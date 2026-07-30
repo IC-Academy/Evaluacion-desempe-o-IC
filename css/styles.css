@@ -233,6 +233,63 @@ textarea { min-height: 60px; resize: vertical; }
 .gantt-active.gantt-green { background: var(--verde); }
 .gantt-active.gantt-red { background: var(--rojo); }
 
+/* ---------- Radar de competencias (beta) ---------- */
+.radar-wrap { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; margin: 14px 0; }
+.radar-chart { flex: 0 0 auto; width: 300px; max-width: 100%; }
+.radar-svg { width: 100%; height: auto; display: block; }
+.radar-side { flex: 1 1 260px; min-width: 220px; }
+.radar-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; font-size: 0.8rem; color: var(--gris-texto); }
+.radar-legend-item { display: flex; align-items: center; gap: 6px; }
+.radar-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.radar-dot-dashed { border-radius: 2px; }
+.radar-table { margin-top: 4px; }
+.radar-note { font-size: 0.74rem; margin-top: 8px; }
+
+/* ---------- 9-Box completa (ejes, niveles, leyenda) ---------- */
+.ninebox-full { margin: 10px 0; }
+.ninebox-full-body { display: flex; align-items: stretch; gap: 6px; }
+.ninebox-full-body .ninebox-vaxis-labels { display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; padding: 4px 0; font-size: 0.7rem; color: #8492a6; font-weight: 700; }
+.ninebox-full-body .ninebox-axes { display: flex; align-items: center; }
+.ninebox-full-body .ninebox-grid { flex: 1; margin-left: 0; }
+.ninebox-haxis-row { display: flex; margin-top: 4px; }
+.ninebox-haxis-spacer { width: 40px; flex-shrink: 0; }
+.ninebox-haxis-labels { flex: 1; display: flex; justify-content: space-between; padding: 0 6px; font-size: 0.7rem; color: #8492a6; font-weight: 700; }
+.ninebox-full .axis-x { margin-left: 46px; }
+.ninebox-legend { margin-top: 14px; background: var(--gris-fondo); border-radius: 8px; padding: 10px 14px; font-size: 0.82rem; }
+.ninebox-legend p { margin: 0 0 6px; }
+.ninebox-legend p:last-child { margin-bottom: 0; }
+
+.ninebox-cell-clickable { cursor: pointer; }
+.ninebox-cell-sel { outline: 3px solid var(--azul-marino); outline-offset: 1px; }
+.ninebox-marker-destacado { outline: 2px solid var(--azul-marino); outline-offset: 1px; box-shadow: 0 0 0 3px rgba(11,37,69,0.18); transform: scale(1.12); }
+
+/* ---------- 9-Box individual (ficha de una persona) ---------- */
+.ninebox-individual { margin: 10px 0; }
+.ninebox-full-body-sm .ninebox-cell { min-height: 66px; padding: 6px; }
+.ninebox-full-body-sm .ninebox-cell-icon { width: 22px; height: 22px; margin-bottom: 3px; }
+.ninebox-full-body-sm .ninebox-cell-title { font-size: 0.66rem; margin-bottom: 4px; }
+.ninebox-full-body-sm .ninebox-marker { width: 20px; height: 20px; font-size: 0.6rem; }
+.ninebox-grid-sm { gap: 4px; }
+.ninebox-grid-sm .ninebox-row { gap: 4px; }
+.ninebox-individual-scores { display: flex; gap: 10px; margin: 12px 0; flex-wrap: wrap; }
+.mini-kpi { flex: 1; min-width: 120px; background: #fff; border: 1px solid var(--gris-borde); border-radius: 8px; padding: 8px 12px; text-align: center; }
+.mini-kpi strong { display: block; font-size: 1.2rem; color: var(--azul-marino); }
+.mini-kpi span { font-size: 0.7rem; color: #8492a6; }
+
+/* ---------- Brecha (tabla comparativa) ---------- */
+.table tr.row-brecha-critica td:first-child { border-left: 3px solid var(--rojo); }
+.table tr.row-brecha-critica { background: #fdecea; }
+
+/* ---------- Ficha ejecutiva (retroalimentación) ---------- */
+.ficha-ejecutiva .ficha-header { display: flex; gap: 16px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+.avatar-iniciales { width: 64px; height: 64px; border-radius: 50%; background: var(--azul-marino); color: #fff; font-weight: 800; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.ficha-datos-generales { flex: 1; min-width: 220px; }
+.ficha-datos-generales h2 { margin-bottom: 8px; }
+.seccion-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin: 10px 0 20px; }
+.seccion-card { border: 1px solid var(--gris-borde); border-radius: var(--radio); padding: 12px 14px; }
+.seccion-card-title { font-size: 0.82rem; font-weight: 700; color: var(--azul-marino); margin-bottom: 6px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.seccion-card-val { font-size: 0.76rem; color: #8492a6; margin-top: 4px; }
+
 /* ---------- Responsive ---------- */
 @media (max-width: 860px) {
   .two-col { grid-template-columns: 1fr; }
@@ -242,4 +299,12 @@ textarea { min-height: 60px; resize: vertical; }
   .header-meta { gap: 10px; }
   .resultado-num { font-size: 2rem; }
   .gantt-header, .gantt-row { grid-template-columns: 140px repeat(6, 28px) 90px; font-size: 0.68rem; }
+  .radar-wrap { flex-direction: column; }
+  .radar-chart { width: 100%; max-width: 320px; margin: 0 auto; }
+  .ninebox-full-body { flex-direction: column; }
+  .ninebox-full-body .ninebox-vaxis-labels { flex-direction: row; justify-content: space-between; align-items: center; }
+  .ninebox-full-body .ninebox-axes { display: none; }
+  .ninebox-full .axis-x { margin-left: 0; text-align: center; }
+  .ninebox-haxis-spacer { display: none; }
+  .ficha-ejecutiva .ficha-header { flex-direction: column; align-items: flex-start; }
 }

@@ -18,7 +18,8 @@
     periodo: null,
     wizard: { seccionIdx: 0, evaluacionId: null, tipo: null, colaboradorId: null, liderId: null },
     adminFiltros: {},
-    nineboxSel: null
+    nineboxSel: null,
+    nineboxSelEmpleado: null
   };
 
   // =========================================================================
@@ -221,6 +222,7 @@
       avance = pct(((respondidas + (objetivosOk ? 1 : 0)) / total) * 100);
     }
     const vencida = esVencido(state.periodo.fechaLimiteAutoevaluacion) && estado === D.ESTADOS.NO_INICIADA;
+    const liderDirecto = S.getLider(col.liderId);
 
     let accion = '';
     if (estado === D.ESTADOS.NO_INICIADA || estado === D.ESTADOS.EN_PROGRESO) {
@@ -238,6 +240,7 @@
       <div class="info-grid">
         <div><span class="label">Periodo activo</span><span class="value">${esc(state.periodo.nombre)}</span></div>
         <div><span class="label">Estado</span>${badge(estado)}</div>
+        <div><span class="label">Líder directo</span><span class="value">${esc(liderDirecto ? liderDirecto.nombre : '—')}</span></div>
         <div><span class="label">Fecha límite autoevaluación</span><span class="value">${state.periodo.fechaLimiteAutoevaluacion}${vencida ? ' ' + badge('Vencida', 'red') : ''}</span></div>
       </div>
       <div class="progress-wrap">${progressBar(avance)}</div>
@@ -394,30 +397,101 @@
     </div>`;
   }
 
+  function inicialesAvatar(nombre) { return String(nombre || '?').split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase(); }
+
+  /**
+   * Ficha ejecutiva de retroalimentación del colaborador. Reutiliza los
+   * campos y funciones ya existentes (resultados, calibración, áreas de
+   * oportunidad, planes de desarrollo, acciones de cronograma, evidencias);
+   * no se duplican entidades nuevas.
+   */
   function viewRetroalimentacion(col, periodoId, estado) {
     if (estado !== D.ESTADOS.RETRO_PENDIENTE && estado !== D.ESTADOS.CERRADA) {
       return `<div class="card"><h2>Retroalimentación</h2><p class="muted">Tu retroalimentación aún no está disponible. Estado actual: ${badge(estado)}</p></div>`;
     }
     const cal = S.getCalibracion(col.empleado, periodoId);
     const liderEval = S.getEvaluacion(col.empleado, periodoId, 'lider');
-    const resultadoLider = S.getUltimoResultadoPorOrigen(col.empleado, periodoId, 'lider');
-    const totalFinal = cal ? cal.resultadoCalibrado : (resultadoLider ? resultadoLider.puntajes.total : null);
+    const resAuto = S.getUltimoResultadoPorOrigen(col.empleado, periodoId, 'autoevaluacion');
+    const resLider = S.getUltimoResultadoPorOrigen(col.empleado, periodoId, 'lider');
+    const totalFinal = cal ? cal.resultadoCalibrado : (resLider ? resLider.puntajes.total : null);
     const nivel = C.clasificarNivel(totalFinal);
-    const cuad = C.asignarCuadrante(resultadoLider ? resultadoLider.promedios.actitud : null, resultadoLider ? resultadoLider.promedios.desempeno : null);
+    const cuad = C.asignarCuadrante(resLider ? resLider.promedios.actitud : null, resLider ? resLider.promedios.desempeno : null);
     const areas = S.getAreasOportunidad(col.empleado, periodoId);
     const planes = S.getPlanesDesarrollo(col.empleado, periodoId);
     const evidencias = S.getEvidencias(col.empleado, periodoId);
     const acciones = S.getAcciones(col.empleado, periodoId);
+    const liderDirecto = S.getLider(col.liderId);
+    const diferenciaGlobal = (resAuto && resLider) ? C.round1(resAuto.puntajes.total - resLider.puntajes.total) : null;
+    const brechaGlobal = diferenciaGlobal !== null ? C.clasificarBrecha(diferenciaGlobal) : null;
+    const promedios = resLider ? resLider.promedios : {};
+    const puntajes = resLider ? resLider.puntajes : {};
+
+    const radarHtml = global.EDDCharts.renderRadarChart({
+      autoevaluacion: resAuto ? resAuto.promedios : null,
+      evaluacionLider: resLider ? resLider.promedios : null,
+      calibracion: (cal && cal.resultadoCalibrado !== undefined && resLider) ? { resultadoLider: resLider.puntajes.total, resultadoCalibrado: cal.resultadoCalibrado } : null
+    });
+    const ninaBoxHtml = global.EDDCharts.renderNineBoxIndividual({
+      actitudProm: resLider ? resLider.promedios.actitud : null,
+      desempenoProm: resLider ? resLider.promedios.desempeno : null,
+      nombreColaborador: col.nombre
+    });
+
+    const seccionesCards = ['actitud', 'habilidades', 'conocimientos', 'objetivos'].map((s) => {
+      const meta = D.SECCIONES_META[s];
+      const val = puntajes[s];
+      const pctVal = (val !== undefined && val !== null && meta.peso) ? (val / meta.peso) * 100 : 0;
+      return `<div class="seccion-card">
+        <div class="seccion-card-title">${esc(meta.titulo)} <span class="peso-tag">${meta.peso}%</span></div>
+        ${progressBar(pctVal)}
+        <div class="seccion-card-val">${f1(val)} de ${meta.peso} pts · promedio ${f1(promedios[s])}/5</div>
+      </div>`;
+    }).join('');
 
     return `
-    <div class="card">
-      <h2>Retroalimentación — ${esc(state.periodo.nombre)}</h2>
+    <div class="card ficha-ejecutiva">
+      <div class="ficha-header">
+        <div class="avatar-iniciales">${esc(inicialesAvatar(col.nombre))}</div>
+        <div class="ficha-datos-generales">
+          <h2>${esc(col.nombre)}</h2>
+          <div class="info-grid">
+            <div><span class="label">N.º de empleado</span><span class="value">${esc(col.empleado)}</span></div>
+            <div><span class="label">Puesto</span><span class="value">${esc(col.puesto)}</span></div>
+            <div><span class="label">Área</span><span class="value">${esc(col.area)}</span></div>
+            <div><span class="label">Dirección</span><span class="value">${esc(col.direccion)}</span></div>
+            <div><span class="label">Ciudad operativa</span><span class="value">${esc(col.ciudad)}</span></div>
+            <div><span class="label">Antigüedad</span><span class="value">${esc(col.antiguedad)}</span></div>
+            <div><span class="label">Líder directo</span><span class="value">${esc(liderDirecto ? liderDirecto.nombre : '—')}</span></div>
+            <div><span class="label">Periodo evaluado</span><span class="value">${esc(state.periodo.nombre)}</span></div>
+          </div>
+        </div>
+      </div>
+
       <div class="resultado-final">
         <div class="resultado-num" style="color:${nivel.color}">${f1(totalFinal)}</div>
         <div>${badge(nivel.nivel, null)}<div class="muted">Puntaje final sobre 100</div></div>
       </div>
       ${progressBar(totalFinal, nivel.color)}
-      ${cuad.info ? renderCuadranteInfo(cuad) : '<p class="muted">Cuadrante 9-box no disponible.</p>'}
+
+      <h3>Indicadores</h3>
+      <div class="kpi-grid">
+        ${kpi('Cumplimiento de objetivos', f1(promedios.objetivos) + ' /5')}
+        ${kpi('Valores y actitud', f1(promedios.actitud) + ' /5')}
+        ${kpi('Habilidades', f1(promedios.habilidades) + ' /5')}
+        ${kpi('Conocimientos técnicos', f1(promedios.conocimientos) + ' /5')}
+        ${kpi('Potencial preliminar', f1(promedios.actitud) + ' /5')}
+        ${kpi('Cuadrante 9-Box', cuad.cuadrante ? cuad.cuadrante + '. ' + cuad.info.nombre : '—')}
+        ${diferenciaGlobal !== null ? kpi('Diferencia auto vs. líder', (diferenciaGlobal > 0 ? '+' : '') + f1(diferenciaGlobal), brechaGlobal.etiqueta === 'Brecha significativa' ? 'red' : (brechaGlobal.etiqueta === 'Revisar' ? 'yellow' : 'green')) : ''}
+      </div>
+
+      <h3>Resultados por sección</h3>
+      <div class="seccion-cards">${seccionesCards}</div>
+
+      <div class="two-col">
+        <div><h3>Radar comparativo</h3>${radarHtml}</div>
+        <div><h3>Matriz 9-Box (tu ubicación)</h3>${ninaBoxHtml}</div>
+      </div>
+
       <h3>Fortalezas</h3><p>${esc(liderEval ? liderEval.fortalezas : '') || '<span class="muted">Sin registrar.</span>'}</p>
       <h3>Áreas de oportunidad y plan de mejora</h3>
       ${areas.length ? `<table class="table"><thead><tr><th>Área de oportunidad</th><th>Plan de mejora</th></tr></thead><tbody>${areas.map((a) => `<tr><td>${esc(a.area)}</td><td>${esc(a.planMejora)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">Sin áreas registradas.</p>'}
@@ -426,6 +500,7 @@
       <h3>Cronograma de seguimiento (6 semanas)</h3>
       ${acciones.length ? renderGantt(acciones) : '<p class="muted">Aún no se genera cronograma.</p>'}
       <h3>Comentarios del líder</h3><p>${esc(liderEval ? liderEval.comentarios : '') || '<span class="muted">Sin comentarios.</span>'}</p>
+      <h3>Observaciones de RH</h3><p>${esc(cal ? cal.observacionesRH : '') || '<span class="muted">Sin observaciones registradas.</span>'}</p>
       <h3>Evidencias</h3>
       <ul class="evidencias-list">${evidencias.map((e) => `<li>${esc(e.nombreArchivo)} <span class="muted">(${esc(e.tipo)}, ${esc(e.fecha)}, ${esc(e.usuario)})</span></li>`).join('') || '<li class="muted">Sin evidencias cargadas.</li>'}</ul>
       <div class="actions">
@@ -435,21 +510,9 @@
     </div>`;
   }
 
-  function renderCuadranteInfo(cuad) {
-    const icono = (global.EDDIcons && global.EDDIcons.SVG[cuad.cuadrante]) || '';
-    return `<div class="cuadrante-box" style="border-color:${cuad.info.color}">
-      <div class="cuadrante-icon">${icono}</div>
-      <div class="cuadrante-body">
-        <div class="cuadrante-title-row">
-          <div class="cuadrante-num" style="background:${cuad.info.color}">${cuad.cuadrante}</div>
-          <strong>${esc(cuad.info.nombre)}</strong> — <span class="muted">Prioridad: ${esc(cuad.info.prioridad)}</span>
-        </div>
-        <p>${esc(cuad.info.significado)}</p>
-        <p><strong>Acción sugerida:</strong> ${esc(cuad.info.accion)}</p>
-        <p class="muted">Seguimiento: ${esc(cuad.info.seguimiento)}</p>
-      </div>
-    </div>`;
-  }
+  // renderCuadranteInfo vive ahora en charts.js (EDDCharts.renderCuadranteInfo)
+  // para que la matriz global y la individual usen exactamente la misma tarjeta.
+  function renderCuadranteInfo(cuad) { return global.EDDCharts.renderCuadranteInfo(cuad); }
 
   function renderPlanesTabla(planes) {
     if (!planes.length) return '<p class="muted">Sin acciones de desarrollo registradas.</p>';
@@ -532,8 +595,22 @@
     return `<div class="kpi-card"><div class="kpi-value ${color ? 'kpi-' + color : ''}">${value}</div><div class="kpi-label">${esc(label)}</div></div>`;
   }
 
+  // Bloquea el acceso de un líder a colaboradores que no le reportan
+  // directamente (liderId debe coincidir con el número de empleado del líder
+  // en sesión). Se aplica tanto si el líder llega por navegación normal como
+  // si escribe la URL con hash directamente en el navegador.
+  function viewAccesoDenegado(mensaje) {
+    return `<div class="card"><h2>Acceso no autorizado</h2><p class="muted">${esc(mensaje)}</p><a class="btn btn-outline" href="#/lider/dashboard">Volver a mi equipo</a></div>`;
+  }
+  function perteneceALider(col, lider) {
+    return !!(col && lider && String(col.liderId) === String(lider.empleado));
+  }
+
   function viewLiderEvaluar(lider, colaboradorId, periodoId) {
     const col = S.getColaborador(colaboradorId);
+    if (!col || !perteneceALider(col, lider)) {
+      return viewAccesoDenegado('Este colaborador no pertenece a tu equipo directo. Solo puedes evaluar a las personas cuyo líder registrado seas tú.');
+    }
     const autoEval = S.getEvaluacion(colaboradorId, periodoId, 'autoevaluacion');
     if (!autoEval || autoEval.estado !== D.ESTADOS.COMPLETADA) {
       return `<div class="card"><h2>${esc(col.nombre)}</h2><p class="muted">El colaborador aún no completa su autoevaluación. No es posible iniciar la evaluación del líder todavía.</p><a class="btn btn-outline" href="#/lider/dashboard">Volver</a></div>`;
@@ -631,6 +708,9 @@
 
   function viewComparacion(lider, colaboradorId, periodoId) {
     const col = S.getColaborador(colaboradorId);
+    if (!col || !perteneceALider(col, lider)) {
+      return viewAccesoDenegado('Este colaborador no pertenece a tu equipo directo. Solo puedes consultar la comparación de las personas cuyo líder registrado seas tú.');
+    }
     const autoEval = S.getEvaluacion(colaboradorId, periodoId, 'autoevaluacion');
     const liderEval = S.getEvaluacion(colaboradorId, periodoId, 'lider');
     if (!autoEval || !liderEval || autoEval.estado !== D.ESTADOS.COMPLETADA || liderEval.estado !== D.ESTADOS.COMPLETADA) {
@@ -656,6 +736,17 @@
     const resLider = S.getUltimoResultadoPorOrigen(colaboradorId, periodoId, 'lider');
     const cuad = C.asignarCuadrante(resLider.promedios.actitud, resLider.promedios.desempeno);
     const estado = S.estadoProceso(colaboradorId, periodoId);
+    const cal = S.getCalibracion(colaboradorId, periodoId);
+    const brechaGeneral = C.clasificarBrecha(resAuto.puntajes.total - resLider.puntajes.total);
+
+    const radarHtml = global.EDDCharts.renderRadarChart({
+      autoevaluacion: resAuto.promedios,
+      evaluacionLider: resLider.promedios,
+      calibracion: (cal && cal.resultadoCalibrado !== undefined) ? { resultadoLider: resLider.puntajes.total, resultadoCalibrado: cal.resultadoCalibrado } : null
+    });
+    const ninaBoxHtml = global.EDDCharts.renderNineBoxIndividual({
+      actitudProm: resLider.promedios.actitud, desempenoProm: resLider.promedios.desempeno, nombreColaborador: col.nombre
+    });
 
     return `
     <div class="card">
@@ -663,8 +754,12 @@
       <div class="kpi-grid kpi-grid-3">
         ${kpi('Puntaje autoevaluación', f1(resAuto.puntajes.total))}
         ${kpi('Puntaje evaluación líder', f1(resLider.puntajes.total))}
-        ${kpi('Diferencia', f1(resAuto.puntajes.total - resLider.puntajes.total))}
+        ${kpi('Diferencia global', (resAuto.puntajes.total - resLider.puntajes.total > 0 ? '+' : '') + f1(resAuto.puntajes.total - resLider.puntajes.total))}
       </div>
+      <p>Brecha general: ${badge(brechaGeneral.etiqueta, brechaGeneral.etiqueta === 'Alineada' ? 'green' : (brechaGeneral.etiqueta === 'Revisar' ? 'yellow' : 'red'))}</p>
+      <h3>Diferencias por sección (radar comparativo)</h3>
+      ${radarHtml}
+      <h3>Diferencias detalladas por competencia</h3>
       <table class="table">
         <thead><tr><th>Competencia</th><th>Autoevaluación</th><th>Evaluación líder</th><th>Diferencia</th><th>Brecha</th><th>Comentario líder</th><th>Comentario colaborador</th></tr></thead>
         <tbody>
@@ -673,11 +768,13 @@
           const diff = na ? null : (Number(f.lider) - Number(f.auto));
           const brecha = na ? { etiqueta: 'Sin datos', color: '#6c757d' } : C.clasificarBrecha(diff);
           const rowClass = na ? '' : (diff > 0 ? 'row-lider-mayor' : (diff < 0 ? 'row-auto-mayor' : ''));
-          return `<tr class="${rowClass}"><td>${esc(f.nombre)}</td><td>${esc(f.auto)}</td><td>${esc(f.lider)}</td><td>${na ? '—' : (diff > 0 ? '+' : '') + f1(diff)}</td><td>${badge(brecha.etiqueta, brecha.etiqueta === 'Alineada' ? 'green' : (brecha.etiqueta === 'Revisar' ? 'yellow' : (brecha.etiqueta === 'Sin datos' ? 'gray' : 'red')))}</td><td>${esc(f.comentarioLider)}</td><td>${esc(f.comentarioAuto)}</td></tr>`;
+          const destacar = !na && brecha.etiqueta === 'Brecha significativa' ? ' row-brecha-critica' : '';
+          return `<tr class="${rowClass}${destacar}"><td>${esc(f.nombre)}</td><td>${esc(f.auto)}</td><td>${esc(f.lider)}</td><td>${na ? '—' : (diff > 0 ? '+' : '') + f1(diff)}</td><td>${badge(brecha.etiqueta, brecha.etiqueta === 'Alineada' ? 'green' : (brecha.etiqueta === 'Revisar' ? 'yellow' : (brecha.etiqueta === 'Sin datos' ? 'gray' : 'red')))}</td><td>${esc(f.comentarioLider)}</td><td>${esc(f.comentarioAuto)}</td></tr>`;
         }).join('')}
         </tbody>
       </table>
-      ${cuad.info ? renderCuadranteInfo(cuad) : ''}
+      <h3>Ubicación en la Matriz 9-Box</h3>
+      ${ninaBoxHtml}
       <p class="muted">Estado actual del proceso: ${badge(estado)}. La calibración y liberación de retroalimentación las gestiona el administrador de RH.</p>
     </div>`;
   }
@@ -703,7 +800,7 @@
       const totalFinal = cal ? cal.resultadoCalibrado : (resLider ? resLider.puntajes.total : null);
       const nivel = C.clasificarNivel(totalFinal);
       const cuad = resLider ? C.asignarCuadrante(resLider.promedios.actitud, resLider.promedios.desempeno) : { cuadrante: null, info: null };
-      return { c, estado, totalFinal, nivel, cuad };
+      return { c, estado, totalFinal, nivel, cuad, promedios: resLider ? resLider.promedios : null };
     });
   }
 
@@ -823,7 +920,17 @@
     if (!resAuto || !resLider) return `<div class="card"><h2>${esc(col.nombre)}</h2><p class="muted">Aún no existen ambas evaluaciones completas para calibrar.</p></div>`;
     const cal = S.getCalibracion(colaboradorId, periodoId) || { ajuste: 0, justificacion: '', actas: 0, nom035: '', observacionesRH: '', retroHabilitada: false, aceptacionColaborador: false, historial: [] };
     const diferencia = C.round1(resAuto.puntajes.total - resLider.puntajes.total);
+    const brechaGeneral = C.clasificarBrecha(diferencia);
     const planes = S.getPlanesDesarrollo(colaboradorId, periodoId);
+    const liderDirecto = S.getLider(col.liderId);
+    const radarHtml = global.EDDCharts.renderRadarChart({
+      autoevaluacion: resAuto.promedios,
+      evaluacionLider: resLider.promedios,
+      calibracion: (cal.resultadoCalibrado !== undefined) ? { resultadoLider: resLider.puntajes.total, resultadoCalibrado: cal.resultadoCalibrado } : null
+    });
+    const ninaBoxHtml = global.EDDCharts.renderNineBoxIndividual({
+      actitudProm: resLider.promedios.actitud, desempenoProm: resLider.promedios.desempeno, nombreColaborador: col.nombre
+    });
 
     return `
     <div class="card">
@@ -832,11 +939,23 @@
         <div><span class="label">Área</span><span class="value">${esc(col.area)}</span></div>
         <div><span class="label">Ciudad operativa</span><span class="value">${esc(col.ciudad)}</span></div>
         <div><span class="label">Antigüedad</span><span class="value">${esc(col.antiguedad)}</span></div>
+        <div><span class="label">Líder directo</span><span class="value">${esc(liderDirecto ? liderDirecto.nombre : '—')}</span></div>
       </div>
       <div class="kpi-grid kpi-grid-3">
         ${kpi('Autoevaluación', f1(resAuto.puntajes.total))}
         ${kpi('Evaluación líder', f1(resLider.puntajes.total))}
         ${kpi('Diferencia', f1(diferencia))}
+      </div>
+      <p>Brecha general auto vs. líder: ${badge(brechaGeneral.etiqueta, brechaGeneral.etiqueta === 'Alineada' ? 'green' : (brechaGeneral.etiqueta === 'Revisar' ? 'yellow' : 'red'))}</p>
+      <div class="two-col">
+        <div>
+          <h3>Radar comparativo</h3>
+          ${radarHtml}
+        </div>
+        <div>
+          <h3>Ubicación en la Matriz 9-Box</h3>
+          ${ninaBoxHtml}
+        </div>
       </div>
       <div class="form-row">
         <div class="form-group"><label>Número de actas administrativas (simulado)</label><input type="number" min="0" id="calActas" value="${cal.actas || 0}"/></div>
@@ -863,36 +982,45 @@
 
   function view9BoxAdmin(periodoId) {
     const datos = datosGlobales(periodoId).filter((d) => d.cuad.cuadrante);
-    const grid = [];
-    for (let fila = 3; fila >= 1; fila--) {
-      const cols = [];
-      for (let col = 1; col <= 3; col++) {
-        const nDesempeno = col; const nActitud = fila;
-        const numero = (nDesempeno - 1) * 3 + nActitud;
-        const info = C.CUADRANTES_INFO[numero];
-        const ocupantes = datos.filter((d) => d.cuad.cuadrante === numero);
-        const icono = (global.EDDIcons && global.EDDIcons.SVG[numero]) || '';
-        cols.push(`<div class="ninebox-cell" style="border-color:${info.color}" onclick="App.selNinebox(${numero})">
-          <div class="ninebox-cell-icon">${icono}</div>
-          <div class="ninebox-cell-title">${numero}. ${esc(info.nombre)}</div>
-          <div class="ninebox-markers">${ocupantes.map((o) => `<span class="ninebox-marker" title="${esc(o.c.nombre)}" style="background:${info.color}">${esc(iniciales(o.c.nombre))}</span>`).join('')}</div>
-        </div>`);
-      }
-      grid.push(`<div class="ninebox-row">${cols.join('')}</div>`);
-    }
+    const ocupantes = datos.map((d) => ({
+      empleado: d.c.empleado, nombre: d.c.nombre, cuadrante: d.cuad.cuadrante,
+      destacado: state.nineboxSelEmpleado === d.c.empleado
+    }));
+    const gridHtml = global.EDDCharts.renderNineBoxFull({
+      ocupantes,
+      resaltarCuadrante: state.nineboxSel,
+      onCellClickJs: (numero) => `App.selNinebox(${numero})`,
+      onMarkerClickJs: (empleado) => `App.selNineboxColaborador('${empleado}')`
+    });
+
     const sel = state.nineboxSel ? C.CUADRANTES_INFO[state.nineboxSel] : null;
     const ocupSel = sel ? datos.filter((d) => d.cuad.cuadrante === state.nineboxSel) : [];
+    const seleccionado = state.nineboxSelEmpleado ? datos.find((d) => d.c.empleado === state.nineboxSelEmpleado) : null;
+
+    let panelDetalle = '<p class="muted">Haz clic en un cuadrante para ver su significado y acción sugerida, o en el marcador de un colaborador para ver su detalle individual.</p>';
+    if (seleccionado) {
+      panelDetalle = `<div class="cuadrante-detail">
+        <h4>${esc(seleccionado.c.nombre)} <span class="muted">— ${esc(seleccionado.c.area)}</span></h4>
+        <div class="kpi-grid kpi-grid-3">
+          ${kpi('Puntaje de desempeño', f1(seleccionado.promedios ? seleccionado.promedios.desempeno : null))}
+          ${kpi('Potencial preliminar', f1(seleccionado.promedios ? seleccionado.promedios.actitud : null))}
+          ${kpi('Resultado final', f1(seleccionado.totalFinal))}
+        </div>
+        ${renderCuadranteInfo(seleccionado.cuad)}
+        <button class="btn btn-outline btn-sm" onclick="App.limpiarSeleccionNinebox()">Quitar selección individual</button>
+      </div>`;
+    } else if (sel) {
+      panelDetalle = `<div class="cuadrante-detail">${renderCuadranteInfo({ cuadrante: state.nineboxSel, info: sel })}<h4>Colaboradores en este cuadrante</h4><ul>${ocupSel.map((o) => `<li><a href="#" onclick="event.preventDefault();App.selNineboxColaborador('${o.c.empleado}')">${esc(o.c.nombre)}</a> — ${esc(o.c.area)} (${f1(o.totalFinal)} pts)</li>`).join('') || '<li class="muted">Sin colaboradores.</li>'}</ul></div>`;
+    }
+
     return `
     <div class="card">
       <h2>Matriz 9-Box</h2>
-      <div class="ninebox-axes"><div class="axis-y">ACTITUD ▲</div></div>
-      <div class="ninebox-grid">${grid.join('')}</div>
-      <div class="axis-x">DESEMPEÑO ►</div>
-      <p class="muted">Umbrales configurables (ver calculations.js → CONFIG_9BOX): nivel 1 hasta ${C.CONFIG_9BOX.nivel1Max}, nivel 2 hasta ${C.CONFIG_9BOX.nivel2Max}, nivel 3 hasta ${C.CONFIG_9BOX.nivel3Max}. Deben ser validados por RH antes de producción.</p>
-      ${sel ? `<div class="cuadrante-detail">${renderCuadranteInfo({ cuadrante: state.nineboxSel, info: sel })}<h4>Colaboradores en este cuadrante</h4><ul>${ocupSel.map((o) => `<li>${esc(o.c.nombre)} — ${esc(o.c.area)} (${f1(o.totalFinal)} pts)</li>`).join('') || '<li class="muted">Sin colaboradores.</li>'}</ul></div>` : '<p class="muted">Haz clic en un cuadrante para ver el detalle.</p>'}
+      <p class="muted">Umbrales configurables (ver calculations.js → CONFIG_9BOX): nivel bajo hasta ${C.CONFIG_9BOX.nivel1Max}, medio hasta ${C.CONFIG_9BOX.nivel2Max}, alto hasta ${C.CONFIG_9BOX.nivel3Max}. Pendientes de validación por RH antes de producción.</p>
+      ${gridHtml}
+      ${panelDetalle}
     </div>`;
   }
-  function iniciales(nombre) { return nombre.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase(); }
 
   function viewAuditoria() {
     const db = S.load();
@@ -1049,7 +1177,17 @@
       alert('Retroalimentación habilitada para el colaborador.');
       render();
     },
-    selNinebox(numero) { state.nineboxSel = numero; render(); },
+    selNinebox(numero) { state.nineboxSel = numero; state.nineboxSelEmpleado = null; render(); },
+    selNineboxColaborador(empleado) {
+      const col = S.getColaborador(empleado);
+      const periodoId = state.periodo.id;
+      const resLider = S.getUltimoResultadoPorOrigen(empleado, periodoId, 'lider');
+      const cuad = resLider ? C.asignarCuadrante(resLider.promedios.actitud, resLider.promedios.desempeno) : null;
+      state.nineboxSelEmpleado = empleado;
+      state.nineboxSel = cuad ? cuad.cuadrante : state.nineboxSel;
+      render();
+    },
+    limpiarSeleccionNinebox() { state.nineboxSelEmpleado = null; render(); },
     guardarConfigBrecha() {
       const alineadaMax = parseFloat($('#cfgAlineada').value);
       const revisarMax = parseFloat($('#cfgRevisar').value);

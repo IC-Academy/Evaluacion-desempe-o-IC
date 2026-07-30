@@ -28,18 +28,26 @@
 
   // ===========================================================================
   // SECCIONES Y COMPETENCIAS (con conductas observables textuales del documento)
+  //
+  // ⚠ PONDERACIÓN PRELIMINAR (acuerdo de la reunión de actualización de la
+  // beta), pendiente de validación definitiva por RH. Los totales por sección
+  // (peso) DEBEN coincidir siempre con calculations.js -> PESOS_SECCION, que
+  // es la fuente de verdad para el cálculo. Aquí solo se reparte ese total
+  // entre las competencias de la sección, para fines de despliegue en pantalla
+  // (el cálculo real promedia las calificaciones de la sección sin ponderar
+  // cada competencia de forma individual; ver calculations.js).
   // ===========================================================================
   const SECCIONES_META = {
-    actitud: { titulo: 'A. Valores y Actitud', peso: 40, eje: 'ACTITUD', descripcion: 'Evalúa la vivencia diaria de los valores ESPÍRITU de Inter-Con. Esta sección determina la posición del colaborador en el eje vertical (Actitud) de la matriz 9-box.' },
-    habilidades: { titulo: 'B. Habilidades', peso: 20, eje: 'DESEMPEÑO', descripcion: 'Evalúa las capacidades funcionales para ejecutar el puesto con eficiencia.' },
-    conocimientos: { titulo: 'C. Conocimientos', peso: 10, eje: 'DESEMPEÑO', descripcion: 'Evalúa el dominio técnico del puesto y de los procesos/herramientas del área.' },
-    objetivos: { titulo: 'D. Cumplimiento de Objetivos', peso: 30, eje: 'DESEMPEÑO', descripcion: 'Registre hasta cinco objetivos específicos del periodo, el resultado obtenido y su calificación (1-5).' }
+    actitud: { titulo: 'A. Valores y Actitud', peso: 20, eje: 'POTENCIAL (preliminar)', descripcion: 'Evalúa la vivencia diaria de los valores ESPÍRITU de Inter-Con. Esta sección alimenta, de forma preliminar, el eje vertical (Potencial) de la matriz 9-box mientras no exista un instrumento de potencial dedicado.' },
+    habilidades: { titulo: 'B. Habilidades', peso: 15, eje: 'DESEMPEÑO', descripcion: 'Evalúa las capacidades funcionales para ejecutar el puesto con eficiencia.' },
+    conocimientos: { titulo: 'C. Conocimientos técnicos', peso: 15, eje: 'DESEMPEÑO', descripcion: 'Evalúa el dominio técnico del puesto y de los procesos/herramientas del área.' },
+    objetivos: { titulo: 'D. Cumplimiento de Objetivos', peso: 50, eje: 'DESEMPEÑO', descripcion: 'Registre hasta cinco objetivos específicos del periodo, el resultado obtenido y su calificación (1-5). Es la sección con mayor peso en la ponderación preliminar.' }
   };
 
   const COMPETENCIAS = {
     actitud: [
       {
-        id: 'A1', nombre: 'Compromiso Organizacional (Integridad y Excelencia)', peso: 8,
+        id: 'A1', nombre: 'Compromiso Organizacional (Integridad y Excelencia)', peso: 4,
         conductas: [
           'Actúa conforme a los valores ESPÍRITU de Inter-Con.',
           'Muestra responsabilidad y ética profesional.',
@@ -47,7 +55,7 @@
         ]
       },
       {
-        id: 'A2', nombre: 'Actitud de Servicio (Pasión y Respeto)', peso: 8,
+        id: 'A2', nombre: 'Actitud de Servicio (Pasión y Respeto)', peso: 4,
         conductas: [
           'Atiende oportunamente las solicitudes de clientes internos y externos.',
           'Demuestra disposición y pasión para apoyar a otros.',
@@ -55,7 +63,7 @@
         ]
       },
       {
-        id: 'A3', nombre: 'Trabajo en Equipo y Unión', peso: 8,
+        id: 'A3', nombre: 'Trabajo en Equipo y Unión', peso: 4,
         conductas: [
           'Colabora con otras áreas para lograr objetivos comunes.',
           'Mantiene relaciones laborales basadas en el respeto.',
@@ -63,7 +71,7 @@
         ]
       },
       {
-        id: 'A4', nombre: 'Innovación y Creatividad (Capacidad de Cambio y Flexibilidad)', peso: 8,
+        id: 'A4', nombre: 'Innovación y Creatividad (Capacidad de Cambio y Flexibilidad)', peso: 4,
         conductas: [
           'Se adapta positivamente a cambios y nuevas prioridades.',
           'Propone ideas para mejorar procesos.',
@@ -71,7 +79,7 @@
         ]
       },
       {
-        id: 'A5', nombre: 'Compromiso con la Sustentabilidad', peso: 8,
+        id: 'A5', nombre: 'Compromiso con la Sustentabilidad', peso: 4,
         conductas: [
           'Hace uso responsable de los recursos materiales y energéticos a su cargo.',
           'Promueve prácticas de cuidado ambiental y ahorro de recursos en su área de trabajo.'
@@ -80,7 +88,7 @@
     ],
     habilidades: [
       {
-        id: 'B1', nombre: 'Orientación a Resultados', peso: 4,
+        id: 'B1', nombre: 'Orientación a Resultados', peso: 3,
         conductas: [
           'Cumple consistentemente los objetivos establecidos.',
           'Mantiene altos estándares de calidad en su trabajo.',
@@ -88,7 +96,7 @@
         ]
       },
       {
-        id: 'B2', nombre: 'Planeación y Organización', peso: 4,
+        id: 'B2', nombre: 'Planeación y Organización', peso: 3,
         conductas: [
           'Organiza adecuadamente sus actividades y prioridades.',
           'Cumple los plazos establecidos.',
@@ -96,7 +104,7 @@
         ]
       },
       {
-        id: 'B3', nombre: 'Comunicación Efectiva', peso: 4,
+        id: 'B3', nombre: 'Comunicación Efectiva', peso: 3,
         conductas: [
           'Se comunica de forma clara, respetuosa y oportuna.',
           'Escucha activamente y considera diferentes puntos de vista.',
@@ -104,7 +112,7 @@
         ]
       },
       {
-        id: 'B4', nombre: 'Seguimiento y Control', peso: 4,
+        id: 'B4', nombre: 'Seguimiento y Control', peso: 3,
         conductas: [
           'Da seguimiento oportuno a sus actividades.',
           'Cumple políticas y procedimientos internos.',
@@ -112,7 +120,7 @@
         ]
       },
       {
-        id: 'B5', nombre: 'Desarrollo de Personas (Liderazgo)', peso: 4,
+        id: 'B5', nombre: 'Desarrollo de Personas (Liderazgo)', peso: 3,
         conductas: [
           'Comparte conocimientos con sus compañeros.',
           'Brinda apoyo cuando otros lo requieren.',
@@ -122,7 +130,7 @@
     ],
     conocimientos: [
       {
-        id: 'C1', nombre: 'Dominio del Puesto', peso: 5,
+        id: 'C1', nombre: 'Dominio del Puesto', peso: 7.5,
         conductas: [
           'Aplica correctamente los conocimientos de su puesto.',
           'Resuelve problemas relacionados con sus funciones.',
@@ -130,7 +138,7 @@
         ]
       },
       {
-        id: 'C2', nombre: 'Procesos y Herramientas de Trabajo', peso: 5,
+        id: 'C2', nombre: 'Procesos y Herramientas de Trabajo', peso: 7.5,
         conductas: [
           'Conoce y aplica correctamente los procesos, políticas y procedimientos de su área.',
           'Utiliza adecuadamente las herramientas y sistemas de automatización disponibles para su puesto.'
@@ -202,12 +210,15 @@
     { empleado: '10001', nombre: 'Laura Hernández', puesto: 'Analista de Recursos Humanos', area: 'Recursos Humanos', liderId: '20001', antiguedad: '2 años 4 meses', ciudad: 'Ciudad de México', direccion: 'Dirección Corporativa', estadoDemo: 'no_iniciada' },
     { empleado: '10002', nombre: 'Jorge Ramírez', puesto: 'Coordinador de Nómina', area: 'Recursos Humanos', liderId: '20001', antiguedad: '1 año 2 meses', ciudad: 'Ciudad de México', direccion: 'Dirección Corporativa', estadoDemo: 'pendiente_lider', perfilObjetivo: { actitud: 4.2, habilidades: 3.8, conocimientos: 4.0, objetivos: 4.0 } },
     { empleado: '10003', nombre: 'Fernanda Gómez', puesto: 'Analista Contable', area: 'Finanzas', liderId: '20002', antiguedad: '3 años', ciudad: 'Guadalajara', direccion: 'Dirección Administrativa', estadoDemo: 'pendiente_calibracion', perfilObjetivo: { actitud: 4.6, habilidades: 4.4, conocimientos: 4.5, objetivos: 4.3 }, perfilObjetivoLider: { actitud: 4.3, habilidades: 4.0, conocimientos: 4.2, objetivos: 4.0 } },
-    { empleado: '10004', nombre: 'Diego Morales', puesto: 'Analista de Tesorería', area: 'Finanzas', liderId: '20002', antiguedad: '8 meses', ciudad: 'Guadalajara', direccion: 'Dirección Administrativa', estadoDemo: 'retro_pendiente', perfilObjetivo: { actitud: 2.4, habilidades: 2.6, conocimientos: 2.8, objetivos: 2.5 }, perfilObjetivoLider: { actitud: 2.2, habilidades: 2.4, conocimientos: 2.5, objetivos: 2.2 } },
-    { empleado: '10005', nombre: 'Patricia Reyes', puesto: 'Supervisora de Zona', area: 'Operaciones', liderId: '20003', antiguedad: '5 años', ciudad: 'Monterrey', direccion: 'Dirección de Operaciones', estadoDemo: 'cerrada', perfilObjetivo: { actitud: 4.8, habilidades: 4.7, conocimientos: 4.6, objetivos: 4.8 }, perfilObjetivoLider: { actitud: 4.7, habilidades: 4.6, conocimientos: 4.5, objetivos: 4.6 } },
+    { empleado: '10004', nombre: 'Diego Morales', puesto: 'Analista de Tesorería', area: 'Finanzas', liderId: '20002', antiguedad: '8 meses', ciudad: 'Guadalajara', direccion: 'Dirección Administrativa', estadoDemo: 'retro_pendiente', perfilObjetivo: { actitud: 4.0, habilidades: 3.2, conocimientos: 3.0, objetivos: 3.3 }, perfilObjetivoLider: { actitud: 4.3, habilidades: 2.2, conocimientos: 2.3, objetivos: 2.0 } },
+    { empleado: '10005', nombre: 'Patricia Reyes', puesto: 'Supervisora de Zona', area: 'Operaciones', liderId: '20003', antiguedad: '5 años', ciudad: 'Monterrey', direccion: 'Dirección de Operaciones', estadoDemo: 'cerrada', perfilObjetivo: { actitud: 3.7, habilidades: 4.7, conocimientos: 4.6, objetivos: 4.7 }, perfilObjetivoLider: { actitud: 3.5, habilidades: 4.6, conocimientos: 4.5, objetivos: 4.6 } },
     { empleado: '10006', nombre: 'Héctor Vargas', puesto: 'Coordinador Operativo', area: 'Operaciones', liderId: '20003', antiguedad: '1 año', ciudad: 'Monterrey', direccion: 'Dirección de Operaciones', estadoDemo: 'no_iniciada' },
     { empleado: '10007', nombre: 'Daniela Cruz', puesto: 'Analista de Sistemas', area: 'Tecnología', liderId: '20004', antiguedad: '2 años', ciudad: 'Ciudad de México', direccion: 'Dirección de Tecnología', estadoDemo: 'en_progreso' },
     { empleado: '10008', nombre: 'Andrés Ortiz', puesto: 'Soporte Técnico Sr.', area: 'Tecnología', liderId: '20004', antiguedad: '5 meses', ciudad: 'Ciudad de México', direccion: 'Dirección de Tecnología', estadoDemo: 'cerrada', perfilObjetivo: { actitud: 1.8, habilidades: 2.2, conocimientos: 2.0, objetivos: 1.9 }, perfilObjetivoLider: { actitud: 1.6, habilidades: 1.9, conocimientos: 1.8, objetivos: 1.7 } },
-    { empleado: '10009', nombre: 'Valeria Sánchez', puesto: 'Ejecutiva de Cuenta', area: 'Comercial', liderId: '20005', antiguedad: '4 años', ciudad: 'Puebla', direccion: 'Dirección Comercial', estadoDemo: 'pendiente_calibracion', perfilObjetivo: { actitud: 3.4, habilidades: 4.3, conocimientos: 4.1, objetivos: 4.4 }, perfilObjetivoLider: { actitud: 3.0, habilidades: 4.0, conocimientos: 3.8, objetivos: 4.1 } },
+    // Caso "brecha significativa": la colaboradora se autopercibe con actitud sobresaliente,
+    // pero el líder documenta una actitud deficiente pese a un desempeño técnico sólido
+    // (Habilidades/Conocimientos/Objetivos alineados). Cuadrante resultante: Agua (7).
+    { empleado: '10009', nombre: 'Valeria Sánchez', puesto: 'Ejecutiva de Cuenta', area: 'Comercial', liderId: '20005', antiguedad: '4 años', ciudad: 'Puebla', direccion: 'Dirección Comercial', estadoDemo: 'pendiente_calibracion', perfilObjetivo: { actitud: 4.5, habilidades: 4.4, conocimientos: 4.2, objetivos: 4.5 }, perfilObjetivoLider: { actitud: 1.8, habilidades: 4.3, conocimientos: 4.3, objetivos: 4.5 } },
     { empleado: '10010', nombre: 'Ricardo Paredes', puesto: 'Coordinador Comercial', area: 'Comercial', liderId: '20005', antiguedad: '1 año 6 meses', ciudad: 'Puebla', direccion: 'Dirección Comercial', estadoDemo: 'cerrada', perfilObjetivo: { actitud: 4.4, habilidades: 3.6, conocimientos: 3.5, objetivos: 3.4 }, perfilObjetivoLider: { actitud: 4.2, habilidades: 3.4, conocimientos: 3.3, objetivos: 3.2 } }
   ];
 

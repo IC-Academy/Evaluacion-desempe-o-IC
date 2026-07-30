@@ -22,7 +22,17 @@
 (function (global) {
   'use strict';
 
-  const STORAGE_KEY = 'edd_interconn_db_v1';
+  // v2 (beta ponderaciones 50/20/15/15): se sube la versión de la clave de
+  // localStorage a propósito. La beta anterior (v1) pudo dejar `resultados`
+  // guardados en el navegador calculados con las ponderaciones viejas
+  // (Actitud 40 / Habilidades 20 / Conocimientos 10 / Objetivos 30). Si
+  // reutilizáramos la misma clave, un usuario que ya probó la v1 vería
+  // puntajes/cuadrantes desactualizados mezclados con la lógica nueva sin
+  // volver a calcularlos. Cambiar la clave fuerza una semilla limpia con la
+  // nueva ponderación la primera vez que se abre esta beta en ese navegador;
+  // no se intenta migrar/recalcular los datos viejos porque esta es una
+  // demo sin backend (ver README, sección "Modelo de datos").
+  const STORAGE_KEY = 'edd_interconn_db_v2';
   let _db = null; // caché en memoria
 
   // ===========================================================================
