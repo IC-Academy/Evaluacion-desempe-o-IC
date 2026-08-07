@@ -162,6 +162,10 @@
       return apiRequest('/auth/me', { method: 'GET' });
     },
 
+    // --- Configuración y periodo (beta "persistencia real de evaluaciones") -
+    getConfiguracion() { return apiRequest('/configuracion', { method: 'GET' }); },
+    getPeriodoActivo() { return apiRequest('/periodos/activo', { method: 'GET' }); },
+
     // --- Colaborador -------------------------------------------------------
     evaluacionesMias() { return apiRequest('/evaluaciones/mias', { method: 'GET' }); },
     evaluacionPorId(id) { return apiRequest('/evaluaciones/' + encodeURIComponent(id), { method: 'GET' }); },
@@ -178,6 +182,7 @@
     // --- Administrador ---------------------------------------------------
     adminEvaluaciones() { return apiRequest('/admin/evaluaciones', { method: 'GET' }); },
     adminCalibraciones() { return apiRequest('/admin/calibraciones', { method: 'GET' }); },
+    adminCalibracionPorId(id) { return apiRequest('/admin/calibraciones/' + encodeURIComponent(id), { method: 'GET' }); },
     adminCalibracionGuardar(id, payload) { return apiRequest('/admin/calibraciones/' + encodeURIComponent(id) + '/guardar', { method: 'POST', body: payload }); },
     adminCalibracionLiberar(id, payload) { return apiRequest('/admin/calibraciones/' + encodeURIComponent(id) + '/liberar', { method: 'POST', body: payload }); },
     adminNineBox() { return apiRequest('/admin/nine-box', { method: 'GET' }); },

@@ -17,6 +17,13 @@
   const C = global.EDDCalc;
   const S = global.EDDStorage;
   const A = global.EDDAuth;
+  // Capa de datos (ver repository.js): TODAS las acciones de guardar/enviar/
+  // liberar/cerrar de esta iteración pasan por aquí en vez de llamar a
+  // storage.js directo, para que dejen de depender de localStorage cuando
+  // APP_CONFIG.mode = 'api'. Las lecturas que alimentan el render() síncrono
+  // (wizard, comparación, 9-box, ficha ejecutiva) siguen leyendo de `S`
+  // directo en esta iteración — ver README para el porqué.
+  const Repo = global.EDDRepo;
 
   const state = {
     user: null,       // {empleado, nombre, perfil} — derivado de EDDAuth.getAppUser()
@@ -1367,90 +1374,102 @@
       render();
     },
     wizardPrev() { state.wizard.seccionIdx = Math.max(state.wizard.seccionIdx - 1, 0); render(); },
-    rate(evaluacionId, seccion, competenciaId, valor) {
+    // Guarda una respuesta/objetivo/fortalezas/comentarios vía repository.js
+    // (Repo.guardarAutoevaluacion en demo llama a las mismas funciones de
+    // storage.js de siempre — mismo comportamiento, un nivel de indirección
+    // extra; en modo API hace POST a /autoevaluacion/:id/guardar o
+    // /lider/evaluaciones/:id/guardar según corresponda).
+    async guardarPatchEvaluacion(evaluacionId, patch) {
+      if (state.wizard.tipo === 'lider') await Repo.guardarEvaluacionLider(evaluacionId, patch);
+      else await Repo.guardarAutoevaluacion(evaluacionId, patch);
+    },
+    async rate(evaluacionId, seccion, competenciaId, valor) {
       const existentes = S.getRespuestas(evaluacionId);
       const actual = existentes.find((r) => r.competenciaId === competenciaId);
-      S.saveRespuesta(evaluacionId, seccion, competenciaId, valor, actual ? actual.comentario : '');
+      await Actions.guardarPatchEvaluacion(evaluacionId, { respuestas: [{ seccion, idCompetencia: competenciaId, valor, comentario: actual ? actual.comentario : '' }] });
     },
-    comentar(evaluacionId, seccion, competenciaId, comentario) {
+    async comentar(evaluacionId, seccion, competenciaId, comentario) {
       const existentes = S.getRespuestas(evaluacionId);
       const actual = existentes.find((r) => r.competenciaId === competenciaId);
-      S.saveRespuesta(evaluacionId, seccion, competenciaId, actual ? actual.valor : '', comentario);
+      await Actions.guardarPatchEvaluacion(evaluacionId, { respuestas: [{ seccion, idCompetencia: competenciaId, valor: actual ? actual.valor : '', comentario }] });
     },
-    agregarObjetivo(evaluacionId) {
+    async agregarObjetivo(evaluacionId) {
       const objetivos = S.getObjetivos(evaluacionId);
       if (objetivos.length >= 5) return;
-      S.saveObjetivo(evaluacionId, objetivos.length, '', '', '');
+      await Actions.guardarPatchEvaluacion(evaluacionId, { objetivos: [{ orden: objetivos.length, descripcion: '', resultadoObtenido: '', calificacion: '' }] });
       render();
     },
-    editarObjetivo(evaluacionId, index, campo, valor) {
+    async editarObjetivo(evaluacionId, index, campo, valor) {
       const objetivos = S.getObjetivos(evaluacionId);
       const o = objetivos.find((x) => x.index === index) || { descripcion: '', resultado: '', calificacion: '' };
       o[campo] = valor;
-      S.saveObjetivo(evaluacionId, index, o.descripcion, o.resultado, o.calificacion);
+      await Actions.guardarPatchEvaluacion(evaluacionId, { objetivos: [{ orden: index, descripcion: o.descripcion, resultadoObtenido: o.resultado, calificacion: o.calificacion }] });
     },
     quitarObjetivo(evaluacionId, index) { S.removeObjetivo(evaluacionId, index); render(); },
-    enviarAutoevaluacion() {
+    async enviarAutoevaluacion() {
       if (!$('#confirmEnvioAuto').checked) { alert('Confirma que la información es correcta antes de enviar.'); return; }
       const evaluacionId = state.wizard.evaluacionId;
       const objetivos = S.getObjetivos(evaluacionId).filter((o) => o.descripcion && o.descripcion.trim());
       if (!objetivos.length) { alert('Registra al menos un objetivo antes de enviar.'); return; }
-      S.completarEvaluacion(evaluacionId, state.user.nombre);
+      await Repo.enviarAutoevaluacion(evaluacionId);
       alert('Tu autoevaluación fue enviada correctamente. El proceso continúa con la evaluación de tu líder.');
       navigate('#/colaborador/inicio');
     },
-    editarObjetivoLider(evaluacionId, index, descripcion, resultado, calificacion) {
-      S.saveObjetivo(evaluacionId, index, descripcion, resultado, calificacion);
+    async editarObjetivoLider(evaluacionId, index, descripcion, resultado, calificacion) {
+      await Actions.guardarPatchEvaluacion(evaluacionId, { objetivos: [{ orden: index, descripcion, resultadoObtenido: resultado, calificacion }] });
     },
-    setFortalezas(evaluacionId, valor) {
-      const db = S.load(); const ev = db.evaluaciones.find((e) => e.id === evaluacionId); if (ev) { ev.fortalezas = valor; S.persist(); }
-    },
-    setComentarios(evaluacionId, valor) {
-      const db = S.load(); const ev = db.evaluaciones.find((e) => e.id === evaluacionId); if (ev) { ev.comentarios = valor; S.persist(); }
-    },
-    agregarAreaOportunidad(colaboradorId) {
+    async setFortalezas(evaluacionId, valor) { await Actions.guardarPatchEvaluacion(evaluacionId, { fortalezas: valor }); },
+    async setComentarios(evaluacionId, valor) { await Actions.guardarPatchEvaluacion(evaluacionId, { comentarios: valor }); },
+    async agregarAreaOportunidad(colaboradorId) {
       const area = prompt('Área de oportunidad:'); if (!area) return;
       const plan = prompt('Plan de mejora:'); if (!plan) return;
-      S.addAreaOportunidad(colaboradorId, state.periodo.id, area, plan, state.user.nombre);
+      await Repo.guardarRetroalimentacion(colaboradorId, { periodo: state.periodo.id, agregarAreaOportunidad: { area, planMejora: plan } });
       render();
     },
-    quitarAreaOportunidad(id) { S.removeAreaOportunidad(id, state.user.nombre); render(); },
-    agregarPlanDesarrollo(colaboradorId, liderId) {
+    async quitarAreaOportunidad(id, colaboradorId) {
+      await Repo.guardarRetroalimentacion(colaboradorId, { periodo: state.periodo.id, quitarAreaOportunidadId: id });
+      render();
+    },
+    async agregarPlanDesarrollo(colaboradorId, liderId) {
       const competencia = prompt('Competencia a desarrollar:'); if (!competencia) return;
       const accion = prompt('Acción:'); if (!accion) return;
       const fecha = prompt('Fecha compromiso (AAAA-MM-DD):', '2026-09-01') || '2026-09-01';
-      S.addPlanDesarrollo(colaboradorId, state.periodo.id, { competencia, accion, responsable: liderId, fechaCompromiso: fecha }, state.user.nombre);
+      await Repo.guardarRetroalimentacion(colaboradorId, { periodo: state.periodo.id, agregarPlanDesarrollo: { competencia, accion, responsable: liderId, fechaCompromiso: fecha } });
       render();
     },
-    quitarPlanDesarrollo(id) { S.removePlanDesarrollo(id, state.user.nombre); render(); },
-    enviarEvaluacionLider(colaboradorId) {
+    async quitarPlanDesarrollo(id, colaboradorId) {
+      await Repo.guardarRetroalimentacion(colaboradorId, { periodo: state.periodo.id, quitarPlanDesarrolloId: id });
+      render();
+    },
+    async enviarEvaluacionLider(colaboradorId) {
       if (!$('#confirmEnvioLider').checked) { alert('Confirma que la evaluación está completa antes de enviar.'); return; }
       const evaluacionId = state.wizard.evaluacionId;
-      S.completarEvaluacion(evaluacionId, state.user.nombre);
+      await Repo.enviarEvaluacionLider(evaluacionId);
       navigate('#/lider/comparacion/' + colaboradorId);
     },
-    cargarEvidencia(colaboradorId, periodoId) {
+    async cargarEvidencia(colaboradorId, periodoId) {
       const nombre = prompt('Nombre del archivo a cargar (simulado), ej. retroalimentacion_firmada.pdf:');
       if (!nombre) return;
       const tipo = prompt('Tipo (PDF firmado / Imagen / Documento de retroalimentación):', 'PDF firmado') || 'Documento';
-      S.addEvidencia(colaboradorId, periodoId, nombre, tipo, state.user.nombre, '');
+      await Repo.guardarRetroalimentacion(colaboradorId, { periodo: periodoId, agregarEvidencia: { nombreArchivo: nombre, tipo, comentario: '' } });
       render();
     },
-    aceptar(colaboradorId, periodoId) {
+    async aceptar(colaboradorId, periodoId) {
       const evidencias = S.getEvidencias(colaboradorId, periodoId);
       if (!evidencias.length) { alert('Carga al menos una evidencia antes de aceptar el resultado.'); return; }
-      S.aceptarResultado(colaboradorId, periodoId, state.user.nombre);
+      await Repo.cerrarRetroalimentacion(colaboradorId, periodoId);
       render();
     },
     setFiltroAdmin(campo, valor) { state.adminFiltros[campo] = valor || undefined; render(); },
     limpiarFiltrosAdmin() { state.adminFiltros = {}; render(); },
-    guardarCalibracion(colaboradorId, periodoId, totalLider) {
+    async guardarCalibracion(colaboradorId, periodoId, totalLider) {
       const ajuste = parseFloat($('#calAjuste').value) || 0;
       const justificacion = $('#calJustificacion').value.trim();
       if (ajuste !== 0 && !justificacion) { alert('La justificación es obligatoria cuando existe un ajuste distinto de 0.'); return; }
       const resultadoCalibrado = C.round1(Math.max(0, Math.min(100, totalLider + ajuste)));
       const resAuto = S.getUltimoResultadoPorOrigen(colaboradorId, periodoId, 'autoevaluacion');
-      S.crearOActualizarCalibracion(colaboradorId, periodoId, {
+      await Repo.guardarCalibracion(colaboradorId, {
+        periodo: periodoId,
         resultadoAuto: resAuto.puntajes.total, resultadoLider: totalLider,
         diferenciaGeneral: C.round1(resAuto.puntajes.total - totalLider),
         ajuste, justificacion, resultadoCalibrado,
@@ -1459,18 +1478,18 @@
         observacionesRH: $('#calObs').value,
         responsable: state.user.nombre,
         _motivo: justificacion || 'Calibración de RH'
-      }, state.user.nombre);
+      });
       alert('Calibración guardada.');
       render();
     },
-    habilitarRetro(colaboradorId, periodoId) {
+    async habilitarRetro(colaboradorId, periodoId) {
       const cal = S.getCalibracion(colaboradorId, periodoId);
       if (!cal || cal.resultadoCalibrado === undefined) { alert('Guarda la calibración antes de habilitar la retroalimentación.'); return; }
       if (cal.resultadoCalibrado < 80) {
         const planes = S.getPlanesDesarrollo(colaboradorId, periodoId);
         if (!planes.length) { alert('El resultado es menor a 80. Registra al menos un plan de desarrollo antes de habilitar la retroalimentación.'); return; }
       }
-      S.habilitarRetroalimentacion(colaboradorId, periodoId, state.user.nombre);
+      await Repo.liberarCalibracion(colaboradorId, periodoId);
       alert('Retroalimentación habilitada para el colaborador.');
       render();
     },
