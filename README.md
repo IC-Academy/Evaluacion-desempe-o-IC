@@ -904,7 +904,47 @@ no capturados**, incluyendo (además de todo lo ya cubierto en beta 3):
   `unidadMedida`: el wizard de captura no los pide todavía; agregarlos
   implica tocar el wizard aprobado, fuera de alcance de esta beta.
 
-## 14. Propuesta de migración a producción
+## 14. Beta 5 — validación visual de competencias pendientes
+
+Antes de esta beta, si el colaborador o el líder intentaban avanzar en el
+wizard sin calificar todas las competencias de una sección, aparecía un
+`window.alert()` genérico ("Debes calificar todas las competencias de esta
+sección antes de continuar.") sin decir cuáles faltaban. Esta beta lo
+sustituye por retroalimentación visual dentro de la propia interfaz — **sin
+tocar cálculos, ponderaciones, backend, login, Airtable, n8n, radar, Nine
+Box ni navegación**, confirmado con la misma batería de pruebas de siempre
+(106 aserciones, incluyendo las 43 de login y las de radar/9-box, todas en
+verde después de este cambio).
+
+**Qué cambia:** al presionar "Siguiente" con competencias sin responder (o
+al intentar enviar con pendientes en cualquier sección), ya no aparece un
+alert — aparece una barra naranja tenue arriba de la sección
+(`Te falta[n] N competencia[s] por calificar en esta sección`, singular/
+plural correcto), cada tarjeta sin responder se marca con borde rojo y el
+mensaje "⚠ Debes seleccionar una calificación o N/A." debajo del selector,
+y la vista hace scroll suave hacia la primera pendiente con un foco visual
+temporal. Responder (incluyendo elegir **N/A**, que sigue siendo una
+respuesta válida, no vacía) actualiza el contador y quita el error al
+instante, sin volver a pulsar "Siguiente". Las pestañas del wizard muestran
+un pequeño ✓ o ● por sección, y la pantalla de "Resumen y envío" bloquea el
+envío y detalla los pendientes por sección con un botón "Ir al primer
+pendiente" — igual para el colaborador que para el líder, mismo componente.
+
+**Cómo se implementó (`js/app.js`):** dos funciones centrales,
+`validateSection(evaluacionId, seccion)` y
+`validateEntireEvaluation(evaluacionId)`, devuelven `{ valid, pendingCount/
+pendingTotal, pendingIds/secciones }` y son la única fuente de verdad de qué
+falta — se reutilizan en `wizardNext`, `enviarAutoevaluacion`,
+`enviarEvaluacionLider`, las pestañas y el resumen final, sin duplicar la
+lógica. El estado de si se debe *mostrar* el error (`state.wizard.
+mostrarPendientes`) vive en el wizard y se resetea al cambiar de sección o
+al corregir todo; los datos guardados (respuestas, comentarios, N/A) nunca
+se tocan ni se pierden. Clases CSS nuevas y aisladas: `.validation-summary`,
+`.competency-card.has-error`, `.field-error-message`,
+`.section-tab-indicator`, `.validation-focus` — ningún color corporativo ni
+clase existente se modificó.
+
+## 15. Propuesta de migración a producción
 
 La demo se diseñó para que `storage.js` sea el único punto de contacto entre la
 interfaz y los datos. Migrar a producción implica sustituir el cuerpo de esas
