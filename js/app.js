@@ -3,6 +3,11 @@
  * ---------------------------------------------------------------------------
  * Interfaz y navegación de la demo EDD Inter-Con. Router por hash, tres
  * portales (Colaborador / Líder / Administrador) y componentes compartidos.
+ *
+ * Beta 3: la sesión (login por número de empleado + código temporal) ya NO
+ * se maneja aquí — vive en auth.js (EDDAuth), sobre sessionStorage. Este
+ * archivo solo consume EDDAuth.getSession()/getAppUser() para saber quién
+ * es el usuario en turno, igual que ya consumía EDDStorage para los datos.
  * ---------------------------------------------------------------------------
  */
 
@@ -11,15 +16,27 @@
   const D = global.EDDData;
   const C = global.EDDCalc;
   const S = global.EDDStorage;
-  const SESSION_KEY = 'edd_session_v1';
+  const A = global.EDDAuth;
 
   const state = {
-    user: null,       // {empleado, nombre, perfil}
+    user: null,       // {empleado, nombre, perfil} — derivado de EDDAuth.getAppUser()
     periodo: null,
     wizard: { seccionIdx: 0, evaluacionId: null, tipo: null, colaboradorId: null, liderId: null },
     adminFiltros: {},
+    usuariosFiltros: {},
+    jerarquiasFiltros: {},
     nineboxSel: null,
-    nineboxSelEmpleado: null
+    nineboxSelEmpleado: null,
+    // --- Estado del login de dos pasos (beta 3) ---
+    login: {
+      paso: 'solicitar',   // 'solicitar' | 'validar'
+      numeroEmpleado: '',
+      maskedEmail: null,
+      loading: false,
+      error: null,
+      info: null,
+      sessionExpiredNotice: false
+    }
   };
 
   // =========================================================================
@@ -55,24 +72,31 @@
   function esVencido(fechaLimite) { return fechaLimite && fechaHoy() > fechaLimite; }
 
   // =========================================================================
-  // SESIÓN
+  // SESIÓN (delegada en auth.js — ver EDDAuth). Este bloque solo resuelve la
+  // navegación posterior al login/logout y el registro en auditoría local.
   // =========================================================================
-  function guardarSesion(u) { try { localStorage.setItem(SESSION_KEY, JSON.stringify(u)); } catch (e) {} }
-  function leerSesion() { try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (e) { return null; } }
-  function borrarSesion() { try { localStorage.removeItem(SESSION_KEY); } catch (e) {} }
-
-  function login(empleado, perfil) {
-    const u = S.getUsuario(empleado);
-    if (!u) { alert('Número de empleado no encontrado en la demo.'); return; }
-    if (u.perfil !== perfil) { alert('El perfil seleccionado no coincide con el número de empleado (perfil real: ' + u.perfil + ').'); return; }
-    state.user = u;
-    guardarSesion(u);
-    S.addAudit(u.nombre, 'Inicio de sesión', 'usuarios', u.empleado, null, u.perfil);
-    navigate(u.perfil === 'colaborador' ? '#/colaborador/inicio' : (u.perfil === 'lider' ? '#/lider/dashboard' : '#/admin/dashboard'));
+  function irAHomeDePerfil(perfil) {
+    navigate(perfil === 'colaborador' ? '#/colaborador/inicio' : (perfil === 'lider' ? '#/lider/dashboard' : '#/admin/dashboard'));
   }
-  function logout() {
+
+  function resetLoginState(paso) {
+    state.login = {
+      paso: paso || 'solicitar',
+      numeroEmpleado: state.login ? state.login.numeroEmpleado : '',
+      maskedEmail: null,
+      loading: false,
+      error: null,
+      info: null,
+      sessionExpiredNotice: state.login ? state.login.sessionExpiredNotice : false
+    };
+  }
+
+  async function logout() {
     if (state.user) S.addAudit(state.user.nombre, 'Cierre de sesión', 'usuarios', state.user.empleado, null, null);
-    state.user = null; borrarSesion(); navigate('#/login');
+    await A.logout();
+    state.user = null;
+    resetLoginState('solicitar');
+    navigate('#/login');
   }
 
   // =========================================================================
@@ -87,11 +111,20 @@
 
   function render() {
     const root = document.getElementById('app-root');
+    const teniaUsuario = !!state.user;
+    const session = A.getSession();
+    state.user = session ? A.getAppUser(session) : null;
+
     if (!state.user) {
-      const sess = leerSesion();
-      if (sess) state.user = sess;
+      // Si había sesión activa y ya no la hay (y no fue por un logout manual
+      // que ya limpió el aviso), asumimos que expiró y lo mostramos en login.
+      if (teniaUsuario && !state.login.sessionExpiredNotice) {
+        state.login.sessionExpiredNotice = true;
+      }
+      root.innerHTML = viewLogin();
+      bindLogin();
+      return;
     }
-    if (!state.user) { root.innerHTML = viewLogin(); bindLogin(); return; }
     state.periodo = S.getPeriodoActivo();
 
     const parts = parseHash();
@@ -120,7 +153,7 @@
     } else if (u.perfil === 'lider') {
       tabs = [['dashboard', 'Dashboard de equipo']];
     } else {
-      tabs = [['dashboard', 'Dashboard'], ['calibracion', 'Calibración'], ['9box', 'Matriz 9-Box'], ['auditoria', 'Auditoría'], ['config', 'Configuración']];
+      tabs = [['dashboard', 'Dashboard'], ['calibracion', 'Calibración'], ['9box', 'Matriz 9-Box'], ['usuarios', 'Usuarios'], ['jerarquias', 'Jerarquías'], ['auditoria', 'Auditoría'], ['config', 'Configuración']];
     }
     const navHtml = tabs.map((t) => `<a href="#/${area === 'colaborador' ? 'colaborador' : area}/${t[0]}" class="${page === t[0] ? 'active' : ''}">${t[1]}</a>`).join('');
     return `
@@ -137,6 +170,7 @@
           <div class="header-meta-item"><span class="label">Usuario</span><span class="value">${esc(u.nombre)}</span></div>
           <div class="header-meta-item"><span class="label">Perfil</span><span class="value">${capitalize(u.perfil)}</span></div>
           <div class="header-meta-item"><span class="label">Periodo</span><span class="value">${esc(per ? per.nombre : '—')}</span></div>
+          <div class="header-meta-item"><span class="label">Modo</span><span class="value">${global.APP_CONFIG.mode === 'api' ? 'API (n8n)' : 'Demo'}</span></div>
           <button class="btn btn-outline btn-sm" onclick="App.logout()">Cerrar sesión</button>
         </div>
       </div>
@@ -160,43 +194,106 @@
   }
 
   // =========================================================================
-  // LOGIN
+  // LOGIN (dos pasos: solicitar código -> validar código) — beta 3
   // =========================================================================
+  let countdownInterval = null;
+
+  function detenerCountdown() { if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; } }
+
+  function iniciarCountdown() {
+    detenerCountdown();
+    countdownInterval = setInterval(() => {
+      const pend = A.pendienteActual();
+      const el = document.getElementById('loginCountdown');
+      if (!pend || !el) { detenerCountdown(); return; }
+      const restanteMs = pend.expiresAt - Date.now();
+      if (restanteMs <= 0) {
+        el.textContent = 'vencido';
+        el.classList.add('countdown-vencido');
+        detenerCountdown();
+        return;
+      }
+      const mm = Math.floor(restanteMs / 60000);
+      const ss = Math.floor((restanteMs % 60000) / 1000);
+      el.textContent = mm + ':' + String(ss).padStart(2, '0');
+    }, 1000);
+  }
+
   function viewLogin() {
+    const L = state.login;
+    let avisoExpirada = '';
+    if (L.sessionExpiredNotice) {
+      avisoExpirada = `<p class="alert alert-warning">Tu sesión anterior expiró por inactividad. Inicia sesión de nuevo.</p>`;
+    }
+    const cuerpo = L.paso === 'validar' ? viewLoginValidar(L) : viewLoginSolicitar(L);
     return `
     <div class="login-screen">
       <div class="login-card">
         <div class="login-brand">
           <span class="brand-mark brand-mark-lg">IC</span>
           <h1>Plataforma EDD Inter-Con</h1>
-          <p>Evaluación del Desempeño Administrativo — acceso de demostración</p>
+          <p>Evaluación del Desempeño Administrativo — acceso con código temporal</p>
         </div>
-        <div class="login-form">
-          <label>Número de empleado</label>
-          <input id="loginEmpleado" type="text" placeholder="Ej. 10001" />
-          <label>Perfil</label>
-          <select id="loginPerfil">
-            <option value="colaborador">Colaborador</option>
-            <option value="lider">Líder</option>
-            <option value="administrador">Administrador</option>
-          </select>
-          <button class="btn btn-primary btn-block" id="btnLogin">Entrar</button>
-        </div>
-        <div class="quick-access">
-          <p class="quick-access-title">Acceso rápido de demostración</p>
-          <button class="btn btn-outline btn-block" data-quick="10001|colaborador">Entrar como colaborador — Laura Hernández (10001)</button>
-          <button class="btn btn-outline btn-block" data-quick="20001|lider">Entrar como líder — Carlos Martínez (20001)</button>
-          <button class="btn btn-outline btn-block" data-quick="90001|administrador">Entrar como administrador — Administrador RH (90001)</button>
-        </div>
+        ${avisoExpirada}
+        ${cuerpo}
       </div>
     </div>`;
   }
+
+  function viewLoginSolicitar(L) {
+    const modoApi = global.APP_CONFIG.mode === 'api';
+    return `
+    <div class="login-form">
+      <p class="muted">Captura tu número de empleado. Si está registrado, te enviaremos un código temporal de acceso a tu correo.</p>
+      <label>Número de empleado</label>
+      <input id="loginEmpleado" type="text" inputmode="numeric" placeholder="Ej. 10001" value="${esc(L.numeroEmpleado)}" />
+      ${L.error ? `<p class="alert alert-danger">${esc(L.error)}</p>` : ''}
+      ${L.info ? `<p class="alert alert-info">${esc(L.info)}</p>` : ''}
+      <button class="btn btn-primary btn-block" id="btnSolicitarCodigo" ${L.loading ? 'disabled' : ''}>${L.loading ? 'Enviando…' : 'Enviar código'}</button>
+      ${modoApi ? '<p class="muted">Modo API: la solicitud se enviará a n8n (' + esc(global.APP_CONFIG.apiBaseUrl) + ').</p>' : ''}
+    </div>
+    <div class="quick-access">
+      <p class="quick-access-title">Acceso rápido de demostración</p>
+      <p class="muted" style="margin-bottom:8px">Solo disponible en modo demo. Solicita y valida el código automáticamente con el código de demostración <strong>${esc(global.APP_CONFIG.demoCode)}</strong>.</p>
+      <button class="btn btn-outline btn-block" data-quick="10001" ${modoApi ? 'disabled' : ''}>Entrar como colaborador — Laura Hernández (10001)</button>
+      <button class="btn btn-outline btn-block" data-quick="20001" ${modoApi ? 'disabled' : ''}>Entrar como líder — Carlos Martínez (20001)</button>
+      <button class="btn btn-outline btn-block" data-quick="90001" ${modoApi ? 'disabled' : ''}>Entrar como administrador — Administrador RH (90001)</button>
+    </div>`;
+  }
+
+  function viewLoginValidar(L) {
+    const modoApi = global.APP_CONFIG.mode === 'api';
+    return `
+    <div class="login-form">
+      <p class="muted">Enviamos un código temporal de un solo uso${L.maskedEmail ? ' a ' + esc(L.maskedEmail) : ''}. Vence en <span id="loginCountdown">${esc(global.APP_CONFIG.codeValidityMinutes)}:00</span> minutos.</p>
+      <label>Código temporal (6 dígitos)</label>
+      <input id="loginCodigo" type="text" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" />
+      ${!modoApi ? `<p class="muted">Código de demostración: <strong>${esc(global.APP_CONFIG.demoCode)}</strong> (exclusivo para pruebas; no válido en modo API).</p>` : ''}
+      ${L.error ? `<p class="alert alert-danger">${esc(L.error)}</p>` : ''}
+      ${L.info ? `<p class="alert alert-info">${esc(L.info)}</p>` : ''}
+      <button class="btn btn-primary btn-block" id="btnValidarCodigo" ${L.loading ? 'disabled' : ''}>${L.loading ? 'Validando…' : 'Ingresar'}</button>
+      <div class="login-secondary-actions">
+        <button class="btn btn-outline btn-sm" id="btnReenviarCodigo" ${L.loading ? 'disabled' : ''}>Reenviar código</button>
+        <button class="btn btn-outline btn-sm" id="btnCorregirEmpleado" ${L.loading ? 'disabled' : ''}>Corregir número de empleado</button>
+      </div>
+    </div>`;
+  }
+
   function bindLogin() {
-    $('#btnLogin').addEventListener('click', () => login($('#loginEmpleado').value.trim(), $('#loginPerfil').value));
-    document.querySelectorAll('[data-quick]').forEach((b) => b.addEventListener('click', () => {
-      const [emp, perfil] = b.getAttribute('data-quick').split('|');
-      login(emp, perfil);
-    }));
+    detenerCountdown();
+    if (state.login.paso === 'validar') {
+      iniciarCountdown();
+      $('#btnValidarCodigo').addEventListener('click', () => Actions.validarCodigo());
+      $('#btnReenviarCodigo').addEventListener('click', () => Actions.reenviarCodigo());
+      $('#btnCorregirEmpleado').addEventListener('click', () => Actions.corregirEmpleado());
+      const inputCodigo = $('#loginCodigo');
+      if (inputCodigo) inputCodigo.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') Actions.validarCodigo(); });
+    } else {
+      $('#btnSolicitarCodigo').addEventListener('click', () => Actions.solicitarCodigo($('#loginEmpleado').value.trim()));
+      const inputEmpleado = $('#loginEmpleado');
+      if (inputEmpleado) inputEmpleado.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') Actions.solicitarCodigo(inputEmpleado.value.trim()); });
+      document.querySelectorAll('[data-quick]').forEach((b) => b.addEventListener('click', () => Actions.quickLogin(b.getAttribute('data-quick'))));
+    }
   }
 
   // =========================================================================
@@ -786,9 +883,127 @@
     const periodoId = state.periodo.id;
     if (page === 'calibracion') return param ? viewCalibracionDetalle(param, periodoId) : viewCalibracionLista(periodoId);
     if (page === '9box') return view9BoxAdmin(periodoId);
+    if (page === 'usuarios') return viewAdminUsuarios();
+    if (page === 'jerarquias') return viewAdminJerarquias(periodoId);
     if (page === 'auditoria') return viewAuditoria();
     if (page === 'config') return viewConfig();
     return viewAdminDashboard(periodoId);
+  }
+
+  // =========================================================================
+  // ADMIN — USUARIOS (consulta, beta 3 — preparación Excel maestro/Airtable)
+  // =========================================================================
+  function todosLosUsuariosCompletos() {
+    const colaboradores = S.getTodosColaboradores().map((c) => Object.assign({ rolPlataforma: 'Colaborador' }, c));
+    const lideres = S.getTodosLideres().map((l) => Object.assign({ rolPlataforma: 'Líder' }, l));
+    const administradores = S.getTodosAdministradores().map((a) => Object.assign({ rolPlataforma: 'Administrador' }, a));
+    return colaboradores.concat(lideres, administradores);
+  }
+  function nombreLiderDe(liderId) {
+    if (!liderId) return null;
+    const l = S.getLider(liderId);
+    return l ? l.nombre : liderId;
+  }
+
+  function viewAdminUsuarios() {
+    const filtros = state.usuariosFiltros;
+    const todos = todosLosUsuariosCompletos();
+    const areas = Array.from(new Set(todos.map((u) => u.area).filter(Boolean))).sort();
+    const filtrados = todos.filter((u) => {
+      if (filtros.area && u.area !== filtros.area) return false;
+      if (filtros.rol && u.rolPlataforma !== filtros.rol) return false;
+      if (filtros.estatus && u.estatusEmpleado !== filtros.estatus) return false;
+      if (filtros.lider === 'con' && !u.liderId) return false;
+      if (filtros.lider === 'sin' && (u.liderId || u.rolPlataforma !== 'Colaborador')) return false;
+      if (filtros.correo === 'con' && !u.correoCorporativo) return false;
+      if (filtros.correo === 'sin' && u.correoCorporativo) return false;
+      return true;
+    });
+
+    return `
+    <div class="card">
+      <h2>Usuarios</h2>
+      <p class="muted">Vista de solo consulta. Origen previsto: Excel maestro de usuarios sincronizado a Airtable vía n8n (tabla <code>Empleados</code>, ver README). Aún no se implementa edición masiva ni importación directa desde el navegador (ver requerimiento 17 del brief).</p>
+      <div class="filters-bar">
+        <select onchange="App.setFiltroUsuarios('area', this.value)"><option value="">Todas las áreas</option>${areas.map((a) => `<option value="${esc(a)}" ${filtros.area === a ? 'selected' : ''}>${esc(a)}</option>`).join('')}</select>
+        <select onchange="App.setFiltroUsuarios('rol', this.value)"><option value="">Todos los roles</option><option ${filtros.rol === 'Colaborador' ? 'selected' : ''}>Colaborador</option><option ${filtros.rol === 'Líder' ? 'selected' : ''}>Líder</option><option ${filtros.rol === 'Administrador' ? 'selected' : ''}>Administrador</option></select>
+        <select onchange="App.setFiltroUsuarios('estatus', this.value)"><option value="">Todos los estatus</option><option ${filtros.estatus === 'Activo' ? 'selected' : ''}>Activo</option><option ${filtros.estatus === 'Inactivo' ? 'selected' : ''}>Inactivo</option></select>
+        <select onchange="App.setFiltroUsuarios('lider', this.value)"><option value="">Con/sin líder (todos)</option><option value="con" ${filtros.lider === 'con' ? 'selected' : ''}>Con líder</option><option value="sin" ${filtros.lider === 'sin' ? 'selected' : ''}>Sin líder</option></select>
+        <select onchange="App.setFiltroUsuarios('correo', this.value)"><option value="">Con/sin correo (todos)</option><option value="con" ${filtros.correo === 'con' ? 'selected' : ''}>Con correo</option><option value="sin" ${filtros.correo === 'sin' ? 'selected' : ''}>Sin correo</option></select>
+        <button class="btn btn-outline btn-sm" onclick="App.limpiarFiltrosUsuarios()">Limpiar filtros</button>
+      </div>
+      <table class="table">
+        <thead><tr><th>No. empleado</th><th>Nombre</th><th>Correo</th><th>Puesto</th><th>Área</th><th>Rol</th><th>Estatus</th><th>Líder asignado</th><th>Correo validado</th><th>Última actualización</th></tr></thead>
+        <tbody>
+        ${filtrados.map((u) => `<tr class="${(u.rolPlataforma === 'Colaborador' && !u.liderId) ? 'row-sin-lider' : ''}">
+          <td>${esc(u.empleado)}</td>
+          <td>${esc(u.nombre)}</td>
+          <td>${u.correoCorporativo ? esc(A.maskEmail(u.correoCorporativo)) : '<span class="muted">Sin correo</span>'}</td>
+          <td>${esc(u.puesto)}</td>
+          <td>${esc(u.area)}</td>
+          <td>${esc(u.rolPlataforma)}</td>
+          <td>${badge(u.estatusEmpleado || '—', u.estatusEmpleado === 'Activo' ? 'green' : 'gray')}</td>
+          <td>${u.rolPlataforma === 'Colaborador' ? (u.liderId ? esc(nombreLiderDe(u.liderId)) : badge('Sin líder asignado', 'red')) : '<span class="muted">N/A</span>'}</td>
+          <td>${u.correoValidado ? badge('Validado', 'green') : badge('Pendiente', 'yellow')}</td>
+          <td>${esc(u.ultimaActualizacion || '—')}</td>
+        </tr>`).join('') || `<tr><td colspan="10" class="muted">Sin resultados para los filtros aplicados.</td></tr>`}
+        </tbody>
+      </table>
+      <p class="muted">${filtrados.length} de ${todos.length} usuarios.</p>
+    </div>`;
+  }
+
+  // =========================================================================
+  // ADMIN — JERARQUÍAS (consulta, beta 3)
+  // =========================================================================
+  function viewAdminJerarquias(periodoId) {
+    const filtros = state.jerarquiasFiltros;
+    const jerarquias = S.getJerarquias();
+    const filas = jerarquias.map((j) => {
+      const col = S.getColaborador(j.numeroEmpleado);
+      const lider = j.numeroLider ? S.getLider(j.numeroLider) : null;
+      return { j, col, lider };
+    }).filter((f) => f.col);
+    const sinLider = filas.filter((f) => !f.j.numeroLider);
+
+    const filtradas = filas.filter((f) => {
+      if (filtros.estado === 'con' && !f.j.numeroLider) return false;
+      if (filtros.estado === 'sin' && f.j.numeroLider) return false;
+      if (filtros.periodo && f.j.periodo !== filtros.periodo) return false;
+      return true;
+    });
+    const periodos = Array.from(new Set(jerarquias.map((j) => j.periodo)));
+
+    return `
+    <div class="card">
+      <h2>Jerarquías</h2>
+      <p class="muted">Origen previsto: tabla <code>Asignaciones</code> del Excel maestro sincronizada a Airtable vía n8n. Las relaciones siempre usan <code>numeroEmpleado</code>/<code>numeroLider</code>, nunca el nombre (ver requerimiento 8 del brief).</p>
+      <div class="kpi-grid kpi-grid-3">
+        ${kpi('Asignaciones totales', filas.length)}
+        ${kpi('Con líder asignado', filas.length - sinLider.length, 'green')}
+        ${kpi('Sin líder asignado', sinLider.length, sinLider.length ? 'red' : 'gray')}
+      </div>
+      <div class="filters-bar">
+        <select onchange="App.setFiltroJerarquias('estado', this.value)"><option value="">Con/sin líder (todos)</option><option value="con" ${filtros.estado === 'con' ? 'selected' : ''}>Con líder</option><option value="sin" ${filtros.estado === 'sin' ? 'selected' : ''}>Sin líder</option></select>
+        <select onchange="App.setFiltroJerarquias('periodo', this.value)"><option value="">Todos los periodos</option>${periodos.map((p) => `<option value="${esc(p)}" ${filtros.periodo === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select>
+        <button class="btn btn-outline btn-sm" onclick="App.limpiarFiltrosJerarquias()">Limpiar filtros</button>
+      </div>
+      <table class="table">
+        <thead><tr><th>Asignación</th><th>Colaborador</th><th>Líder asignado</th><th>Periodo</th><th>Tipo</th><th>Vigencia</th><th>Estado</th></tr></thead>
+        <tbody>
+        ${filtradas.map((f) => `<tr class="${!f.j.numeroLider ? 'row-sin-lider' : ''}">
+          <td>${esc(f.j.idAsignacion)}</td>
+          <td>${esc(f.col.nombre)} <span class="muted">(${esc(f.j.numeroEmpleado)})</span></td>
+          <td>${f.lider ? esc(f.lider.nombre) + ' <span class="muted">(' + esc(f.j.numeroLider) + ')</span>' : badge('Sin líder asignado', 'red')}</td>
+          <td>${esc(f.j.periodo)}</td>
+          <td>${esc(f.j.tipoAsignacion)}</td>
+          <td>${esc(f.j.fechaInicio)} — ${f.j.fechaFin ? esc(f.j.fechaFin) : 'vigente'}</td>
+          <td>${badge(f.j.asignacionActiva ? 'Activa' : 'Inactiva', f.j.asignacionActiva ? 'green' : 'gray')}</td>
+        </tr>`).join('') || `<tr><td colspan="7" class="muted">Sin resultados para los filtros aplicados.</td></tr>`}
+        </tbody>
+      </table>
+      ${sinLider.length ? `<p class="alert alert-warning">${sinLider.length} colaborador(es) no tienen líder asignado y por lo tanto no pueden avanzar en el flujo de evaluación del líder hasta que se asigne uno en el Excel maestro.</p>` : ''}
+    </div>`;
   }
 
   function datosGlobales(periodoId) {
@@ -1046,11 +1261,93 @@
     </div>`;
   }
 
+  // Traduce errores de auth.js/api.js a mensajes seguros para el usuario
+  // final (nunca trazas técnicas — eso solo va a consola, ver
+  // requerimiento 12 del brief).
+  function mensajeErrorLogin(err) {
+    const tipo = err && err.tipo;
+    if (tipo === 'network') return 'Error de conexión. Verifica tu internet e intenta de nuevo.';
+    if (tipo === 'timeout') return 'La solicitud tardó demasiado. Intenta de nuevo.';
+    if (tipo === 'expired') return 'El código venció. Solicita uno nuevo.';
+    if (tipo === 'invalid_code') return 'Código inválido. Verifica los 6 dígitos e intenta de nuevo.';
+    if (tipo === 'validation') return err.message || 'Verifica los datos capturados.';
+    if (tipo === 'unauthorized') return 'Tu sesión expiró. Inicia sesión nuevamente.';
+    // 'http' (modo API): el backend real (n8n) respondió con un error HTTP
+    // — ej. 400/401 en /auth/verify-code cuando el código es inválido o
+    // venció. n8n ya manda un mensaje seguro para el usuario en el cuerpo
+    // (ver api.js), así que se muestra tal cual en vez del genérico.
+    if (tipo === 'http' && err.message) return err.message;
+    return 'Ocurrió un error inesperado. Intenta de nuevo.';
+  }
+
   // =========================================================================
   // ACCIONES (expuestas a los onclick del HTML)
   // =========================================================================
   const Actions = {
     logout,
+    async solicitarCodigo(numeroEmpleado) {
+      state.login.error = null; state.login.info = null;
+      if (!numeroEmpleado) { state.login.error = 'Captura tu número de empleado.'; render(); return; }
+      state.login.loading = true; state.login.numeroEmpleado = numeroEmpleado; render();
+      try {
+        const resp = await A.requestCode(numeroEmpleado);
+        state.login.paso = 'validar';
+        state.login.maskedEmail = resp.maskedEmail || null;
+        state.login.loading = false;
+        state.login.info = null;
+        render();
+      } catch (err) {
+        console.error('Error al solicitar código', err);
+        state.login.loading = false;
+        state.login.error = mensajeErrorLogin(err);
+        render();
+      }
+    },
+    async validarCodigo() {
+      const codigo = ($('#loginCodigo') || {}).value || '';
+      state.login.error = null; state.login.info = null; state.login.loading = true; render();
+      try {
+        const resp = await A.verifyCode(state.login.numeroEmpleado, codigo.trim());
+        const appUser = A.getAppUser();
+        state.user = appUser;
+        S.addAudit(appUser.nombre, 'Inicio de sesión', 'usuarios', appUser.empleado, null, appUser.perfil);
+        resetLoginState('solicitar');
+        irAHomeDePerfil(appUser.perfil);
+      } catch (err) {
+        console.error('Error al validar código', err);
+        state.login.loading = false;
+        state.login.error = mensajeErrorLogin(err);
+        render();
+      }
+    },
+    async reenviarCodigo() {
+      await Actions.solicitarCodigo(state.login.numeroEmpleado);
+      state.login.info = 'Se envió un nuevo código.';
+      render();
+    },
+    corregirEmpleado() {
+      A.limpiarPendiente();
+      resetLoginState('solicitar');
+      render();
+    },
+    async quickLogin(numeroEmpleado) {
+      if (global.APP_CONFIG.mode === 'api') return; // solo disponible en modo demo
+      state.login.error = null; state.login.info = null; state.login.loading = true; render();
+      try {
+        await A.requestCode(numeroEmpleado);
+        const resp = await A.verifyCode(numeroEmpleado, global.APP_CONFIG.demoCode);
+        const appUser = A.getAppUser();
+        state.user = appUser;
+        S.addAudit(appUser.nombre, 'Inicio de sesión', 'usuarios', appUser.empleado, null, appUser.perfil);
+        resetLoginState('solicitar');
+        irAHomeDePerfil(appUser.perfil);
+      } catch (err) {
+        console.error('Error en acceso rápido', err);
+        state.login.loading = false;
+        state.login.error = mensajeErrorLogin(err);
+        render();
+      }
+    },
     wizardNext(seccionActual) {
       if (seccionActual !== 'resumen') {
         const ev = { id: state.wizard.evaluacionId };
@@ -1199,14 +1496,27 @@
     reiniciarDemo() {
       if (!confirm('¿Reiniciar todos los datos de la demo? Esta acción no se puede deshacer.')) return;
       S.reset();
-      borrarSesion();
+      A.clearSession();
       state.user = null;
+      resetLoginState('solicitar');
       location.hash = '#/login';
       render();
-    }
+    },
+    setFiltroUsuarios(campo, valor) { state.usuariosFiltros[campo] = valor || undefined; render(); },
+    limpiarFiltrosUsuarios() { state.usuariosFiltros = {}; render(); },
+    setFiltroJerarquias(campo, valor) { state.jerarquiasFiltros[campo] = valor || undefined; render(); },
+    limpiarFiltrosJerarquias() { state.jerarquiasFiltros = {}; render(); }
   };
 
   global.App = Actions;
   global.addEventListener('hashchange', render);
   global.addEventListener('DOMContentLoaded', render);
+  // Si el backend responde 401 (token inválido/vencido en modo API), api.js
+  // dispara este evento; auth.js ya limpió la sesión, aquí solo refrescamos
+  // la pantalla para mandar al usuario al login con el aviso correspondiente.
+  global.addEventListener(global.EDDApi.EVENTO_SESION_EXPIRADA, () => { if (state.user) render(); });
+  // Verificación periódica de expiración por tiempo (no depende de que el
+  // usuario haga clic en algo): si la sesión ya venció, se refleja en la UI
+  // sin esperar a la siguiente navegación.
+  setInterval(() => { if (state.user && !A.getSession()) render(); }, 15000);
 })(window);

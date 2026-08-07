@@ -80,6 +80,13 @@ p { margin: 0 0 12px; }
 .quick-access-title { font-size: 0.78rem; color: #8492a6; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 10px; }
 .quick-access .btn { font-size: 0.78rem; margin-bottom: 8px; }
 
+/* Login de dos pasos (beta 3) */
+.login-secondary-actions { display: flex; justify-content: space-between; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.login-secondary-actions .btn { flex: 1; }
+#loginCountdown { font-weight: 700; color: var(--azul-marino); }
+#loginCountdown.countdown-vencido { color: var(--rojo); }
+.row-sin-lider td:first-child { border-left: 3px solid var(--rojo); }
+
 /* ---------- Tarjetas / layout ---------- */
 .card { background: #fff; border-radius: var(--radio); box-shadow: var(--sombra); padding: 22px; margin-bottom: 20px; }
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }

@@ -32,7 +32,18 @@
   // nueva ponderación la primera vez que se abre esta beta en ese navegador;
   // no se intenta migrar/recalcular los datos viejos porque esta es una
   // demo sin backend (ver README, sección "Modelo de datos").
-  const STORAGE_KEY = 'edd_interconn_db_v2';
+  //
+  // v3 (beta 3 — preparación Airtable/n8n): el modelo de datos de usuarios
+  // cambió de forma incompatible con v2 (se agregan correoCorporativo,
+  // estatusEmpleado, correoValidado, ultimaActualizacion en colaboradores/
+  // líderes/administradores; se agrega la tabla `jerarquias`; se agrega un
+  // colaborador sin líder asignado para poder demostrar la vista
+  // administrativa correspondiente). Un `db` v2 cacheado no tendría estos
+  // campos, así que se vuelve a subir la versión para forzar una semilla
+  // limpia. La SESIÓN (login) es independiente de esto: vive en
+  // sessionStorage bajo APP_CONFIG.sessionStorageKey (ver auth.js), no en
+  // esta clave de localStorage.
+  const STORAGE_KEY = 'edd_interconn_db_v3';
   let _db = null; // caché en memoria
 
   // ===========================================================================
@@ -49,6 +60,8 @@
       usuarios: [],
       colaboradores: [],
       lideres: [],
+      administradores: [],
+      jerarquias: D.JERARQUIAS.map((j) => Object.assign({}, j)),
       periodos: [periodo],
       evaluaciones: [],
       respuestas: [],
@@ -78,6 +91,7 @@
     });
     D.ADMINISTRADORES.forEach((a) => {
       db.usuarios.push({ empleado: a.empleado, nombre: a.nombre, perfil: 'administrador' });
+      db.administradores.push(Object.assign({}, a));
     });
     D.COLABORADORES.forEach((col) => {
       db.usuarios.push({ empleado: col.empleado, nombre: col.nombre, perfil: 'colaborador' });
@@ -326,6 +340,9 @@
   function getLider(empleado) { return load().lideres.find((l) => l.empleado === String(empleado)); }
   function getColaboradoresDeLider(liderId) { return load().colaboradores.filter((c) => c.liderId === String(liderId)); }
   function getTodosColaboradores() { return load().colaboradores.slice(); }
+  function getTodosLideres() { return load().lideres.slice(); }
+  function getTodosAdministradores() { return load().administradores.slice(); }
+  function getJerarquias() { return load().jerarquias.slice(); }
   function getPeriodoActivo() { return load().periodos.find((p) => p.activo); }
 
   function getEvaluacion(colaboradorId, periodoId, tipo) {
@@ -565,7 +582,7 @@
   // ===========================================================================
   global.EDDStorage = {
     load, persist, reset, generarId, nowParts, addAudit,
-    getUsuario, getColaborador, getLider, getColaboradoresDeLider, getTodosColaboradores, getPeriodoActivo,
+    getUsuario, getColaborador, getLider, getColaboradoresDeLider, getTodosColaboradores, getTodosLideres, getTodosAdministradores, getJerarquias, getPeriodoActivo,
     getEvaluacion, getOrCreateEvaluacion, getRespuestas, getRespuestasPorSeccion, saveRespuesta,
     getObjetivos, saveObjetivo, removeObjetivo, completarEvaluacion, getResultado, getUltimoResultadoPorOrigen,
     estadoProceso, getCalibracion, crearOActualizarCalibracion, habilitarRetroalimentacion, aceptarResultado,
