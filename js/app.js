@@ -128,14 +128,26 @@
     state.periodo = S.getPeriodoActivo();
 
     const parts = parseHash();
-    const area = parts[0] || (state.user.perfil === 'colaborador' ? 'colaborador' : state.user.perfil === 'lider' ? 'lider' : 'admin');
-    const page = parts[1] || 'inicio';
+    const areaEsperada = state.user.perfil === 'colaborador' ? 'colaborador' : state.user.perfil === 'lider' ? 'lider' : 'admin';
+    const area = parts[0] || areaEsperada;
+    const page = parts[1] || (areaEsperada === 'colaborador' ? 'inicio' : 'dashboard');
     const param = parts[2];
+
+    // Seguridad de navegación: el rol de la URL nunca puede sustituir al rol
+    // de la sesión. Si el usuario modifica manualmente el hash, vuelve a su portal.
+    if (area !== areaEsperada) {
+      navigate(areaEsperada === 'colaborador' ? '#/colaborador/inicio' : areaEsperada === 'lider' ? '#/lider/dashboard' : '#/admin/dashboard');
+      return;
+    }
 
     let body = '';
     if (area === 'colaborador') body = renderColaborador(page);
     else if (area === 'lider') body = renderLider(page, param);
-    else body = renderAdmin(page, param);
+    else if (area === 'admin') body = renderAdmin(page, param);
+    else {
+      navigate(areaEsperada === 'colaborador' ? '#/colaborador/inicio' : areaEsperada === 'lider' ? '#/lider/dashboard' : '#/admin/dashboard');
+      return;
+    }
 
     root.innerHTML = renderHeader(area, page) + `<main class="container">${body}</main>` + renderFooter();
     bindGlobal();
