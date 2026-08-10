@@ -336,39 +336,103 @@
 
   function viewBienvenidaEvaluacion(col, periodoId, estado) {
     const enProgreso = estado === D.ESTADOS.EN_PROGRESO;
+    const primerNombre = esc((col.nombre || '').trim().split(/\s+/)[0] || '');
     return `
-    <section class="intro-evaluacion">
-      <div class="intro-hero">
-        <div class="intro-kicker">Evaluación de Desempeño Administrativo</div>
-        <h1>¡Bienvenido(a) a tu Evaluación de Desempeño!</h1>
-        <p class="intro-lead">Conoce tu desempeño, reconoce tus fortalezas e identifica oportunidades de desarrollo que impulsen tu crecimiento dentro de Inter-Con.</p>
-        <div class="intro-persona"><strong>${esc(col.nombre)}</strong><span>${esc(col.puesto)} · ${esc(col.area)}</span></div>
-      </div>
+    <section class="welcome-page">
+      <div class="welcome-hero">
+        <div class="welcome-hero-copy">
+          <div class="welcome-eyebrow">Evaluación de Desempeño Administrativo</div>
+          <h1>¡Bienvenida, ${primerNombre}! <span class="welcome-wave">👋</span></h1>
+          <p class="welcome-lead">Esta evaluación nos ayuda a conocer tu desempeño, reconocer tus fortalezas e identificar oportunidades de desarrollo que impulsen tu crecimiento dentro de Inter-Con.</p>
 
-      <div class="intro-grid">
-        <article class="intro-card"><div class="intro-icon">⏱️</div><h3>Duración</h3><p><strong>15 a 20 minutos.</strong> Procura realizar la evaluación en un solo momento y sin interrupciones.</p></article>
-        <article class="intro-card"><div class="intro-icon">👥</div><h3>¿Quién participa?</h3><p>El proceso contempla tu <strong>autoevaluación</strong>, la <strong>evaluación de tu líder</strong> y la <strong>retroalimentación</strong> para tu desarrollo.</p></article>
-        <article class="intro-card"><div class="intro-icon">⭐</div><h3>Antes de comenzar</h3><p>Responde con honestidad y objetividad, considera tu desempeño durante el periodo evaluado y lee cuidadosamente cada pregunta.</p></article>
-        <article class="intro-card"><div class="intro-icon">🔒</div><h3>Confidencialidad</h3><p>Tus respuestas serán tratadas de forma confidencial y se utilizarán exclusivamente para apoyar tu desarrollo y fortalecer nuestro proceso de gestión del desempeño.</p></article>
-      </div>
-
-      <div class="intro-como-califica">
-        <div>
-          <h3>¿Cómo se integra tu evaluación?</h3>
-          <p><strong>Competencias 70%</strong> + <strong>Cumplimiento de Objetivos 30%</strong>.</p>
-          <div class="intro-pesos">
-            <span>Valores y Actitud <b>40%</b></span>
-            <span>Habilidades <b>20%</b></span>
-            <span>Conocimientos <b>10%</b></span>
-            <span>Objetivos <b>30%</b></span>
+          <div class="welcome-persona">
+            <div class="welcome-persona-block">
+              <div class="welcome-persona-icon">▣</div>
+              <div><strong>${esc(col.nombre)}</strong><span>${esc(col.puesto)}</span></div>
+            </div>
+            <div class="welcome-persona-divider"></div>
+            <div class="welcome-persona-block">
+              <div class="welcome-persona-icon">⌘</div>
+              <div><strong>${esc(col.area || 'Área')}</strong><span>${esc(col.area || '')}</span></div>
+            </div>
           </div>
         </div>
-        <details class="intro-escala"><summary>Ver escala de evaluación</summary>${escalaHelpHTML()}</details>
+
+        <div class="welcome-hero-art" aria-hidden="true">
+          <div class="welcome-building">
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <div class="welcome-quote">
+            <div class="welcome-quote-mark">“</div>
+            <p>Tu opinión y compromiso contribuyen a construir un mejor Inter-Con.</p>
+            <i></i>
+          </div>
+        </div>
       </div>
 
-      <div class="intro-actions">
-        <p>Tu opinión y compromiso contribuyen a construir un mejor Inter-Con.</p>
-        <button class="btn btn-primary btn-lg" onclick="App.comenzarEvaluacion()">${enProgreso ? 'Continuar mi evaluación' : 'Comenzar mi evaluación'}</button>
+      <div class="welcome-info-grid">
+        <article class="welcome-card">
+          <div class="welcome-card-icon icon-blue">◷</div>
+          <h3>Duración estimada</h3>
+          <div class="welcome-big-number">15 a 20<br>minutos</div>
+          <p>Procura realizar la evaluación en un solo momento y sin interrupciones.</p>
+        </article>
+
+        <article class="welcome-card">
+          <div class="welcome-card-icon icon-purple">👥</div>
+          <h3>¿Quién participa?</h3>
+          <ul class="welcome-check-list purple-list">
+            <li>Tu autoevaluación.</li>
+            <li>La evaluación de tu líder.</li>
+            <li>Retroalimentación para tu desarrollo.</li>
+          </ul>
+        </article>
+
+        <article class="welcome-card">
+          <div class="welcome-card-icon icon-yellow">★</div>
+          <h3>Antes de comenzar</h3>
+          <ul class="welcome-check-list yellow-list">
+            <li>Responde con honestidad y objetividad.</li>
+            <li>Considera tu desempeño durante el periodo evaluado.</li>
+            <li>Lee cuidadosamente cada pregunta.</li>
+          </ul>
+        </article>
+
+        <article class="welcome-card">
+          <div class="welcome-card-icon icon-green">▣</div>
+          <h3>Confidencialidad</h3>
+          <p>Tus respuestas serán tratadas de forma confidencial y se utilizarán exclusivamente para apoyar tu desarrollo y fortalecer nuestro proceso de gestión del desempeño.</p>
+        </article>
+
+        <article class="welcome-card welcome-card-integracion">
+          <div class="welcome-card-icon icon-blue">◔</div>
+          <h3>¿Cómo se integra?</h3>
+          <p class="welcome-integracion-title"><strong>Competencias 70%</strong> +<br><strong>Cumplimiento de Objetivos 30%</strong></p>
+          <div class="welcome-weight-list">
+            <span><i class="dot-blue"></i>Valores y Actitud <b>40%</b></span>
+            <span><i class="dot-purple"></i>Habilidades <b>20%</b></span>
+            <span><i class="dot-green"></i>Conocimientos <b>10%</b></span>
+            <span><i class="dot-yellow"></i>Objetivos <b>30%</b></span>
+          </div>
+        </article>
+      </div>
+
+      <div class="welcome-scale">
+        <div class="welcome-scale-title">
+          <div class="welcome-scale-icon">▥</div>
+          <strong>Escala de<br>evaluación</strong>
+        </div>
+        <div class="welcome-scale-item score-5"><b>5</b><span><strong>Excede</strong> significativamente las expectativas.</span></div>
+        <div class="welcome-scale-item score-4"><b>4</b><span><strong>Supera</strong> las expectativas de manera constante.</span></div>
+        <div class="welcome-scale-item score-3"><b>3</b><span><strong>Cumple</strong> con lo esperado para su puesto.</span></div>
+        <div class="welcome-scale-item score-2"><b>2</b><span><strong>Cumple parcialmente</strong>; requiere mejorar.</span></div>
+        <div class="welcome-scale-item score-1"><b>1</b><span><strong>No cumple</strong> con las expectativas del puesto.</span></div>
+        <div class="welcome-scale-item score-na"><b>N/A</b><span>No aplica o no cuento con elementos suficientes para evaluarlo.</span></div>
+      </div>
+
+      <div class="welcome-actions">
+        <button class="btn welcome-start-btn" onclick="App.comenzarEvaluacion()">→&nbsp;&nbsp;${enProgreso ? 'Continuar mi evaluación' : 'Comenzar mi evaluación'}</button>
+        <div class="welcome-important">◈ &nbsp;Tu evaluación es importante</div>
       </div>
     </section>`;
   }
