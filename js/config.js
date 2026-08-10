@@ -37,12 +37,32 @@
   'use strict';
 
   const APP_CONFIG = {
+<<<<<<< HEAD
     // "demo" (por defecto, sin backend) | "api" (consume webhooks de n8n)
     mode: 'demo',
 
     // Base de los webhooks de n8n. Sustituir por la URL real del entorno
     // cuando exista. No se usa en modo "demo".
     apiBaseUrl: 'https://URL-N8N/webhook/evaluacion',
+=======
+    // "demo" (sin backend) | "api" (consume webhooks de n8n).
+    // A partir de esta beta el login (POST /auth/request-code y
+    // /auth/verify-code) SÍ está conectado a un workflow real de n8n
+    // (ver apiBaseUrl) que valida contra la base de Airtable "EDD Inter-Con".
+    // El resto de la plataforma (evaluaciones, comparación, calibración,
+    // 9-box) sigue leyendo de localStorage en ambos modos — ver README,
+    // sección 12.1 y 12.8 ("riesgos y pendientes"). Cambiar a "demo" aquí
+    // regresa el login al flujo simulado con el código fijo 123456.
+    mode: 'api',
+
+    // Base real de los webhooks de n8n para esta instancia. Los endpoints de
+    // autenticación (request-code / verify-code) ya están implementados;
+    // el resto de los endpoints listados en api.js todavía no.
+    // IMPORTANTE (pruebas): el envío de correo con el código temporal está
+    // redirigido a jmejia@intercon.com.mx en el workflow de n8n — no llega
+    // al correo real del empleado mientras dure esta etapa de pruebas.
+    apiBaseUrl: 'https://jmejiaromero.app.n8n.cloud/webhook',
+>>>>>>> 246765198c6416704f286bd590aa60f969907aac
 
     // Clave usada en sessionStorage para guardar la sesión (token + usuario).
     // Ver auth.js. Se usa sessionStorage y no localStorage a propósito: el

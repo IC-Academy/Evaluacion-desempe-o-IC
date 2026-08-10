@@ -17,11 +17,21 @@
   const C = global.EDDCalc;
   const S = global.EDDStorage;
   const A = global.EDDAuth;
+<<<<<<< HEAD
+=======
+  // Capa de datos (ver repository.js): TODAS las acciones de guardar/enviar/
+  // liberar/cerrar de esta iteración pasan por aquí en vez de llamar a
+  // storage.js directo, para que dejen de depender de localStorage cuando
+  // APP_CONFIG.mode = 'api'. Las lecturas que alimentan el render() síncrono
+  // (wizard, comparación, 9-box, ficha ejecutiva) siguen leyendo de `S`
+  // directo en esta iteración — ver README para el porqué.
+  const Repo = global.EDDRepo;
+>>>>>>> 246765198c6416704f286bd590aa60f969907aac
 
   const state = {
     user: null,       // {empleado, nombre, perfil} — derivado de EDDAuth.getAppUser()
     periodo: null,
-    wizard: { seccionIdx: 0, evaluacionId: null, tipo: null, colaboradorId: null, liderId: null },
+    wizard: { seccionIdx: 0, evaluacionId: null, tipo: null, colaboradorId: null, liderId: null, mostrarPendientes: false, scrollToPendingId: null },
     adminFiltros: {},
     usuariosFiltros: {},
     jerarquiasFiltros: {},
@@ -203,6 +213,7 @@
         if (panel) panel.classList.toggle('open');
       });
     });
+    bindWizardValidation();
   }
 
   // =========================================================================
@@ -359,11 +370,105 @@
 
   function ensureWizard(col, periodoId) {
     const ev = S.getOrCreateEvaluacion(col.empleado, col.liderId, periodoId, 'autoevaluacion');
-    if (state.wizard.evaluacionId !== ev.id) { state.wizard = { seccionIdx: 0, evaluacionId: ev.id, tipo: 'autoevaluacion', colaboradorId: col.empleado, liderId: col.liderId }; }
+    if (state.wizard.evaluacionId !== ev.id) { state.wizard = { seccionIdx: 0, evaluacionId: ev.id, tipo: 'autoevaluacion', colaboradorId: col.empleado, liderId: col.liderId, mostrarPendientes: false, scrollToPendingId: null }; }
     return ev;
   }
 
   const SECCIONES_WIZARD = ['actitud', 'habilidades', 'conocimientos', 'objetivos', 'resumen'];
+  const SECCIONES_COMPETENCIAS = ['actitud', 'habilidades', 'conocimientos'];
+
+  // =========================================================================
+  // VALIDACIÓN VISUAL DE COMPETENCIAS PENDIENTES
+  // ---------------------------------------------------------------------------
+  // Sustituye los window.alert() de wizardNext/enviar para las secciones de
+  // competencias (actitud/habilidades/conocimientos). No toca la validación
+  // de "objetivos" (texto), que queda exactamente igual que antes, ni ningún
+  // cálculo/ponderación — esto es únicamente feedback visual.
+  //
+  // N/A cuenta como respuesta válida (igual que 1-5): una competencia solo
+  // se considera "pendiente" cuando no tiene ningún valor guardado todavía
+  // (undefined/null/''), nunca cuando el valor es 'N/A'.
+  // =========================================================================
+
+  /** validateSection(evaluacionId, seccion) -> { seccion, valid, pendingCount, pendingIds } */
+  function validateSection(evaluacionId, seccion) {
+    const competencias = D.COMPETENCIAS[seccion] || [];
+    const respuestas = S.getRespuestasPorSeccion(evaluacionId)[seccion] || [];
+    const mapVal = {}; respuestas.forEach((r) => { mapVal[r.competenciaId] = r.valor; });
+    const pendingIds = competencias
+      .filter((c) => { const v = mapVal[c.id]; return v === undefined || v === null || v === ''; })
+      .map((c) => c.id);
+    return { seccion, valid: pendingIds.length === 0, pendingCount: pendingIds.length, pendingIds };
+  }
+
+  /** validateEntireEvaluation(evaluacionId) -> { valid, pendingTotal, secciones: [validateSection...] } */
+  function validateEntireEvaluation(evaluacionId) {
+    const secciones = SECCIONES_COMPETENCIAS.map((s) => validateSection(evaluacionId, s));
+    const pendingTotal = secciones.reduce((sum, s) => sum + s.pendingCount, 0);
+    return { valid: pendingTotal === 0, pendingTotal, secciones };
+  }
+
+  function mensajePendientes(count) {
+    return count === 1
+      ? 'Te falta 1 competencia por calificar en esta sección.'
+      : `Te faltan ${count} competencias por calificar en esta sección.`;
+  }
+
+  /** Barra de resumen de pendientes de UNA sección (justo antes de las tarjetas). */
+  function showSectionValidationSummary(check) {
+    if (!check || check.valid) return '';
+    return `<div class="validation-summary" role="alert" aria-live="polite">
+      <span class="validation-summary__icon" aria-hidden="true">⚠</span>
+      <div>
+        <div class="validation-summary__count">${esc(mensajePendientes(check.pendingCount))}</div>
+        <div class="validation-summary__hint">Revisa los campos marcados antes de continuar.</div>
+      </div>
+    </div>`;
+  }
+
+  /** Barra de resumen de TODA la evaluación (pantalla de Resumen y envío). */
+  function showEvaluationValidationSummary(evaluacionId) {
+    const val = validateEntireEvaluation(evaluacionId);
+    if (val.valid) return '';
+    const detalle = val.secciones.map((s) => `${esc(labelSeccion(s.seccion))}: ${s.valid ? 'Completo' : s.pendingCount}`).join(' &middot; ');
+    const plural = val.pendingTotal === 1 ? '' : 's';
+    return `<div class="validation-summary validation-summary--full" role="alert" aria-live="polite">
+      <span class="validation-summary__icon" aria-hidden="true">⚠</span>
+      <div>
+        <div class="validation-summary__count">Tu evaluación aún tiene ${val.pendingTotal} campo${plural} pendiente${plural}.</div>
+        <div class="validation-summary__hint">${detalle}</div>
+        <button type="button" class="btn btn-outline btn-sm" style="margin-top:8px" onclick="App.irAlPrimerPendiente('${evaluacionId}')">Ir al primer pendiente</button>
+      </div>
+    </div>`;
+  }
+
+  /** Indicadores pequeños (●/✓) en las pestañas del wizard — ver brief secc. 8. */
+  function renderWizardSteps(evaluacionId, idx) {
+    return SECCIONES_WIZARD.map((s, i) => {
+      let indicador = '';
+      if (i !== idx && SECCIONES_COMPETENCIAS.indexOf(s) !== -1) {
+        const check = validateSection(evaluacionId, s);
+        indicador = check.valid
+          ? '<span class="section-tab-indicator is-complete" title="Sección completa" aria-label="Completa">✓</span>'
+          : '<span class="section-tab-indicator has-pending" title="Sección con competencias pendientes" aria-label="Pendiente">●</span>';
+      }
+      return `<div class="wizard-step ${i === idx ? 'active' : ''} ${i < idx ? 'done' : ''}">${i + 1}. ${labelSeccion(s)}${indicador}</div>`;
+    }).join('');
+  }
+
+  // Foco/scroll post-render hacia la primera competencia pendiente (secc. 6/7
+  // del brief). state.wizard.scrollToPendingId es de un solo uso: se limpia
+  // apenas se procesa, para no volver a hacer scroll en cada render() futuro.
+  function bindWizardValidation() {
+    const id = state.wizard && state.wizard.scrollToPendingId;
+    if (!id) return;
+    state.wizard.scrollToPendingId = null;
+    const el = document.getElementById('comp_' + state.wizard.evaluacionId + '_' + id);
+    if (!el) return;
+    if (typeof el.scrollIntoView === 'function') el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('validation-focus');
+    setTimeout(() => el.classList.remove('validation-focus'), 2500);
+  }
 
   function viewAutoevaluacion(col, periodoId, estado) {
     const ev = ensureWizard(col, periodoId);
@@ -372,7 +477,7 @@
     }
     const idx = state.wizard.seccionIdx;
     const seccion = SECCIONES_WIZARD[idx];
-    const stepsHtml = SECCIONES_WIZARD.map((s, i) => `<div class="wizard-step ${i === idx ? 'active' : ''} ${i < idx ? 'done' : ''}">${i + 1}. ${labelSeccion(s)}</div>`).join('');
+    const stepsHtml = renderWizardSteps(ev.id, idx);
 
     let contenido = '';
     if (seccion === 'objetivos') contenido = renderObjetivosForm(ev, false);
@@ -403,10 +508,13 @@
     const competencias = D.COMPETENCIAS[seccion];
     const respuestas = S.getRespuestasPorSeccion(ev.id)[seccion];
     const mapVal = {}; respuestas.forEach((r) => { mapVal[r.competenciaId] = r; });
+    const mostrarPendientes = !soloLectura && state.wizard && state.wizard.evaluacionId === ev.id && state.wizard.mostrarPendientes;
+    const check = mostrarPendientes ? validateSection(ev.id, seccion) : null;
     return `
     <p class="muted">${esc(meta.descripcion)} <span class="peso-tag">Peso de la sección: ${meta.peso}%</span></p>
     ${escalaHelpInline()}
-    ${competencias.map((c) => renderCompetenciaCard(ev.id, seccion, c, mapVal[c.id], soloLectura)).join('')}
+    ${check ? showSectionValidationSummary(check) : ''}
+    ${competencias.map((c) => renderCompetenciaCard(ev.id, seccion, c, mapVal[c.id], soloLectura, !!(check && check.pendingIds.indexOf(c.id) !== -1))).join('')}
     `;
   }
 
@@ -420,33 +528,35 @@
    * que sean mutuamente excluyentes; el relleno visual usa el truco CSS de
    * hermanos generales (~) sobre <label class="star">, ver styles.css.
    */
-  function ratingWidget(groupName, valorActual, onchangeJs, disabled, compact) {
+  function ratingWidget(groupName, valorActual, onchangeJs, disabled, compact, pendiente) {
     const safeGroup = String(groupName).replace(/[^a-zA-Z0-9_-]/g, '_');
+    const ariaInvalid = pendiente ? ' aria-invalid="true"' : '';
     const estrellas = [5, 4, 3, 2, 1].map((v) => {
       const id = safeGroup + '_s' + v;
       const checked = String(valorActual) === String(v);
       const descEntry = D.ESCALA.find((e) => String(e.valor) === String(v));
       const tip = descEntry ? (v + ' — ' + descEntry.descripcion) : String(v);
-      return `<input type="radio" name="${safeGroup}" id="${id}" value="${v}" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''} onchange="${onchangeJs}"/><label class="star" for="${id}" title="${esc(tip)}">★</label>`;
+      return `<input type="radio" name="${safeGroup}" id="${id}" value="${v}" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''}${ariaInvalid} onchange="${onchangeJs}"/><label class="star" for="${id}" title="${esc(tip)}">★</label>`;
     }).join('');
     const idNA = safeGroup + '_na';
     const checkedNA = String(valorActual) === 'N/A';
     const vacio = valorActual === '' || valorActual === null || valorActual === undefined;
     return `<div class="rating-widget${disabled ? ' rating-readonly' : ''}${compact ? ' rating-compact' : ''}">
       <div class="star-rating">${estrellas}</div>
-      <input type="radio" class="na-radio" name="${safeGroup}" id="${idNA}" value="N/A" ${checkedNA ? 'checked' : ''} ${disabled ? 'disabled' : ''} onchange="${onchangeJs}"/>
+      <input type="radio" class="na-radio" name="${safeGroup}" id="${idNA}" value="N/A" ${checkedNA ? 'checked' : ''} ${disabled ? 'disabled' : ''}${ariaInvalid} onchange="${onchangeJs}"/>
       <label class="na-pill" for="${idNA}" title="No aplica o sin elementos suficientes para evaluar">N/A</label>
-      ${vacio ? '<span class="rating-empty-hint">Sin calificar</span>' : ''}
+      ${vacio ? `<span class="rating-empty-hint${pendiente ? ' rating-empty-hint--error' : ''}">Sin calificar</span>` : ''}
     </div>`;
   }
 
-  function renderCompetenciaCard(evaluacionId, seccion, c, respuesta, soloLectura) {
+  function renderCompetenciaCard(evaluacionId, seccion, c, respuesta, soloLectura, pendiente) {
     const valor = respuesta ? respuesta.valor : '';
     const comentario = respuesta ? respuesta.comentario : '';
     const groupName = 'rate_' + evaluacionId + '_' + c.id;
     const onchangeJs = `App.rate('${evaluacionId}','${seccion}','${c.id}',this.value)`;
+    const cardId = 'comp_' + evaluacionId + '_' + c.id;
     return `
-    <div class="competency-card">
+    <div class="competency-card${pendiente ? ' has-error' : ''}" id="${cardId}">
       <div class="competency-header">
         <div>
           <strong>${esc(c.nombre)}</strong>
@@ -455,9 +565,10 @@
         </div>
         <div class="competency-rate">
           <label>Calificación</label>
-          ${ratingWidget(groupName, valor, onchangeJs, soloLectura, false)}
+          ${ratingWidget(groupName, valor, onchangeJs, soloLectura, false, pendiente)}
         </div>
       </div>
+      ${pendiente ? '<p class="field-error-message" role="alert">⚠ Debes seleccionar una calificación o N/A.</p>' : ''}
       ${!soloLectura ? `<textarea class="comentario-box" placeholder="Comentario (opcional)" onchange="App.comentar('${evaluacionId}','${seccion}','${c.id}',this.value)">${esc(comentario)}</textarea>` : (comentario ? `<div class="comentario-lectura">${esc(comentario)}</div>` : '')}
     </div>`;
   }
@@ -494,6 +605,7 @@
     const objetivos = S.getObjetivos(ev.id).filter((o) => o.descripcion && o.descripcion.trim());
     return `
     <p class="muted">Revisa tus respuestas antes de enviar. El resultado y la comparación con tu líder se mostrarán más adelante, en la fase de retroalimentación.</p>
+    ${showEvaluationValidationSummary(ev.id)}
     ${secciones.map((s) => {
       const resp = S.getRespuestasPorSeccion(ev.id)[s];
       const map = {}; resp.forEach((r) => map[r.competenciaId] = r.valor);
@@ -727,10 +839,10 @@
     const ev = S.getOrCreateEvaluacion(colaboradorId, lider.empleado, periodoId, 'lider');
     if (ev.estado === D.ESTADOS.COMPLETADA) return viewComparacion(lider, colaboradorId, periodoId);
 
-    if (state.wizard.evaluacionId !== ev.id) state.wizard = { seccionIdx: 0, evaluacionId: ev.id, tipo: 'lider', colaboradorId, liderId: lider.empleado };
+    if (state.wizard.evaluacionId !== ev.id) state.wizard = { seccionIdx: 0, evaluacionId: ev.id, tipo: 'lider', colaboradorId, liderId: lider.empleado, mostrarPendientes: false, scrollToPendingId: null };
     const idx = state.wizard.seccionIdx;
     const seccion = SECCIONES_WIZARD[idx];
-    const stepsHtml = SECCIONES_WIZARD.map((s, i) => `<div class="wizard-step ${i === idx ? 'active' : ''} ${i < idx ? 'done' : ''}">${i + 1}. ${labelSeccion(s === 'resumen' ? 'resumen' : s)}</div>`).join('');
+    const stepsHtml = renderWizardSteps(ev.id, idx);
 
     let contenido = '';
     if (seccion === 'objetivos') contenido = renderObjetivosLider(ev, autoEval);
@@ -788,6 +900,7 @@
 
   function renderResumenLider(ev, col) {
     return `
+    ${showEvaluationValidationSummary(ev.id)}
     <p class="muted">Registra retroalimentación cualitativa. Estos campos se mostrarán al colaborador cuando RH habilite la fase de retroalimentación.</p>
     <div class="form-group"><label>Fortalezas del colaborador</label><textarea onchange="App.setFortalezas('${ev.id}',this.value)">${esc(ev.fortalezas)}</textarea></div>
     <div class="form-group"><label>Comentarios generales</label><textarea onchange="App.setComentarios('${ev.id}',this.value)">${esc(ev.comentarios)}</textarea></div>
@@ -1284,6 +1397,14 @@
     if (tipo === 'invalid_code') return 'Código inválido. Verifica los 6 dígitos e intenta de nuevo.';
     if (tipo === 'validation') return err.message || 'Verifica los datos capturados.';
     if (tipo === 'unauthorized') return 'Tu sesión expiró. Inicia sesión nuevamente.';
+<<<<<<< HEAD
+=======
+    // 'http' (modo API): el backend real (n8n) respondió con un error HTTP
+    // — ej. 400/401 en /auth/verify-code cuando el código es inválido o
+    // venció. n8n ya manda un mensaje seguro para el usuario en el cuerpo
+    // (ver api.js), así que se muestra tal cual en vez del genérico.
+    if (tipo === 'http' && err.message) return err.message;
+>>>>>>> 246765198c6416704f286bd590aa60f969907aac
     return 'Ocurrió un error inesperado. Intenta de nuevo.';
   }
 
@@ -1415,22 +1536,27 @@
       else if (state.wizard.tipo === 'lider') { if (!requireLeaderEvaluation(state.wizard.evaluacionId, state.wizard.colaboradorId)) return; }
       else { if (!requireRole([state.user && state.user.perfil])) return; }
       if (seccionActual !== 'resumen') {
-        const ev = { id: state.wizard.evaluacionId };
         const seccion = seccionActual;
         if (seccion !== 'objetivos') {
-          const resp = S.getRespuestasPorSeccion(ev.id)[seccion];
-          const totalReq = D.COMPETENCIAS[seccion].length;
-          if (resp.length < totalReq) { alert('Debes calificar todas las competencias de esta sección antes de continuar.'); return; }
+          const check = validateSection(state.wizard.evaluacionId, seccion);
+          if (!check.valid) {
+            state.wizard.mostrarPendientes = true;
+            state.wizard.scrollToPendingId = check.pendingIds[0];
+            render();
+            return;
+          }
         } else {
-          const objetivos = S.getObjetivos(ev.id).filter((o) => o.descripcion && o.descripcion.trim());
+          const objetivos = S.getObjetivos(state.wizard.evaluacionId).filter((o) => o.descripcion && o.descripcion.trim());
           if (!objetivos.length) { alert('Registra al menos un objetivo con descripción antes de continuar.'); return; }
-          const sinDescripcion = S.getObjetivos(ev.id).some((o) => o.calificacion && (!o.descripcion || !o.descripcion.trim()));
+          const sinDescripcion = S.getObjetivos(state.wizard.evaluacionId).some((o) => o.calificacion && (!o.descripcion || !o.descripcion.trim()));
           if (sinDescripcion) { alert('No puedes calificar un objetivo sin descripción.'); return; }
         }
       }
+      state.wizard.mostrarPendientes = false;
       state.wizard.seccionIdx = Math.min(state.wizard.seccionIdx + 1, SECCIONES_WIZARD.length - 1);
       render();
     },
+<<<<<<< HEAD
     wizardPrev() {
       if (state.wizard.tipo === 'autoevaluacion' && !requireOwnEvaluation(state.wizard.evaluacionId, 'autoevaluacion')) return;
       if (state.wizard.tipo === 'lider' && !requireLeaderEvaluation(state.wizard.evaluacionId, state.wizard.colaboradorId)) return;
@@ -1466,22 +1592,75 @@
     },
     editarObjetivo(evaluacionId, index, campo, valor) {
       if (!requireOwnEvaluation(evaluacionId, 'autoevaluacion')) return;
+=======
+    wizardPrev() { state.wizard.mostrarPendientes = false; state.wizard.seccionIdx = Math.max(state.wizard.seccionIdx - 1, 0); render(); },
+    // Desde la barra de "Resumen y envío": salta a la primera sección con
+    // competencias pendientes, la marca y hace scroll — ver brief secc. 9.
+    irAlPrimerPendiente(evaluacionId) {
+      const val = validateEntireEvaluation(evaluacionId);
+      const primera = val.secciones.find((s) => !s.valid);
+      if (!primera) return;
+      state.wizard.seccionIdx = SECCIONES_WIZARD.indexOf(primera.seccion);
+      state.wizard.mostrarPendientes = true;
+      state.wizard.scrollToPendingId = primera.pendingIds[0];
+      render();
+    },
+    // Guarda una respuesta/objetivo/fortalezas/comentarios vía repository.js
+    // (Repo.guardarAutoevaluacion en demo llama a las mismas funciones de
+    // storage.js de siempre — mismo comportamiento, un nivel de indirección
+    // extra; en modo API hace POST a /autoevaluacion/:id/guardar o
+    // /lider/evaluaciones/:id/guardar según corresponda).
+    async guardarPatchEvaluacion(evaluacionId, patch) {
+      if (state.wizard.tipo === 'lider') await Repo.guardarEvaluacionLider(evaluacionId, patch);
+      else await Repo.guardarAutoevaluacion(evaluacionId, patch);
+    },
+    async rate(evaluacionId, seccion, competenciaId, valor) {
+      const existentes = S.getRespuestas(evaluacionId);
+      const actual = existentes.find((r) => r.competenciaId === competenciaId);
+      await Actions.guardarPatchEvaluacion(evaluacionId, { respuestas: [{ seccion, idCompetencia: competenciaId, valor, comentario: actual ? actual.comentario : '' }] });
+      // Si la barra de pendientes está activa, se refresca de inmediato para
+      // que el contador baje y la tarjeta deje de marcarse en rojo sin tener
+      // que volver a presionar "Siguiente" (brief secc. 4).
+      if (state.wizard.evaluacionId === evaluacionId && state.wizard.mostrarPendientes) render();
+    },
+    async comentar(evaluacionId, seccion, competenciaId, comentario) {
+      const existentes = S.getRespuestas(evaluacionId);
+      const actual = existentes.find((r) => r.competenciaId === competenciaId);
+      await Actions.guardarPatchEvaluacion(evaluacionId, { respuestas: [{ seccion, idCompetencia: competenciaId, valor: actual ? actual.valor : '', comentario }] });
+    },
+    async agregarObjetivo(evaluacionId) {
+      const objetivos = S.getObjetivos(evaluacionId);
+      if (objetivos.length >= 5) return;
+      await Actions.guardarPatchEvaluacion(evaluacionId, { objetivos: [{ orden: objetivos.length, descripcion: '', resultadoObtenido: '', calificacion: '' }] });
+      render();
+    },
+    async editarObjetivo(evaluacionId, index, campo, valor) {
+>>>>>>> 246765198c6416704f286bd590aa60f969907aac
       const objetivos = S.getObjetivos(evaluacionId);
       const o = objetivos.find((x) => x.index === index) || { descripcion: '', resultado: '', calificacion: '' };
       o[campo] = valor;
-      S.saveObjetivo(evaluacionId, index, o.descripcion, o.resultado, o.calificacion);
+      await Actions.guardarPatchEvaluacion(evaluacionId, { objetivos: [{ orden: index, descripcion: o.descripcion, resultadoObtenido: o.resultado, calificacion: o.calificacion }] });
     },
+<<<<<<< HEAD
     quitarObjetivo(evaluacionId, index) { if (!requireOwnEvaluation(evaluacionId, 'autoevaluacion')) return; S.removeObjetivo(evaluacionId, index); render(); },
     enviarAutoevaluacion() {
       const evaluacionId = state.wizard.evaluacionId;
       if (!requireOwnEvaluation(evaluacionId, 'autoevaluacion')) return;
+=======
+    quitarObjetivo(evaluacionId, index) { S.removeObjetivo(evaluacionId, index); render(); },
+    async enviarAutoevaluacion() {
+      const evaluacionId = state.wizard.evaluacionId;
+      const valCompetencias = validateEntireEvaluation(evaluacionId);
+      if (!valCompetencias.valid) { state.wizard.mostrarPendientes = true; render(); return; }
+>>>>>>> 246765198c6416704f286bd590aa60f969907aac
       if (!$('#confirmEnvioAuto').checked) { alert('Confirma que la información es correcta antes de enviar.'); return; }
       const objetivos = S.getObjetivos(evaluacionId).filter((o) => o.descripcion && o.descripcion.trim());
       if (!objetivos.length) { alert('Registra al menos un objetivo antes de enviar.'); return; }
-      S.completarEvaluacion(evaluacionId, state.user.nombre);
+      await Repo.enviarAutoevaluacion(evaluacionId);
       alert('Tu autoevaluación fue enviada correctamente. El proceso continúa con la evaluación de tu líder.');
       navigate('#/colaborador/inicio');
     },
+<<<<<<< HEAD
     editarObjetivoLider(evaluacionId, index, descripcion, resultado, calificacion) {
       const ev = getEvaluacionById(evaluacionId);
       if (!ev || !requireLeaderEvaluation(evaluacionId, ev.colaboradorId)) return;
@@ -1497,11 +1676,20 @@
     },
     agregarAreaOportunidad(colaboradorId) {
       if (!requireLeaderCollaborator(colaboradorId)) return;
+=======
+    async editarObjetivoLider(evaluacionId, index, descripcion, resultado, calificacion) {
+      await Actions.guardarPatchEvaluacion(evaluacionId, { objetivos: [{ orden: index, descripcion, resultadoObtenido: resultado, calificacion }] });
+    },
+    async setFortalezas(evaluacionId, valor) { await Actions.guardarPatchEvaluacion(evaluacionId, { fortalezas: valor }); },
+    async setComentarios(evaluacionId, valor) { await Actions.guardarPatchEvaluacion(evaluacionId, { comentarios: valor }); },
+    async agregarAreaOportunidad(colaboradorId) {
+>>>>>>> 246765198c6416704f286bd590aa60f969907aac
       const area = prompt('Área de oportunidad:'); if (!area) return;
       const plan = prompt('Plan de mejora:'); if (!plan) return;
-      S.addAreaOportunidad(colaboradorId, state.periodo.id, area, plan, state.user.nombre);
+      await Repo.guardarRetroalimentacion(colaboradorId, { periodo: state.periodo.id, agregarAreaOportunidad: { area, planMejora: plan } });
       render();
     },
+<<<<<<< HEAD
     quitarAreaOportunidad(id) {
       if (!requireRole('lider')) return;
       const item = S.load().areas_oportunidad.find((x) => x.id === id);
@@ -1510,12 +1698,20 @@
     },
     agregarPlanDesarrollo(colaboradorId, liderId) {
       if (!requireLeaderCollaborator(colaboradorId) || String(liderId) !== String(state.user.empleado)) return;
+=======
+    async quitarAreaOportunidad(id, colaboradorId) {
+      await Repo.guardarRetroalimentacion(colaboradorId, { periodo: state.periodo.id, quitarAreaOportunidadId: id });
+      render();
+    },
+    async agregarPlanDesarrollo(colaboradorId, liderId) {
+>>>>>>> 246765198c6416704f286bd590aa60f969907aac
       const competencia = prompt('Competencia a desarrollar:'); if (!competencia) return;
       const accion = prompt('Acción:'); if (!accion) return;
       const fecha = prompt('Fecha compromiso (AAAA-MM-DD):', '2026-09-01') || '2026-09-01';
-      S.addPlanDesarrollo(colaboradorId, state.periodo.id, { competencia, accion, responsable: liderId, fechaCompromiso: fecha }, state.user.nombre);
+      await Repo.guardarRetroalimentacion(colaboradorId, { periodo: state.periodo.id, agregarPlanDesarrollo: { competencia, accion, responsable: liderId, fechaCompromiso: fecha } });
       render();
     },
+<<<<<<< HEAD
     quitarPlanDesarrollo(id) {
       if (!requireRole('lider')) return;
       const item = S.load().planes_desarrollo.find((x) => x.id === id);
@@ -1531,29 +1727,55 @@
     },
     cargarEvidencia(colaboradorId, periodoId) {
       if (!requireOwnCollaboratorResource(colaboradorId)) return;
+=======
+    async quitarPlanDesarrollo(id, colaboradorId) {
+      await Repo.guardarRetroalimentacion(colaboradorId, { periodo: state.periodo.id, quitarPlanDesarrolloId: id });
+      render();
+    },
+    async enviarEvaluacionLider(colaboradorId) {
+      const evaluacionId = state.wizard.evaluacionId;
+      const valCompetencias = validateEntireEvaluation(evaluacionId);
+      if (!valCompetencias.valid) { state.wizard.mostrarPendientes = true; render(); return; }
+      if (!$('#confirmEnvioLider').checked) { alert('Confirma que la evaluación está completa antes de enviar.'); return; }
+      await Repo.enviarEvaluacionLider(evaluacionId);
+      navigate('#/lider/comparacion/' + colaboradorId);
+    },
+    async cargarEvidencia(colaboradorId, periodoId) {
+>>>>>>> 246765198c6416704f286bd590aa60f969907aac
       const nombre = prompt('Nombre del archivo a cargar (simulado), ej. retroalimentacion_firmada.pdf:');
       if (!nombre) return;
       const tipo = prompt('Tipo (PDF firmado / Imagen / Documento de retroalimentación):', 'PDF firmado') || 'Documento';
-      S.addEvidencia(colaboradorId, periodoId, nombre, tipo, state.user.nombre, '');
+      await Repo.guardarRetroalimentacion(colaboradorId, { periodo: periodoId, agregarEvidencia: { nombreArchivo: nombre, tipo, comentario: '' } });
       render();
     },
+<<<<<<< HEAD
     aceptar(colaboradorId, periodoId) {
       if (!requireOwnCollaboratorResource(colaboradorId)) return;
+=======
+    async aceptar(colaboradorId, periodoId) {
+>>>>>>> 246765198c6416704f286bd590aa60f969907aac
       const evidencias = S.getEvidencias(colaboradorId, periodoId);
       if (!evidencias.length) { alert('Carga al menos una evidencia antes de aceptar el resultado.'); return; }
-      S.aceptarResultado(colaboradorId, periodoId, state.user.nombre);
+      await Repo.cerrarRetroalimentacion(colaboradorId, periodoId);
       render();
     },
+<<<<<<< HEAD
     setFiltroAdmin(campo, valor) { if (!requireRole('administrador')) return; state.adminFiltros[campo] = valor || undefined; render(); },
     limpiarFiltrosAdmin() { if (!requireRole('administrador')) return; state.adminFiltros = {}; render(); },
     guardarCalibracion(colaboradorId, periodoId, totalLider) {
       if (!requireRole('administrador')) return;
+=======
+    setFiltroAdmin(campo, valor) { state.adminFiltros[campo] = valor || undefined; render(); },
+    limpiarFiltrosAdmin() { state.adminFiltros = {}; render(); },
+    async guardarCalibracion(colaboradorId, periodoId, totalLider) {
+>>>>>>> 246765198c6416704f286bd590aa60f969907aac
       const ajuste = parseFloat($('#calAjuste').value) || 0;
       const justificacion = $('#calJustificacion').value.trim();
       if (ajuste !== 0 && !justificacion) { alert('La justificación es obligatoria cuando existe un ajuste distinto de 0.'); return; }
       const resultadoCalibrado = C.round1(Math.max(0, Math.min(100, totalLider + ajuste)));
       const resAuto = S.getUltimoResultadoPorOrigen(colaboradorId, periodoId, 'autoevaluacion');
-      S.crearOActualizarCalibracion(colaboradorId, periodoId, {
+      await Repo.guardarCalibracion(colaboradorId, {
+        periodo: periodoId,
         resultadoAuto: resAuto.puntajes.total, resultadoLider: totalLider,
         diferenciaGeneral: C.round1(resAuto.puntajes.total - totalLider),
         ajuste, justificacion, resultadoCalibrado,
@@ -1562,19 +1784,23 @@
         observacionesRH: $('#calObs').value,
         responsable: state.user.nombre,
         _motivo: justificacion || 'Calibración de RH'
-      }, state.user.nombre);
+      });
       alert('Calibración guardada.');
       render();
     },
+<<<<<<< HEAD
     habilitarRetro(colaboradorId, periodoId) {
       if (!requireRole('administrador')) return;
+=======
+    async habilitarRetro(colaboradorId, periodoId) {
+>>>>>>> 246765198c6416704f286bd590aa60f969907aac
       const cal = S.getCalibracion(colaboradorId, periodoId);
       if (!cal || cal.resultadoCalibrado === undefined) { alert('Guarda la calibración antes de habilitar la retroalimentación.'); return; }
       if (cal.resultadoCalibrado < 80) {
         const planes = S.getPlanesDesarrollo(colaboradorId, periodoId);
         if (!planes.length) { alert('El resultado es menor a 80. Registra al menos un plan de desarrollo antes de habilitar la retroalimentación.'); return; }
       }
-      S.habilitarRetroalimentacion(colaboradorId, periodoId, state.user.nombre);
+      await Repo.liberarCalibracion(colaboradorId, periodoId);
       alert('Retroalimentación habilitada para el colaborador.');
       render();
     },
@@ -1609,10 +1835,17 @@
       location.hash = '#/login';
       render();
     },
+<<<<<<< HEAD
     setFiltroUsuarios(campo, valor) { if (!requireRole('administrador')) return; state.usuariosFiltros[campo] = valor || undefined; render(); },
     limpiarFiltrosUsuarios() { if (!requireRole('administrador')) return; state.usuariosFiltros = {}; render(); },
     setFiltroJerarquias(campo, valor) { if (!requireRole('administrador')) return; state.jerarquiasFiltros[campo] = valor || undefined; render(); },
     limpiarFiltrosJerarquias() { if (!requireRole('administrador')) return; state.jerarquiasFiltros = {}; render(); }
+=======
+    setFiltroUsuarios(campo, valor) { state.usuariosFiltros[campo] = valor || undefined; render(); },
+    limpiarFiltrosUsuarios() { state.usuariosFiltros = {}; render(); },
+    setFiltroJerarquias(campo, valor) { state.jerarquiasFiltros[campo] = valor || undefined; render(); },
+    limpiarFiltrosJerarquias() { state.jerarquiasFiltros = {}; render(); }
+>>>>>>> 246765198c6416704f286bd590aa60f969907aac
   };
 
   global.App = Actions;

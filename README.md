@@ -108,6 +108,13 @@ evaluacion-desempeno/
 │   ├── auth.js             (NUEVO en beta 3) Sesión y login por código
 │   │                       temporal (`EDDAuth`): solicitar/validar código,
 │   │                       token en sessionStorage, expiración, logout.
+<<<<<<< HEAD
+=======
+│   ├── repository.js       (NUEVO en beta 4) Capa única de acceso a datos
+│   │                       (`EDDRepo`): resuelve demo (storage.js) vs. api
+│   │                       (api.js) para que app.js no tenga que saberlo.
+│   │                       Ver sección 13.
+>>>>>>> 246765198c6416704f286bd590aa60f969907aac
 │   └── app.js             Router por hash, vistas de los 3 portales, validaciones,
 │                           widget de calificación en estrellas + N/A, y (beta 3)
 │                           las dos pantallas de login y las vistas
@@ -392,9 +399,26 @@ auditoría) tal como viene en `data.js`.
 
 ## 12. Beta 3 — preparación para Airtable + n8n
 
+<<<<<<< HEAD
 Esta beta **no conecta un backend real**. Prepara el frontend (modo, login, cliente
 API, sesión, endpoints, estructura de usuarios/jerarquías, pantallas de consulta)
 para que conectarlo después sea un cambio acotado, sin tocar la interfaz aprobada.
+=======
+> **Actualización:** el login (`POST /auth/request-code` y `POST /auth/verify-code`)
+> **ya está conectado a un backend real**: un workflow de n8n
+> ("EDD - Auth (request-code + verify-code)") que valida contra la base de
+> Airtable **"EDD Inter-Con — Evaluación del Desempeño Administrativo"**. El
+> resto de la plataforma (evaluaciones, comparación, calibración, 9-box, radar)
+> sigue leyendo de `EDDStorage`/localStorage — ver 12.8 para el detalle de qué
+> falta conectar. Durante esta etapa de pruebas, el correo con el código
+> temporal se redirige a **jmejia@intercon.com.mx** en vez de al correo real
+> del empleado (el destinatario real queda visible en el asunto y el cuerpo
+> del mensaje, para trazabilidad).
+
+Esta beta preparó el frontend (modo, login, cliente API, sesión, endpoints,
+estructura de usuarios/jerarquías, pantallas de consulta) para conectarlo sin
+tocar la interfaz aprobada — y el login ya se conectó.
+>>>>>>> 246765198c6416704f286bd590aa60f969907aac
 
 ### 12.1 Modo demo vs. modo API
 
@@ -403,8 +427,13 @@ que declara la URL de la API o la clave de sesión:
 
 ```js
 const APP_CONFIG = {
+<<<<<<< HEAD
   mode: 'demo',                                    // 'demo' | 'api'
   apiBaseUrl: 'https://URL-N8N/webhook/evaluacion', // no se usa en modo demo
+=======
+  mode: 'api',                                              // 'demo' | 'api' — API por defecto (login real)
+  apiBaseUrl: 'https://jmejiaromero.app.n8n.cloud/webhook',  // base real de n8n
+>>>>>>> 246765198c6416704f286bd590aa60f969907aac
   sessionStorageKey: 'edd_session',
   requestTimeout: 15000,
   demoCode: '123456',                               // solo modo demo
@@ -413,6 +442,7 @@ const APP_CONFIG = {
 };
 ```
 
+<<<<<<< HEAD
 - **Modo demo** (por defecto): sin backend, usa `EDDStorage`/localStorage tal cual
   venía funcionando desde beta 1/2. Conserva accesos rápidos, datos simulados,
   flujos por rol y el botón de reinicio.
@@ -425,6 +455,21 @@ const APP_CONFIG = {
   existan de verdad (ver 12.8, "riesgos y pendientes"). Cambiar a `mode: 'api'` sin
   una URL real hace que las llamadas fallen con un error de conexión controlado
   (nunca una excepción sin capturar ni una traza expuesta al usuario).
+=======
+- **Modo demo**: sin backend, usa `EDDStorage`/localStorage tal cual venía
+  funcionando desde beta 1/2. Conserva accesos rápidos, datos simulados, flujos
+  por rol y el botón de reinicio. Útil para demos rápidas sin depender de
+  Airtable/n8n.
+- **Modo API** (valor por defecto desde esta actualización): el login (`auth.js`)
+  llama a los endpoints reales de n8n descritos en 12.5. El resto de la
+  aplicación (evaluaciones, comparación, calibración, 9-box, radar) **sigue
+  leyendo de `EDDStorage`/localStorage** — el cliente `api.js` y los demás 18
+  endpoints quedan centralizados y listos para consumirse, pero conectar cada
+  pantalla de datos al backend real es trabajo pendiente (ver 12.8). Los
+  accesos rápidos de demo (10001/20001/90001) se deshabilitan en modo API,
+  porque requieren el código fijo de demostración, que el backend real nunca
+  acepta.
+>>>>>>> 246765198c6416704f286bd590aa60f969907aac
 
 Para probarlo: edita `APP_CONFIG.mode = 'api'` en `js/config.js` (o en la consola del
 navegador) y recarga. El login mostrará el mensaje de modo API y los accesos rápidos
@@ -545,6 +590,7 @@ verificados de beta 2 (10001–10010 quedan intactos).
 
 ### 12.8 Riesgos y pendientes para conectar n8n/Airtable
 
+<<<<<<< HEAD
 - El `apiBaseUrl` de ejemplo (`js/config.js`) es un placeholder; hay que
   sustituirlo por la URL real del entorno de n8n antes de usar el modo `api`.
 - Los 20 endpoints de 12.5 están **definidos** en `api.js` pero no **implementados**
@@ -561,6 +607,25 @@ verificados de beta 2 (10001–10010 quedan intactos).
 - Las pantallas de datos (evaluaciones, comparación, calibración, 9-box) siguen
   leyendo de `localStorage` incluso en modo `api` en esta beta; conectarlas al
   backend real es trabajo de una beta posterior (ver 12.1).
+=======
+- **Ya resuelto:** `/auth/request-code` y `/auth/verify-code` están implementados
+  y activos en n8n ("EDD - Auth (request-code + verify-code)"), validan contra la
+  base real de Airtable, generan y validan el código con hash (nunca en texto
+  plano en Airtable), generan sesión con token hasheado, y registran el login en
+  `Bitacora`. `apiBaseUrl` en `js/config.js` ya apunta a la URL real.
+- **Pendiente — envío de correo real:** mientras dure la etapa de pruebas, el
+  nodo de correo del workflow redirige todo a jmejia@intercon.com.mx en vez de
+  al correo real del empleado. Antes de producción hay que revertir ese nodo
+  (`toRecipients`) al correo real (`{{ $("Buscar empleado").item.json.fields["Correo corporativo"] }}`).
+- Los otros 18 endpoints de 12.5 (evaluaciones, líder, admin, retroalimentación)
+  siguen **definidos** en `api.js` pero no **implementados** en n8n.
+- La autorización por rol implementada en el frontend (qué ve cada perfil) es
+  **solo de interfaz**; debe revalidarse siempre del lado de n8n antes de producción,
+  ocultar un botón no equivale a autorizar la acción.
+- Las pantallas de datos (evaluaciones, comparación, calibración, 9-box) siguen
+  leyendo de `localStorage` incluso en modo `api`; conectarlas al backend real
+  es el siguiente trabajo pendiente (ver 12.1).
+>>>>>>> 246765198c6416704f286bd590aa60f969907aac
 - Falta decidir, junto con RH, el mapeo definitivo de `rolPlataforma` /
   `puedeAutoevaluarse` / `puedeEvaluar` / `requiereEvaluacion` del Excel maestro
   hacia las reglas de acceso de la plataforma (hoy se infiere del mismo campo
@@ -583,7 +648,355 @@ verificados de beta 2 (10001–10010 quedan intactos).
   | `CodigosAcceso` | código temporal + `requestId` (12.2) — de un solo uso, con vigencia corta |
   | `Bitacora` | `auditoria` |
 
+<<<<<<< HEAD
 ## 13. Propuesta de migración a producción
+=======
+## 13. Beta 4 — capa de persistencia real (`repository.js`)
+
+> **Qué NO cambió en esta beta** (confirmación explícita, ver brief "PREPARAR
+> PERSISTENCIA REAL DE EVALUACIONES"): el login no se tocó — `auth.js` sigue
+> exactamente igual, los dos workflows de n8n de autenticación siguen activos
+> tal cual — este archivo solo **reutiliza** la sesión ya autenticada
+> (`EDDAuth.getSession/getAppUser`) para saber quién es el usuario en turno.
+> Tampoco cambió la apariencia, la navegación, los roles, el radar de
+> competencias, la Nine Box, la ficha ejecutiva de retroalimentación, las
+> ponderaciones visibles ni el flujo aprobado — verificado con la batería de
+> pruebas automatizadas (13.6): 80 aserciones, incluyendo login completo,
+> radar/9-box y blindaje líder-colaborador, todas en verde después de este
+> cambio.
+
+### 13.1 El problema que resuelve
+
+Antes de esta beta, `app.js` llamaba a `storage.js` (`EDDStorage`) directo en
+más de 40 puntos distintos del código para leer y escribir evaluaciones,
+calibraciones y retroalimentación. Eso significa que conectar n8n de verdad
+habría implicado tocar esos mismos 40+ puntos, con el riesgo de romper el
+flujo aprobado en el proceso. `repository.js` resuelve esto: es la única
+puerta de entrada a los datos de evaluación, con **una sola función que se
+comporta distinto según `APP_CONFIG.mode`**, para que `app.js` nunca tenga
+que preguntar `if (mode === 'api')`.
+
+### 13.2 Qué sí se conectó en esta beta (y qué no)
+
+Dado el tamaño del cambio pedido y la prioridad explícita de "no romper nada
+ni rediseñar", esta beta conecta `repository.js` en dos capas de riesgo muy
+distinto:
+
+- **Todas las acciones de escritura** (guardar respuesta, comentario,
+  objetivo, fortalezas/comentarios, enviar autoevaluación, enviar evaluación
+  del líder, guardar calibración, liberar retroalimentación, agregar/quitar
+  área de oportunidad, plan de desarrollo, evidencia, cerrar retroalimentación)
+  **ya pasan por `EDDRepo`** en ambos modos. En modo demo, `EDDRepo` llama
+  exactamente a las mismas funciones de `storage.js` que se llamaban antes
+  (mismo comportamiento, una capa de indirección extra); en modo API, hace
+  el `POST`/`PUT` correspondiente a n8n. Estos `onclick`/`onchange` del HTML
+  no cambiaron: lo único que cambió es qué hay detrás del botón.
+- **Las lecturas de alto nivel** que alimentan los dashboards
+  (`getPeriodoActivo`, `getConfiguracion`, `getMisEvaluaciones`,
+  `getEquipoLider`) están **implementadas y probadas de forma independiente**
+  (ver 13.6), armando exactamente la forma canónica que pide el brief. Sin
+  embargo, las vistas más profundas y ya aprobadas — el wizard de captura
+  (actitud/habilidades/conocimientos/objetivos), la comparación auto-vs-líder,
+  la Nine Box y la ficha ejecutiva — **siguen leyendo directo de
+  `EDDStorage`**, igual que antes de esta beta, sin ningún cambio.
+
+  **Por qué se decidió así:** todo el `render()` de la aplicación es
+  síncrono (arma un string de HTML y lo inserta). Una lectura en modo API
+  siempre es asíncrona (`fetch`). Cambiar esas vistas profundas para leer de
+  `EDDRepo` habría requerido convertir el router/`render()` a un modelo
+  asíncrono (cargar datos, *luego* renderizar) — un cambio de arquitectura
+  bastante más grande que "preparar la capa de datos", con riesgo real de
+  alterar el flujo aprobado. El login ya resolvió este mismo problema para sí
+  mismo con un patrón de acciones asíncronas dedicadas (`solicitarCodigo`,
+  `validarCodigo`); extender ese patrón a *todo* el `render()` de la app es
+  el siguiente paso natural, y queda documentado aquí como pendiente
+  concreto (ver 13.7), no como algo que se intentó a medias.
+
+### 13.3 Cómo funciona `repository.js`
+
+```js
+// EDDRepo.<función>(...) — una sola función, resuelve el modo internamente
+function elegir(nombre) { return enModoApi() ? apiImpl[nombre] : demoImpl[nombre]; }
+```
+
+Cada una de las 17 funciones pedidas en el brief tiene una implementación
+`demoImpl.<función>` (llama a `storage.js` y arma la forma canónica) y una
+`apiImpl.<función>` (llama a `api.js`, que ya centraliza `fetch`). `app.js`
+solo ve `EDDRepo.<función>(...)` y nunca sabe cuál de las dos corrió.
+
+`repository.js` **nunca recalcula una fórmula**: en modo demo arma los
+objetos "forma API" leyendo los resultados que `storage.js` ya calculó con
+`calculations.js` (`S.getUltimoResultadoPorOrigen`, `S.getCalibracion`) —
+exactamente el mismo principio de "`calculations.js` es la única fuente de
+verdad" que ya regía desde la beta 2, ahora extendido a esta capa nueva.
+
+Funciones expuestas por `EDDRepo` (las 17 del brief, sección 3):
+
+```
+getPeriodoActivo()                         getConfiguracion()
+getMisEvaluaciones()                       getEvaluacion(idEvaluacion)
+guardarAutoevaluacion(idEvaluacion, data)  enviarAutoevaluacion(idEvaluacion)
+getEquipoLider()                           getEvaluacionesEquipo()
+guardarEvaluacionLider(idEvaluacion, data) enviarEvaluacionLider(idEvaluacion)
+getCalibraciones()                         getCalibracion(numeroEmpleado)
+guardarCalibracion(numeroEmpleado, data)   liberarCalibracion(numeroEmpleado)
+getRetroalimentacion(numeroEmpleado)       guardarRetroalimentacion(numeroEmpleado, data)
+cerrarRetroalimentacion(numeroEmpleado)
+```
+
+**Nota sobre las llaves:** en modo demo, `getCalibracion`/`liberarCalibracion`/
+`getRetroalimentacion`/`cerrarRetroalimentacion` usan `numeroEmpleado` como
+identificador (más el periodo activo implícito), porque así es como
+`storage.js` ya modela la calibración desde la beta 1 (una calibración por
+colaborador y periodo, sin un ID independiente que el resto de la app use
+para navegar). `getEvaluacion`/`guardarAutoevaluacion`/`guardarEvaluacionLider`
+sí usan `idEvaluacion` (el ID propio de la evaluación), que es como ya
+navegaba el wizard.
+
+### 13.4 Vocabulario de estados: interno vs. canónico
+
+El motor de estados real de `storage.js` (`ev.estado`) no cambió — sigue
+usando exactamente los mismos 3 valores por evaluación individual (`No
+iniciada` / `En progreso` / `Completada`) y las mismas 8 etapas de proceso
+(`estadoProceso()`) que ya existían. `repository.js` **traduce** esos valores
+al vocabulario de 11 estados que pide el brief (sección 7) solo para los
+objetos que arma, sin tocar el motor real:
+
+| Interno (`storage.js`, sin cambios) | Canónico (brief secc. 7, solo en objetos de `EDDRepo`) |
+|---|---|
+| `No iniciada` | `No iniciada` |
+| `En progreso` (tipo autoevaluación) | `En autoevaluación` |
+| `En progreso` (tipo líder) | `En evaluación del líder` |
+| `Completada` (tipo autoevaluación) | `Autoevaluación enviada` |
+| `Completada` (tipo líder) | `Evaluación del líder enviada` |
+| `Pendiente de calibración` | `En calibración` |
+| `Calibrada` | `Calibrada` |
+| `Retroalimentación pendiente` | `Retroalimentación habilitada` / `Retroalimentación realizada` (según `aceptacionColaborador`) |
+| `Cerrada` | `Cerrada` |
+
+`Vencida` no tiene un equivalente 1:1 en el motor interno — se calcula aparte
+comparando la fecha límite del periodo contra la fecha de referencia
+(`esVencido`, ya existía en `app.js`; se duplicó como utilidad de una línea
+en `repository.js` para no crear una dependencia circular, documentado en el
+propio archivo).
+
+### 13.5 Endpoints esperados (n8n)
+
+Además de los 4 de autenticación (ya implementados, ver sección 12), el
+frontend queda preparado para estos, con ejemplo de request/response:
+
+```
+GET  /configuracion
+→ { "PESO_OBJETIVOS": 50, "PESO_VALORES_ACTITUD": 20, "PESO_HABILIDADES": 15,
+    "PESO_CONOCIMIENTOS": 15, "BRECHA_ADVERTENCIA": 1, "BRECHA_SIGNIFICATIVA": 2,
+    "NINEBOX_BAJO_MAX": 2.49, "NINEBOX_MEDIO_MAX": 3.99 }
+    // Nota: los umbrales de 9-box están en escala 1-5 (igual que los
+    // promedios de sección), no en escala 0-100.
+
+GET  /periodos/activo
+→ { "idPeriodo": "PER-2026-01", "nombre": "Evaluación de Desempeño Administrativo 2026",
+    "fechaInicio": "2026-06-01", "fechaFin": "2026-08-31",
+    "fechaLimiteAutoevaluacion": "2026-07-15", "fechaLimiteEvaluacionLider": "2026-07-31",
+    "fechaLimiteCalibracion": null, "fechaLiberacionResultados": null,
+    "fechaLimiteRetroalimentacion": null, "estadoPeriodo": "Autoevaluación" }
+
+GET  /evaluaciones/mias                    (usa el token de sesión; sin numeroEmpleado en el body)
+→ [ { "idEvaluacion": "EVAL-...", "periodo": "PER-2026-01", "numeroEmpleado": "10001",
+      "numeroLider": "20001", "tipo": "autoevaluacion", "estado": "En autoevaluación",
+      "fortalezas": "", "comentarios": "", "creada": "...", "actualizada": "...",
+      "completadaEl": null, "resultadoValores": null, "resultadoHabilidades": null,
+      "resultadoConocimientos": null, "resultadoObjetivos": null, "resultadoPonderado": null,
+      "brechaGlobal": null, "bloqueada": false, "fechaBloqueo": null,
+      "respuestas": [ { "idRespuesta": "EVAL-...:A1", "idEvaluacion": "EVAL-...",
+        "idCompetencia": "A1", "seccion": "actitud", "valor": "4", "comentario": "" } ],
+      "objetivos": [] } ]
+
+GET  /evaluaciones/:id
+→ un objeto con la misma forma que cada elemento de /evaluaciones/mias.
+
+POST /autoevaluacion/:id/guardar
+  body → { "respuestas": [ { "seccion": "actitud", "idCompetencia": "A1", "valor": "4", "comentario": "" } ],
+           "objetivos": [ { "orden": 0, "descripcion": "...", "resultadoObtenido": "...", "calificacion": "5" } ],
+           "fortalezas": "...", "comentarios": "..." }   // cualquier subconjunto de estas llaves; guardado parcial
+  → { "success": true }
+
+POST /autoevaluacion/:id/enviar
+  → { "success": true, "estado": "Autoevaluación enviada" }
+  → 409 si ya estaba enviada: { "success": false, "message": "La evaluación ya fue enviada y no puede modificarse" }
+
+GET  /lider/equipo
+→ [ { "numeroEmpleado": "10002", "nombreCompleto": "Jorge Ramírez", "puesto": "Coordinador de Nómina",
+      "area": "Recursos Humanos", "estadoEvaluacion": "En evaluación del líder" } ]
+    // Solo colaboradores asignados al líder autenticado (resuelto por el token, no por parámetro).
+
+GET  /lider/evaluaciones                   → misma forma que /evaluaciones/mias, tipo "lider", filtrado al equipo del líder autenticado.
+GET  /lider/evaluaciones/:id               → un objeto evaluación (tipo "lider").
+POST /lider/evaluaciones/:id/guardar       → mismo body que /autoevaluacion/:id/guardar.
+POST /lider/evaluaciones/:id/enviar        → mismo response que /autoevaluacion/:id/enviar.
+  // Regla de negocio (brief secc. 15): el líder solo puede comenzar cuando
+  // la autoevaluación correspondiente ya fue enviada — esta validación debe
+  // vivir en n8n (403 si no se cumple), el frontend no la fuerza todavía.
+
+GET  /admin/calibraciones
+→ [ { "idCalibracion": "CAL-...", "numeroEmpleado": "10003", "periodo": "PER-2026-01",
+      "resultadoAutoevaluacion": 88.5, "resultadoLider": 82.1, "diferenciaGeneral": 6.4,
+      "ajusteRH": null, "justificacionAjuste": null, "resultadoCalibrado": null,
+      "puntajeDesempeno": 82.1, "nivelDesempeno": "Bueno",
+      "puntajePotencialPreliminar": 4.3, "nivelPotencial": null,
+      "cuadranteNineBox": "Enigma", "responsableRH": null, "retroalimentacionHabilitada": false } ]
+
+GET  /admin/calibraciones/:id              → un objeto con la misma forma (:id = numeroEmpleado en esta beta).
+
+POST /admin/calibraciones/:id/guardar
+  body → { "periodo": "PER-2026-01", "resultadoLider": 82.1, "ajuste": 2, "justificacion": "...",
+           "resultadoCalibrado": 84.1, "actas": 0, "nom035": "", "observacionesRH": "..." }
+  → { "success": true }
+
+POST /admin/calibraciones/:id/liberar
+  → { "success": true, "retroalimentacionHabilitada": true }
+  // Regla de negocio (secc. brief): si resultadoCalibrado < 80, n8n debería
+  // exigir al menos un plan de desarrollo antes de liberar — el frontend ya
+  // valida esto localmente en demo; en API debe revalidarse del lado n8n.
+
+GET  /retroalimentacion/:id
+→ { "idRetroalimentacion": "CAL-...", "numeroEmpleado": "10003", "periodo": "PER-2026-01",
+    "fortalezas": null, "areasOportunidad": [ { "id": "AO-...", "area": "...", "planMejora": "..." } ],
+    "planDesarrollo": [ { "id": "PD-...", "competencia": "...", "accion": "...", "responsable": "...",
+      "fechaCompromiso": "2026-09-01", "estado": "No iniciada" } ],
+    "cronogramaAcciones": [], "comentariosLider": null, "comentariosRH": null,
+    "fechaRetroalimentacion": null, "responsableRetroalimentacion": null,
+    "evidencias": [ { "id": "EV-...", "nombreArchivo": "...", "tipo": "PDF firmado", "comentario": "" } ],
+    "estado": "Retroalimentación habilitada", "aceptacionColaborador": false, "fechaCierre": null }
+
+POST /retroalimentacion/:id/guardar
+  body → { "periodo": "PER-2026-01",
+           "agregarAreaOportunidad": { "area": "...", "planMejora": "..." },
+           // o bien: "quitarAreaOportunidadId", "agregarPlanDesarrollo", "quitarPlanDesarrolloId", "agregarEvidencia"
+         }
+  → { "success": true }
+
+POST /retroalimentacion/:id/cerrar
+  → { "success": true, "aceptacionColaborador": true, "estado": "Retroalimentación realizada" }
+```
+
+`:id` es siempre `numeroEmpleado` para los endpoints de calibración/
+retroalimentación, e `idEvaluacion` para los de evaluación — ver nota de
+llaves en 13.3.
+
+### 13.6 Campos que el frontend necesita de Airtable (además de los ya
+documentados en 12.8)
+
+- **Preguntas**: `PESO_OBJETIVOS`/`PESO_VALORES_ACTITUD`/`PESO_HABILIDADES`/
+  `PESO_CONOCIMIENTOS` no están hoy en ninguna tabla — según el brief deben
+  vivir en `Configuracion` (secc. 11), no en `Preguntas`. `js/data.js` sigue
+  siendo la fuente del catálogo de competencias (`COMPETENCIAS`) en esta beta.
+- **Configuracion**: tabla nueva (no creada todavía) con exactamente los 8
+  campos del ejemplo de `GET /configuracion` en 13.5.
+- **Evaluaciones**: necesita soportar los campos de resultado
+  (`resultadoValores`/`resultadoHabilidades`/`resultadoConocimientos`/
+  `resultadoObjetivos`/`resultadoPonderado`) para que `GET /evaluaciones/mias`
+  y `GET /lider/equipo` no tengan que recalcularlos en cada lectura.
+- **Objetivos**: necesita `ponderacion` por objetivo (brief secc. 10, la
+  suma debe validarse en 100% antes de enviar) — el wizard actual todavía no
+  captura ponderación por objetivo ni `tipoObjetivo`/`meta`/`unidadMedida`;
+  quedan en la forma canónica como `null`/valor por defecto hasta que se
+  agregue esa captura al wizard (fuera de alcance de esta beta, que pide
+  explícitamente no rediseñar el flujo).
+
+### 13.7 Pruebas realizadas
+
+Batería jsdom (`testharness/run.js`), **80 aserciones, 0 errores de ventana
+no capturados**, incluyendo (además de todo lo ya cubierto en beta 3):
+
+- `EDDRepo` cargado y `getConfiguracion()`/`getPeriodoActivo()` devuelven la
+  forma correcta, con los mismos pesos reales de `calculations.js`.
+- Flujo de autoevaluación real de punta a punta a través de `App.rate` /
+  `App.comentar` / `App.agregarObjetivo` / `App.editarObjetivo` →
+  `EDDRepo.guardarAutoevaluacion` → `storage.js`, confirmando que el dato se
+  guarda igual que antes del cambio.
+- `EDDRepo.getEvaluacion()` arma la forma canónica correcta (estado
+  traducido, respuestas y objetivos incluidos, `N/A` nunca convertido).
+- `EDDRepo.enviarAutoevaluacion()` completa la evaluación igual que
+  `S.completarEvaluacion()` antes del cambio.
+- Mismo flujo para la evaluación del líder (`App.rate` dentro del wizard del
+  líder enruta correctamente a `guardarEvaluacionLider`, no a
+  `guardarAutoevaluacion`, gracias a `state.wizard.tipo`).
+- `EDDRepo.getEquipoLider()` trae la forma exacta del brief y **no** filtra
+  mal — se probó explícitamente que el equipo de un líder no incluye
+  colaboradores de otro líder.
+- `EDDRepo.getMisEvaluaciones()` solo trae evaluaciones del empleado
+  autenticado.
+- Calibración y retroalimentación completas: guardar calibración, leer la
+  forma canónica (incluye `puntajePotencialPreliminar` sin crear un
+  cuestionario nuevo), liberar retroalimentación, agregar área de
+  oportunidad y evidencia, cerrar retroalimentación — cada paso verificado
+  contra `storage.js` y contra la forma canónica que devuelve `EDDRepo`.
+- **Confirmación explícita de que el login no se alteró**: las 43 pruebas de
+  login de la beta 3 (código correcto/incorrecto/inexistente, expiración de
+  sesión, logout, accesos rápidos, blindaje líder-colaborador) siguen en
+  verde exactamente igual después de este cambio.
+- **Confirmación explícita de que el radar y la Nine Box siguen
+  funcionando**: se volvió a verificar que la matriz 9-box global renderiza
+  y que el radar/9-box individual (SVG) sigue apareciendo en la comparación,
+  después de todos los cambios de esta beta.
+
+### 13.8 Pendiente para la siguiente iteración
+
+- Conectar las vistas profundas (wizard, comparación, ficha ejecutiva) a
+  `EDDRepo` requiere convertir `render()`/el router a un modelo asíncrono
+  (cargar datos → luego renderizar), siguiendo el mismo patrón que ya usa el
+  login. Es el paso natural siguiente, documentado aquí a propósito en vez
+  de intentarlo a medias.
+- Los 13 endpoints de datos (fuera de auth) están definidos en `api.js` y
+  documentados en 13.5, pero **no implementados en n8n todavía** — mismo
+  estado que el resto de los endpoints no-auth documentado en 12.8.
+- Tabla `Configuracion` en Airtable: no existe todavía (ver 13.6).
+- Ponderación por objetivo (brief secc. 10) y `tipoObjetivo`/`meta`/
+  `unidadMedida`: el wizard de captura no los pide todavía; agregarlos
+  implica tocar el wizard aprobado, fuera de alcance de esta beta.
+
+## 14. Beta 5 — validación visual de competencias pendientes
+
+Antes de esta beta, si el colaborador o el líder intentaban avanzar en el
+wizard sin calificar todas las competencias de una sección, aparecía un
+`window.alert()` genérico ("Debes calificar todas las competencias de esta
+sección antes de continuar.") sin decir cuáles faltaban. Esta beta lo
+sustituye por retroalimentación visual dentro de la propia interfaz — **sin
+tocar cálculos, ponderaciones, backend, login, Airtable, n8n, radar, Nine
+Box ni navegación**, confirmado con la misma batería de pruebas de siempre
+(106 aserciones, incluyendo las 43 de login y las de radar/9-box, todas en
+verde después de este cambio).
+
+**Qué cambia:** al presionar "Siguiente" con competencias sin responder (o
+al intentar enviar con pendientes en cualquier sección), ya no aparece un
+alert — aparece una barra naranja tenue arriba de la sección
+(`Te falta[n] N competencia[s] por calificar en esta sección`, singular/
+plural correcto), cada tarjeta sin responder se marca con borde rojo y el
+mensaje "⚠ Debes seleccionar una calificación o N/A." debajo del selector,
+y la vista hace scroll suave hacia la primera pendiente con un foco visual
+temporal. Responder (incluyendo elegir **N/A**, que sigue siendo una
+respuesta válida, no vacía) actualiza el contador y quita el error al
+instante, sin volver a pulsar "Siguiente". Las pestañas del wizard muestran
+un pequeño ✓ o ● por sección, y la pantalla de "Resumen y envío" bloquea el
+envío y detalla los pendientes por sección con un botón "Ir al primer
+pendiente" — igual para el colaborador que para el líder, mismo componente.
+
+**Cómo se implementó (`js/app.js`):** dos funciones centrales,
+`validateSection(evaluacionId, seccion)` y
+`validateEntireEvaluation(evaluacionId)`, devuelven `{ valid, pendingCount/
+pendingTotal, pendingIds/secciones }` y son la única fuente de verdad de qué
+falta — se reutilizan en `wizardNext`, `enviarAutoevaluacion`,
+`enviarEvaluacionLider`, las pestañas y el resumen final, sin duplicar la
+lógica. El estado de si se debe *mostrar* el error (`state.wizard.
+mostrarPendientes`) vive en el wizard y se resetea al cambiar de sección o
+al corregir todo; los datos guardados (respuestas, comentarios, N/A) nunca
+se tocan ni se pierden. Clases CSS nuevas y aisladas: `.validation-summary`,
+`.competency-card.has-error`, `.field-error-message`,
+`.section-tab-indicator`, `.validation-focus` — ningún color corporativo ni
+clase existente se modificó.
+
+## 15. Propuesta de migración a producción
+>>>>>>> 246765198c6416704f286bd590aa60f969907aac
 
 La demo se diseñó para que `storage.js` sea el único punto de contacto entre la
 interfaz y los datos. Migrar a producción implica sustituir el cuerpo de esas

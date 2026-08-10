@@ -107,7 +107,18 @@
     }
     if (timeoutId) clearTimeout(timeoutId);
 
+<<<<<<< HEAD
     if (response.status === 401) {
+=======
+    // Un 401 solo significa "tu sesión ya no es válida" en peticiones QUE
+    // llevan sesión (auth !== false). Los endpoints de login (/auth/request-code,
+    // /auth/verify-code) también pueden responder 401 cuando el código
+    // temporal capturado es inválido o venció — eso no es una sesión
+    // expirada (todavía no existe sesión en ese punto del flujo), así que
+    // ese caso se deja pasar como un error HTTP normal y auth.js lo traduce
+    // a 'invalid_code' a partir del cuerpo de la respuesta.
+    if (response.status === 401 && options.auth !== false) {
+>>>>>>> 246765198c6416704f286bd590aa60f969907aac
       try { global.dispatchEvent(new CustomEvent(EVENTO_SESION_EXPIRADA)); } catch (e) { /* entornos sin CustomEvent */ }
       throw new ApiError('unauthorized', 'Tu sesión expiró. Inicia sesión nuevamente.', 401);
     }
@@ -155,6 +166,13 @@
       return apiRequest('/auth/me', { method: 'GET' });
     },
 
+<<<<<<< HEAD
+=======
+    // --- Configuración y periodo (beta "persistencia real de evaluaciones") -
+    getConfiguracion() { return apiRequest('/configuracion', { method: 'GET' }); },
+    getPeriodoActivo() { return apiRequest('/periodos/activo', { method: 'GET' }); },
+
+>>>>>>> 246765198c6416704f286bd590aa60f969907aac
     // --- Colaborador -------------------------------------------------------
     evaluacionesMias() { return apiRequest('/evaluaciones/mias', { method: 'GET' }); },
     evaluacionPorId(id) { return apiRequest('/evaluaciones/' + encodeURIComponent(id), { method: 'GET' }); },
@@ -171,6 +189,10 @@
     // --- Administrador ---------------------------------------------------
     adminEvaluaciones() { return apiRequest('/admin/evaluaciones', { method: 'GET' }); },
     adminCalibraciones() { return apiRequest('/admin/calibraciones', { method: 'GET' }); },
+<<<<<<< HEAD
+=======
+    adminCalibracionPorId(id) { return apiRequest('/admin/calibraciones/' + encodeURIComponent(id), { method: 'GET' }); },
+>>>>>>> 246765198c6416704f286bd590aa60f969907aac
     adminCalibracionGuardar(id, payload) { return apiRequest('/admin/calibraciones/' + encodeURIComponent(id) + '/guardar', { method: 'POST', body: payload }); },
     adminCalibracionLiberar(id, payload) { return apiRequest('/admin/calibraciones/' + encodeURIComponent(id) + '/liberar', { method: 'POST', body: payload }); },
     adminNineBox() { return apiRequest('/admin/nine-box', { method: 'GET' }); },

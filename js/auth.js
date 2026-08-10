@@ -48,6 +48,7 @@
     return visible + '***@' + dominio;
   }
 
+<<<<<<< HEAD
   function randomSeguro(bytes) {
     const arr = new Uint8Array(bytes || 16);
     if (!global.crypto || typeof global.crypto.getRandomValues !== 'function') {
@@ -64,6 +65,13 @@
   }
   function generarRequestId() {
     return 'REQ-' + randomSeguro(8);
+=======
+  function generarTokenDemo() {
+    return 'DEMO-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+  }
+  function generarRequestId() {
+    return 'REQ-' + Math.floor(100000 + Math.random() * 900000);
+>>>>>>> 246765198c6416704f286bd590aa60f969907aac
   }
 
   function esperar(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
@@ -230,6 +238,7 @@
     return s ? s.token : null;
   }
 
+<<<<<<< HEAD
   // ===========================================================================
   // AUTORIZACIÓN EN FRONTEND (defensa en profundidad para la demo).
   // IMPORTANTE: en modo API el backend/n8n DEBE repetir estas validaciones.
@@ -277,6 +286,8 @@
     return areaPorRol[rol] === areaNormalizada;
   }
 
+=======
+>>>>>>> 246765198c6416704f286bd590aa60f969907aac
   async function logout() {
     const session = getSession();
     clearSession();
@@ -299,7 +310,10 @@
   global.EDDAuth = {
     requestCode, verifyCode, getSession, clearSession, getAppUser, getToken, logout,
     maskEmail, pendienteActual, limpiarPendiente,
+<<<<<<< HEAD
     normalizarRol, requireRole, canAccessArea,
+=======
+>>>>>>> 246765198c6416704f286bd590aa60f969907aac
     ROL_INTERNO_A_API
   };
 })(window);
