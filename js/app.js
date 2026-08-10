@@ -627,11 +627,53 @@
     </div>`;
   }
 
+  function evaluarSmartObjetivo(o) {
+    const descripcion = String(o.descripcion || '').trim();
+    const meta = String(o.meta || '').trim();
+    const fecha = String(o.fechaCompromiso || '').trim();
+    const palabras = descripcion.split(/\s+/).filter(Boolean);
+    const verbos = /\b(incrementar|reducir|disminuir|aumentar|mejorar|alcanzar|lograr|implementar|completar|mantener|desarrollar|optimizar|automatizar|entregar|cumplir|capacitar|generar|crear|fortalecer|elevar|bajar)\b/i;
+    const especifico = palabras.length >= 7 && verbos.test(descripcion);
+    const medible = !!meta || /\d|%|porcentaje|indicador|kpi|cantidad|número|numero|tasa|índice|indice/i.test(descripcion);
+    const alcanzable = !!o.alcanzable;
+    const relevante = !!o.relevante;
+    const temporal = !!fecha || /\b(20\d{2}|q[1-4]|trimestre|mes|semana|antes del|a más tardar|al \d{1,2}|durante)\b/i.test(descripcion);
+    const criterios = { S: especifico, M: medible, A: alcanzable, R: relevante, T: temporal };
+    return { criterios, completo: Object.values(criterios).every(Boolean), total: Object.values(criterios).filter(Boolean).length };
+  }
+
+  function smartChecklistHTML(o, evaluacionId, index, soloLecturaDescripcion) {
+    const smart = evaluarSmartObjetivo(o);
+    const item = (k, label) => `<span class="smart-pill ${smart.criterios[k] ? 'ok' : 'pending'}"><b>${k}</b>${smart.criterios[k] ? '✓' : '•'} ${label}</span>`;
+    return `<div class="smart-validator ${smart.completo ? 'smart-ok' : ''}">
+      <div class="smart-validator-head"><strong>Validación SMART</strong><span>${smart.total}/5 criterios</span></div>
+      <div class="smart-pills">
+        ${item('S','Específico')}${item('M','Medible')}${item('A','Alcanzable')}${item('R','Relevante')}${item('T','Temporal')}
+      </div>
+      ${smart.completo ? '<p class="smart-status ok">✓ Este objetivo cumple con los criterios SMART.</p>' : '<p class="smart-status">Completa los criterios pendientes antes de continuar.</p>'}
+      ${!soloLecturaDescripcion ? `<div class="smart-confirmations">
+        <label><input type="checkbox" ${o.alcanzable ? 'checked' : ''} onchange="App.editarObjetivoSmart('${evaluacionId}',${index},'alcanzable',this.checked)"> A — Es alcanzable con los recursos y responsabilidades disponibles.</label>
+        <label><input type="checkbox" ${o.relevante ? 'checked' : ''} onchange="App.editarObjetivoSmart('${evaluacionId}',${index},'relevante',this.checked)"> R — Está relacionado con las responsabilidades del puesto o prioridades del área.</label>
+      </div>` : ''}
+    </div>`;
+  }
+
   function renderObjetivosForm(ev, soloLecturaDescripcion) {
     const objetivos = S.getObjetivos(ev.id);
     const filas = [];
-    for (let i = 0; i < Math.max(objetivos.length, 1); i++) filas.push(objetivos[i] || { index: i, descripcion: '', resultado: '', calificacion: '' });
+    for (let i = 0; i < Math.max(objetivos.length, 1); i++) filas.push(objetivos[i] || { index: i, descripcion: '', meta: '', fechaCompromiso: '', alcanzable: false, relevante: false, resultado: '', calificacion: '' });
     return `
+    <div class="smart-info-card">
+      <div class="smart-info-icon">SMART</div>
+      <div>
+        <h3>Define objetivos SMART</h3>
+        <p>Cada objetivo debe ser <strong>Específico</strong>, <strong>Medible</strong>, <strong>Alcanzable</strong>, <strong>Relevante</strong> y <strong>Temporal</strong>. La página verificará estos cinco criterios antes de permitirte continuar.</p>
+        <div class="smart-legend">
+          <span><b>S</b> Qué quieres lograr</span><span><b>M</b> Cómo lo medirás</span><span><b>A</b> Que sea realista</span><span><b>R</b> Que aporte al puesto/área</span><span><b>T</b> Cuándo debe cumplirse</span>
+        </div>
+        <div class="smart-example"><strong>Ejemplo:</strong> Incrementar en 10% la captación de nuevos clientes del sector bancario antes del 30 de septiembre de 2026, medido por contratos nuevos cerrados.</div>
+      </div>
+    </div>
     <p class="muted">Registra hasta cinco objetivos del periodo. Solo se promedian los objetivos con descripción y calificación válida.</p>
     ${escalaHelpInline()}
     <div id="objetivosWrap">${filas.map((o, i) => renderObjetivoRow(ev.id, o, i, soloLecturaDescripcion)).join('')}</div>
@@ -643,13 +685,16 @@
     const groupName = 'obj_' + evaluacionId + '_' + index;
     const onchangeJs = `App.editarObjetivo('${evaluacionId}',${index},'calificacion',this.value)`;
     return `
-    <div class="objetivo-row" data-idx="${index}">
+    <div class="objetivo-row smart-objective" data-idx="${index}">
       <div class="objetivo-num">#${index + 1}</div>
-      <div class="objetivo-fields">
-        <textarea placeholder="Descripción del objetivo" ${soloLecturaDescripcion ? 'disabled' : ''} onchange="App.editarObjetivo('${evaluacionId}',${index},'descripcion',this.value)">${esc(o.descripcion)}</textarea>
-        <textarea placeholder="Resultado obtenido" ${soloLecturaDescripcion ? 'disabled' : ''} onchange="App.editarObjetivo('${evaluacionId}',${index},'resultado',this.value)">${esc(o.resultado)}</textarea>
-        ${ratingWidget(groupName, o.calificacion, onchangeJs, false, true)}
-        <div class="validation-message" aria-live="polite">Completa la descripción y selecciona una calificación.</div>
+      <div class="objetivo-fields smart-objective-fields">
+        <div class="smart-field smart-field-wide"><label>Objetivo específico</label><textarea placeholder="Ej. Incrementar la cobertura..." ${soloLecturaDescripcion ? 'disabled' : ''} oninput="App.editarObjetivoSmart('${evaluacionId}',${index},'descripcion',this.value)">${esc(o.descripcion)}</textarea></div>
+        <div class="smart-field"><label>Meta / indicador</label><input type="text" placeholder="Ej. +10% / 25 contratos" value="${esc(o.meta || '')}" ${soloLecturaDescripcion ? 'disabled' : ''} oninput="App.editarObjetivoSmart('${evaluacionId}',${index},'meta',this.value)"></div>
+        <div class="smart-field"><label>Fecha compromiso</label><input type="date" value="${esc(o.fechaCompromiso || '')}" ${soloLecturaDescripcion ? 'disabled' : ''} onchange="App.editarObjetivoSmart('${evaluacionId}',${index},'fechaCompromiso',this.value)"></div>
+        ${smartChecklistHTML(o, evaluacionId, index, soloLecturaDescripcion)}
+        <div class="smart-field"><label>Resultado obtenido</label><textarea placeholder="Resultado obtenido" ${soloLecturaDescripcion ? 'disabled' : ''} onchange="App.editarObjetivo('${evaluacionId}',${index},'resultado',this.value)">${esc(o.resultado)}</textarea></div>
+        <div class="smart-field smart-rating-field"><label>Calificación</label>${ratingWidget(groupName, o.calificacion, onchangeJs, false, true)}</div>
+        <div class="validation-message" aria-live="polite">Completa el objetivo y asegúrate de que cumpla los 5 criterios SMART.</div>
       </div>
       <button class="btn btn-outline btn-sm" onclick="App.quitarObjetivo('${evaluacionId}',${index})">Quitar</button>
     </div>`;
@@ -1488,10 +1533,10 @@
       const filas = wizard.querySelectorAll('.objetivo-row');
       filas.forEach((fila, i) => {
         const o = objetivos.find((x) => Number(x.index) === i);
-        const tieneAlgo = o && ((o.descripcion || '').trim() || (o.resultado || '').trim() || o.calificacion);
-        if (tieneAlgo && (!(o.descripcion || '').trim() || !o.calificacion)) faltantes.push(fila);
+        const tieneAlgo = o && ((o.descripcion || '').trim() || (o.meta || '').trim() || (o.fechaCompromiso || '').trim() || (o.resultado || '').trim() || o.calificacion || o.alcanzable || o.relevante);
+        if (tieneAlgo && (!(o.descripcion || '').trim() || !o.calificacion || !evaluarSmartObjetivo(o).completo)) faltantes.push(fila);
       });
-      if (!objetivos.some((o) => (o.descripcion || '').trim() && o.calificacion)) {
+      if (!objetivos.some((o) => (o.descripcion || '').trim() && o.calificacion && evaluarSmartObjetivo(o).completo)) {
         if (!faltantes.length && filas[0]) faltantes.push(filas[0]);
       }
     }
@@ -1599,7 +1644,7 @@
     agregarObjetivo(evaluacionId) {
       const objetivos = S.getObjetivos(evaluacionId);
       if (objetivos.length >= 5) return;
-      S.saveObjetivo(evaluacionId, objetivos.length, '', '', '');
+      S.saveObjetivo(evaluacionId, objetivos.length, '', '', '', { meta:'', fechaCompromiso:'', alcanzable:false, relevante:false });
       render();
     },
     editarObjetivo(evaluacionId, index, campo, valor) {
@@ -1610,6 +1655,21 @@
       const fila = document.querySelector(`.objetivo-row[data-idx="${index}"]`);
       if (fila && (o.descripcion || '').trim() && o.calificacion) fila.classList.remove('validation-error');
     },
+    editarObjetivoSmart(evaluacionId, index, campo, valor) {
+      const objetivos = S.getObjetivos(evaluacionId);
+      const o = objetivos.find((x) => Number(x.index) === Number(index)) || { descripcion: '', meta: '', fechaCompromiso: '', alcanzable: false, relevante: false, resultado: '', calificacion: '' };
+      o[campo] = valor;
+      S.saveObjetivo(evaluacionId, Number(index), o.descripcion || '', o.resultado || '', o.calificacion || '', {
+        meta: o.meta || '', fechaCompromiso: o.fechaCompromiso || '', alcanzable: !!o.alcanzable, relevante: !!o.relevante
+      });
+      const fila = document.querySelector(`.objetivo-row[data-idx="${index}"]`);
+      if (fila) {
+        const validator = fila.querySelector('.smart-validator');
+        const nuevo = evaluarSmartObjetivo(o);
+        if (validator) validator.outerHTML = smartChecklistHTML(o, evaluacionId, Number(index), false);
+        if (nuevo.completo && (o.descripcion || '').trim() && o.calificacion) fila.classList.remove('validation-error');
+      }
+    },
     quitarObjetivo(evaluacionId, index) { S.removeObjetivo(evaluacionId, index); render(); },
     enviarAutoevaluacion() {
       if (!$('#confirmEnvioAuto').checked) { alert('Confirma que la información es correcta antes de enviar.'); return; }
@@ -1617,7 +1677,7 @@
       for (let i = 0; i < SECCIONES_WIZARD.length - 1; i++) {
         const sec = SECCIONES_WIZARD[i];
         const incompleta = sec === 'objetivos'
-          ? !S.getObjetivos(evaluacionId).some((o) => (o.descripcion || '').trim() && o.calificacion)
+          ? !S.getObjetivos(evaluacionId).some((o) => (o.descripcion || '').trim() && o.calificacion && evaluarSmartObjetivo(o).completo)
           : (S.getRespuestasPorSeccion(evaluacionId)[sec] || []).filter((r) => r.valor !== '' && r.valor !== null && r.valor !== undefined).length < D.COMPETENCIAS[sec].length;
         if (incompleta) {
           state.wizard.seccionIdx = i; render();

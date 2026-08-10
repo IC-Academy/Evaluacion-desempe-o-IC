@@ -386,11 +386,21 @@
     return load().objetivos.filter((o) => o.evaluacionId === evaluacionId).sort((a, b) => a.index - b.index);
   }
 
-  function saveObjetivo(evaluacionId, index, descripcion, resultado, calificacion) {
+  function saveObjetivo(evaluacionId, index, descripcion, resultado, calificacion, extra) {
     const db = load();
     let o = db.objetivos.find((x) => x.evaluacionId === evaluacionId && x.index === index);
-    if (o) { o.descripcion = descripcion; o.resultado = resultado; o.calificacion = calificacion; }
-    else { db.objetivos.push({ evaluacionId, index, descripcion, resultado, calificacion }); }
+    const extras = extra || {};
+    if (o) {
+      o.descripcion = descripcion;
+      o.resultado = resultado;
+      o.calificacion = calificacion;
+      if (Object.prototype.hasOwnProperty.call(extras, 'meta')) o.meta = extras.meta || '';
+      if (Object.prototype.hasOwnProperty.call(extras, 'fechaCompromiso')) o.fechaCompromiso = extras.fechaCompromiso || '';
+      if (Object.prototype.hasOwnProperty.call(extras, 'alcanzable')) o.alcanzable = !!extras.alcanzable;
+      if (Object.prototype.hasOwnProperty.call(extras, 'relevante')) o.relevante = !!extras.relevante;
+    } else {
+      db.objetivos.push({ evaluacionId, index, descripcion, resultado, calificacion, meta: extras.meta || '', fechaCompromiso: extras.fechaCompromiso || '', alcanzable: !!extras.alcanzable, relevante: !!extras.relevante });
+    }
     persist();
   }
 
