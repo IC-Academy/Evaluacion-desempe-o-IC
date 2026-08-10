@@ -193,34 +193,57 @@
   // USUARIOS / COLABORADORES / LÍDERES DE DEMOSTRACIÓN
   // ===========================================================================
   const LIDERES = [
-    { empleado: '20001', nombre: 'Carlos Martínez', puesto: 'Gerente de Recursos Humanos', area: 'Recursos Humanos', ciudad: 'Ciudad de México' },
-    { empleado: '20002', nombre: 'Ana Torres', puesto: 'Gerente de Finanzas', area: 'Finanzas', ciudad: 'Guadalajara' },
-    { empleado: '20003', nombre: 'Roberto Díaz', puesto: 'Gerente de Operaciones', area: 'Operaciones', ciudad: 'Monterrey' },
-    { empleado: '20004', nombre: 'Sofía López', puesto: 'Gerente de Tecnología', area: 'Tecnología', ciudad: 'Ciudad de México' },
-    { empleado: '20005', nombre: 'Miguel Ángel Ruiz', puesto: 'Gerente Comercial', area: 'Comercial', ciudad: 'Puebla' }
+    { empleado: '20001', nombre: 'Carlos Martínez', puesto: 'Gerente de Recursos Humanos', area: 'Recursos Humanos', ciudad: 'Ciudad de México', correoCorporativo: 'carlos.martinez@intercon.com.mx', estatusEmpleado: 'Activo', correoValidado: true, ultimaActualizacion: '2026-07-20' },
+    { empleado: '20002', nombre: 'Ana Torres', puesto: 'Gerente de Finanzas', area: 'Finanzas', ciudad: 'Guadalajara', correoCorporativo: 'ana.torres@intercon.com.mx', estatusEmpleado: 'Activo', correoValidado: true, ultimaActualizacion: '2026-07-20' },
+    { empleado: '20003', nombre: 'Roberto Díaz', puesto: 'Gerente de Operaciones', area: 'Operaciones', ciudad: 'Monterrey', correoCorporativo: 'roberto.diaz@intercon.com.mx', estatusEmpleado: 'Activo', correoValidado: true, ultimaActualizacion: '2026-07-20' },
+    { empleado: '20004', nombre: 'Sofía López', puesto: 'Gerente de Tecnología', area: 'Tecnología', ciudad: 'Ciudad de México', correoCorporativo: 'sofia.lopez@intercon.com.mx', estatusEmpleado: 'Activo', correoValidado: true, ultimaActualizacion: '2026-07-20' },
+    { empleado: '20005', nombre: 'Miguel Ángel Ruiz', puesto: 'Gerente Comercial', area: 'Comercial', ciudad: 'Puebla', correoCorporativo: 'miguel.ruiz@intercon.com.mx', estatusEmpleado: 'Activo', correoValidado: true, ultimaActualizacion: '2026-07-20' }
   ];
 
   const ADMINISTRADORES = [
-    { empleado: '90001', nombre: 'Administrador RH', puesto: 'Administrador de RH', area: 'Recursos Humanos' }
+    { empleado: '90001', nombre: 'Administrador RH', puesto: 'Administrador de RH', area: 'Recursos Humanos', correoCorporativo: 'rh.admin@intercon.com.mx', estatusEmpleado: 'Activo', correoValidado: true, ultimaActualizacion: '2026-07-20' }
   ];
 
   // perfilObjetivo: valores de referencia (1-5) usados por el generador de respuestas
   // simuladas para poder mostrar distintos cuadrantes 9-box en la demo.
   const COLABORADORES = [
-    { empleado: '10001', nombre: 'Laura Hernández', puesto: 'Analista de Recursos Humanos', area: 'Recursos Humanos', liderId: '20001', antiguedad: '2 años 4 meses', ciudad: 'Ciudad de México', direccion: 'Dirección Corporativa', estadoDemo: 'no_iniciada' },
-    { empleado: '10002', nombre: 'Jorge Ramírez', puesto: 'Coordinador de Nómina', area: 'Recursos Humanos', liderId: '20001', antiguedad: '1 año 2 meses', ciudad: 'Ciudad de México', direccion: 'Dirección Corporativa', estadoDemo: 'pendiente_lider', perfilObjetivo: { actitud: 4.2, habilidades: 3.8, conocimientos: 4.0, objetivos: 4.0 } },
-    { empleado: '10003', nombre: 'Fernanda Gómez', puesto: 'Analista Contable', area: 'Finanzas', liderId: '20002', antiguedad: '3 años', ciudad: 'Guadalajara', direccion: 'Dirección Administrativa', estadoDemo: 'pendiente_calibracion', perfilObjetivo: { actitud: 4.6, habilidades: 4.4, conocimientos: 4.5, objetivos: 4.3 }, perfilObjetivoLider: { actitud: 4.3, habilidades: 4.0, conocimientos: 4.2, objetivos: 4.0 } },
-    { empleado: '10004', nombre: 'Diego Morales', puesto: 'Analista de Tesorería', area: 'Finanzas', liderId: '20002', antiguedad: '8 meses', ciudad: 'Guadalajara', direccion: 'Dirección Administrativa', estadoDemo: 'retro_pendiente', perfilObjetivo: { actitud: 4.0, habilidades: 3.2, conocimientos: 3.0, objetivos: 3.3 }, perfilObjetivoLider: { actitud: 4.3, habilidades: 2.2, conocimientos: 2.3, objetivos: 2.0 } },
-    { empleado: '10005', nombre: 'Patricia Reyes', puesto: 'Supervisora de Zona', area: 'Operaciones', liderId: '20003', antiguedad: '5 años', ciudad: 'Monterrey', direccion: 'Dirección de Operaciones', estadoDemo: 'cerrada', perfilObjetivo: { actitud: 3.7, habilidades: 4.7, conocimientos: 4.6, objetivos: 4.7 }, perfilObjetivoLider: { actitud: 3.5, habilidades: 4.6, conocimientos: 4.5, objetivos: 4.6 } },
-    { empleado: '10006', nombre: 'Héctor Vargas', puesto: 'Coordinador Operativo', area: 'Operaciones', liderId: '20003', antiguedad: '1 año', ciudad: 'Monterrey', direccion: 'Dirección de Operaciones', estadoDemo: 'no_iniciada' },
-    { empleado: '10007', nombre: 'Daniela Cruz', puesto: 'Analista de Sistemas', area: 'Tecnología', liderId: '20004', antiguedad: '2 años', ciudad: 'Ciudad de México', direccion: 'Dirección de Tecnología', estadoDemo: 'en_progreso' },
-    { empleado: '10008', nombre: 'Andrés Ortiz', puesto: 'Soporte Técnico Sr.', area: 'Tecnología', liderId: '20004', antiguedad: '5 meses', ciudad: 'Ciudad de México', direccion: 'Dirección de Tecnología', estadoDemo: 'cerrada', perfilObjetivo: { actitud: 1.8, habilidades: 2.2, conocimientos: 2.0, objetivos: 1.9 }, perfilObjetivoLider: { actitud: 1.6, habilidades: 1.9, conocimientos: 1.8, objetivos: 1.7 } },
+    { empleado: '10001', nombre: 'Laura Hernández', puesto: 'Analista de Recursos Humanos', area: 'Recursos Humanos', liderId: '20001', antiguedad: '2 años 4 meses', ciudad: 'Ciudad de México', direccion: 'Dirección Corporativa', estadoDemo: 'no_iniciada', correoCorporativo: 'laura.hernandez@intercon.com.mx', estatusEmpleado: 'Activo', correoValidado: true, ultimaActualizacion: '2026-07-20' },
+    { empleado: '10002', nombre: 'Jorge Ramírez', puesto: 'Coordinador de Nómina', area: 'Recursos Humanos', liderId: '20001', antiguedad: '1 año 2 meses', ciudad: 'Ciudad de México', direccion: 'Dirección Corporativa', estadoDemo: 'pendiente_lider', perfilObjetivo: { actitud: 4.2, habilidades: 3.8, conocimientos: 4.0, objetivos: 4.0 }, correoCorporativo: 'jorge.ramirez@intercon.com.mx', estatusEmpleado: 'Activo', correoValidado: true, ultimaActualizacion: '2026-07-20' },
+    { empleado: '10003', nombre: 'Fernanda Gómez', puesto: 'Analista Contable', area: 'Finanzas', liderId: '20002', antiguedad: '3 años', ciudad: 'Guadalajara', direccion: 'Dirección Administrativa', estadoDemo: 'pendiente_calibracion', perfilObjetivo: { actitud: 4.6, habilidades: 4.4, conocimientos: 4.5, objetivos: 4.3 }, perfilObjetivoLider: { actitud: 4.3, habilidades: 4.0, conocimientos: 4.2, objetivos: 4.0 }, correoCorporativo: 'fernanda.gomez@intercon.com.mx', estatusEmpleado: 'Activo', correoValidado: true, ultimaActualizacion: '2026-07-20' },
+    { empleado: '10004', nombre: 'Diego Morales', puesto: 'Analista de Tesorería', area: 'Finanzas', liderId: '20002', antiguedad: '8 meses', ciudad: 'Guadalajara', direccion: 'Dirección Administrativa', estadoDemo: 'retro_pendiente', perfilObjetivo: { actitud: 4.0, habilidades: 3.2, conocimientos: 3.0, objetivos: 3.3 }, perfilObjetivoLider: { actitud: 4.3, habilidades: 2.2, conocimientos: 2.3, objetivos: 2.0 }, correoCorporativo: 'diego.morales@intercon.com.mx', estatusEmpleado: 'Activo', correoValidado: true, ultimaActualizacion: '2026-07-20' },
+    { empleado: '10005', nombre: 'Patricia Reyes', puesto: 'Supervisora de Zona', area: 'Operaciones', liderId: '20003', antiguedad: '5 años', ciudad: 'Monterrey', direccion: 'Dirección de Operaciones', estadoDemo: 'cerrada', perfilObjetivo: { actitud: 3.7, habilidades: 4.7, conocimientos: 4.6, objetivos: 4.7 }, perfilObjetivoLider: { actitud: 3.5, habilidades: 4.6, conocimientos: 4.5, objetivos: 4.6 }, correoCorporativo: 'patricia.reyes@intercon.com.mx', estatusEmpleado: 'Activo', correoValidado: true, ultimaActualizacion: '2026-07-20' },
+    { empleado: '10006', nombre: 'Héctor Vargas', puesto: 'Coordinador Operativo', area: 'Operaciones', liderId: '20003', antiguedad: '1 año', ciudad: 'Monterrey', direccion: 'Dirección de Operaciones', estadoDemo: 'no_iniciada', correoCorporativo: 'hector.vargas@intercon.com.mx', estatusEmpleado: 'Activo', correoValidado: true, ultimaActualizacion: '2026-07-20' },
+    { empleado: '10007', nombre: 'Daniela Cruz', puesto: 'Analista de Sistemas', area: 'Tecnología', liderId: '20004', antiguedad: '2 años', ciudad: 'Ciudad de México', direccion: 'Dirección de Tecnología', estadoDemo: 'en_progreso', correoCorporativo: 'daniela.cruz@intercon.com.mx', estatusEmpleado: 'Activo', correoValidado: true, ultimaActualizacion: '2026-07-20' },
+    { empleado: '10008', nombre: 'Andrés Ortiz', puesto: 'Soporte Técnico Sr.', area: 'Tecnología', liderId: '20004', antiguedad: '5 meses', ciudad: 'Ciudad de México', direccion: 'Dirección de Tecnología', estadoDemo: 'cerrada', perfilObjetivo: { actitud: 1.8, habilidades: 2.2, conocimientos: 2.0, objetivos: 1.9 }, perfilObjetivoLider: { actitud: 1.6, habilidades: 1.9, conocimientos: 1.8, objetivos: 1.7 }, correoCorporativo: 'andres.ortiz@intercon.com.mx', estatusEmpleado: 'Activo', correoValidado: false, ultimaActualizacion: '2026-07-18' },
     // Caso "brecha significativa": la colaboradora se autopercibe con actitud sobresaliente,
     // pero el líder documenta una actitud deficiente pese a un desempeño técnico sólido
     // (Habilidades/Conocimientos/Objetivos alineados). Cuadrante resultante: Agua (7).
-    { empleado: '10009', nombre: 'Valeria Sánchez', puesto: 'Ejecutiva de Cuenta', area: 'Comercial', liderId: '20005', antiguedad: '4 años', ciudad: 'Puebla', direccion: 'Dirección Comercial', estadoDemo: 'pendiente_calibracion', perfilObjetivo: { actitud: 4.5, habilidades: 4.4, conocimientos: 4.2, objetivos: 4.5 }, perfilObjetivoLider: { actitud: 1.8, habilidades: 4.3, conocimientos: 4.3, objetivos: 4.5 } },
-    { empleado: '10010', nombre: 'Ricardo Paredes', puesto: 'Coordinador Comercial', area: 'Comercial', liderId: '20005', antiguedad: '1 año 6 meses', ciudad: 'Puebla', direccion: 'Dirección Comercial', estadoDemo: 'cerrada', perfilObjetivo: { actitud: 4.4, habilidades: 3.6, conocimientos: 3.5, objetivos: 3.4 }, perfilObjetivoLider: { actitud: 4.2, habilidades: 3.4, conocimientos: 3.3, objetivos: 3.2 } }
+    { empleado: '10009', nombre: 'Valeria Sánchez', puesto: 'Ejecutiva de Cuenta', area: 'Comercial', liderId: '20005', antiguedad: '4 años', ciudad: 'Puebla', direccion: 'Dirección Comercial', estadoDemo: 'pendiente_calibracion', perfilObjetivo: { actitud: 4.5, habilidades: 4.4, conocimientos: 4.2, objetivos: 4.5 }, perfilObjetivoLider: { actitud: 1.8, habilidades: 4.3, conocimientos: 4.3, objetivos: 4.5 }, correoCorporativo: 'valeria.sanchez@intercon.com.mx', estatusEmpleado: 'Activo', correoValidado: true, ultimaActualizacion: '2026-07-20' },
+    { empleado: '10010', nombre: 'Ricardo Paredes', puesto: 'Coordinador Comercial', area: 'Comercial', liderId: '20005', antiguedad: '1 año 6 meses', ciudad: 'Puebla', direccion: 'Dirección Comercial', estadoDemo: 'cerrada', perfilObjetivo: { actitud: 4.4, habilidades: 3.6, conocimientos: 3.5, objetivos: 3.4 }, perfilObjetivoLider: { actitud: 4.2, habilidades: 3.4, conocimientos: 3.3, objetivos: 3.2 }, correoCorporativo: 'ricardo.paredes@intercon.com.mx', estatusEmpleado: 'Activo', correoValidado: true, ultimaActualizacion: '2026-07-20' },
+    // Caso nuevo de beta 3, aditivo: colaborador SIN líder asignado en el Excel
+    // maestro (ver requerimiento 18 del brief — "Sin líder asignado"). No
+    // afecta ningún escenario previo: su evaluación sigue "no_iniciada" y no
+    // participa en flujos de líder/comparación/calibración.
+    { empleado: '10011', nombre: 'Mario Castillo', puesto: 'Analista Junior de Operaciones', area: 'Operaciones', liderId: null, antiguedad: '3 meses', ciudad: 'Monterrey', direccion: 'Dirección de Operaciones', estadoDemo: 'no_iniciada', correoCorporativo: null, estatusEmpleado: 'Activo', correoValidado: false, ultimaActualizacion: '2026-07-25' }
   ];
+
+  // ===========================================================================
+  // JERARQUÍAS (tabla "Asignaciones" del Excel maestro / Airtable, ver brief
+  // sección 8). Se deriva de COLABORADORES.liderId para no duplicar la fuente
+  // de verdad de la relación líder-colaborador (que sigue viviendo ahí, tal
+  // como en beta 1/2). Esta tabla es solo la proyección con la forma exacta
+  // que tendrá el registro real de Airtable/Excel.
+  // ===========================================================================
+  const JERARQUIAS = COLABORADORES.map((c, idx) => ({
+    idAsignacion: 'ASG-2026-' + String(idx + 1).padStart(4, '0'),
+    numeroEmpleado: c.empleado,
+    numeroLider: c.liderId || null,
+    periodo: 'EDD-2026',
+    fechaInicio: '2026-08-01',
+    fechaFin: null,
+    asignacionActiva: true,
+    tipoAsignacion: 'Líder directo'
+  }));
 
   // ===========================================================================
   // GENERADOR DETERMINISTA DE RESPUESTAS SIMULADAS (para poblar la demo)
@@ -299,6 +322,7 @@
     LIDERES,
     ADMINISTRADORES,
     COLABORADORES,
+    JERARQUIAS,
     generarRespuestas,
     generarObjetivos,
     crearRng,
