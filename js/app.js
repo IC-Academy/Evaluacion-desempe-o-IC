@@ -177,27 +177,23 @@
       tabs = [['dashboard', 'Dashboard'], ['calibracion', 'Calibración'], ['9box', 'Matriz 9-Box'], ['usuarios', 'Usuarios'], ['jerarquias', 'Jerarquías'], ['auditoria', 'Auditoría'], ['config', 'Configuración']];
     }
     const navHtml = tabs.map((t) => `<a href="#/${area === 'colaborador' ? 'colaborador' : area}/${t[0]}" class="${page === t[0] ? 'active' : ''}">${t[1]}</a>`).join('');
+    const iniciales = esc((u.nombre || '').split(/\s+/).slice(0,2).map(x => x[0] || '').join('').toUpperCase());
     return `
-    <header class="app-header">
-      <div class="app-header-top">
-        <div class="brand">
-          <span class="brand-mark">IC</span>
-          <div>
-            <div class="brand-title">Plataforma EDD · Inter-Con</div>
-            <div class="brand-sub">Evaluación del Desempeño Administrativo</div>
-          </div>
+    <header class="app-header premium-header">
+      <div class="app-header-top premium-header-top">
+        <div class="brand premium-brand">
+          <img src="assets/ic-seguridad-privada.png" alt="IC Seguridad Privada" />
         </div>
-        <div class="header-meta">
-          <div class="header-meta-item"><span class="label">Usuario</span><span class="value">${esc(u.nombre)}</span></div>
-          <div class="header-meta-item"><span class="label">Perfil</span><span class="value">${capitalize(u.perfil)}</span></div>
-          <div class="header-meta-item"><span class="label">Periodo</span><span class="value">${esc(per ? per.nombre : '—')}</span></div>
-          <div class="header-meta-item"><span class="label">Modo</span><span class="value">${global.APP_CONFIG.mode === 'api' ? 'API (n8n)' : 'Demo'}</span></div>
-          <button class="btn btn-outline btn-sm" onclick="App.logout()">Cerrar sesión</button>
+        <nav class="nav-tabs premium-nav-tabs">${navHtml}</nav>
+        <div class="premium-user-menu">
+          <span class="premium-user-avatar">${iniciales}</span>
+          <span class="premium-user-copy"><strong>${esc(u.nombre)}</strong><small>${capitalize(u.perfil)} · ${esc(per ? per.nombre : '')}</small></span>
+          <button class="premium-logout" onclick="App.logout()" title="Cerrar sesión">⌄</button>
         </div>
       </div>
-      <nav class="nav-tabs">${navHtml}</nav>
     </header>`;
   }
+
   function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
   function renderFooter() {
@@ -242,60 +238,77 @@
 
   function viewLogin() {
     const L = state.login;
-    let avisoExpirada = '';
-    if (L.sessionExpiredNotice) {
-      avisoExpirada = `<p class="alert alert-warning">Tu sesión anterior expiró por inactividad. Inicia sesión de nuevo.</p>`;
-    }
+    const avisoExpirada = L.sessionExpiredNotice
+      ? `<p class="alert alert-warning premium-login-alert">Tu sesión anterior expiró por inactividad. Inicia sesión de nuevo.</p>`
+      : '';
     const cuerpo = L.paso === 'validar' ? viewLoginValidar(L) : viewLoginSolicitar(L);
     return `
-    <div class="login-screen">
-      <div class="login-card">
-        <div class="login-brand">
-          <span class="brand-mark brand-mark-lg">IC</span>
-          <h1>Plataforma EDD Inter-Con</h1>
-          <p>Evaluación del Desempeño Administrativo — acceso con código temporal</p>
+    <div class="login-screen premium-login-screen">
+      <section class="premium-login-shell">
+        <div class="premium-login-brand-panel">
+          <div class="premium-login-overlay"></div>
+          <div class="premium-login-brand-content">
+            <img class="premium-login-logo" src="assets/ic-seguridad-privada.png" alt="IC Seguridad Privada" />
+            <div class="premium-login-kicker">Plataforma corporativa</div>
+            <h1>Evaluación de Desempeño<br>Administrativo</h1>
+            <p>Una experiencia simple, segura y confidencial para impulsar tu desarrollo dentro de Inter-Con.</p>
+          </div>
+          <div class="premium-login-trust">
+            <div><span>◇</span><strong>Seguro</strong><small>Tus datos están protegidos</small></div>
+            <div><span>▣</span><strong>Confidencial</strong><small>Información de uso interno</small></div>
+            <div><span>↗</span><strong>Desarrollo</strong><small>Impulsamos tu crecimiento</small></div>
+          </div>
         </div>
-        ${avisoExpirada}
-        ${cuerpo}
-      </div>
+        <div class="premium-login-form-panel">
+          <div class="premium-login-form-wrap">
+            <div class="premium-login-mobile-logo"><img src="assets/ic-seguridad-privada.png" alt="IC Seguridad Privada" /></div>
+            <div class="premium-login-step">${L.paso === 'validar' ? 'Verificación de identidad' : 'Bienvenido(a)'}</div>
+            <h2>${L.paso === 'validar' ? 'Ingresa tu código de acceso' : 'Inicia sesión'}</h2>
+            <p class="premium-login-description">${L.paso === 'validar' ? 'Revisa tu correo corporativo y captura el código temporal de 6 dígitos.' : 'Utiliza tu número de empleado para acceder a tu evaluación.'}</p>
+            ${avisoExpirada}
+            ${cuerpo}
+            <div class="premium-login-security">▾ &nbsp; Acceso protegido · Uso exclusivo de personal autorizado</div>
+          </div>
+        </div>
+      </section>
     </div>`;
   }
 
   function viewLoginSolicitar(L) {
     const modoApi = global.APP_CONFIG.mode === 'api';
     return `
-    <div class="login-form">
-      <p class="muted">Captura tu número de empleado. Si está registrado, te enviaremos un código temporal de acceso a tu correo.</p>
-      <label>Número de empleado</label>
-      <input id="loginEmpleado" type="text" inputmode="numeric" placeholder="Ej. 10001" value="${esc(L.numeroEmpleado)}" />
+    <div class="login-form premium-login-form">
+      <label for="loginEmpleado">Número de empleado</label>
+      <div class="premium-input-wrap"><span>♙</span><input id="loginEmpleado" type="text" inputmode="numeric" placeholder="Ingresa tu número de empleado" value="${esc(L.numeroEmpleado)}" /></div>
+      <p class="premium-field-help">Te enviaremos un código de verificación a tu correo corporativo.</p>
       ${L.error ? `<p class="alert alert-danger">${esc(L.error)}</p>` : ''}
       ${L.info ? `<p class="alert alert-info">${esc(L.info)}</p>` : ''}
-      <button class="btn btn-primary btn-block" id="btnSolicitarCodigo" ${L.loading ? 'disabled' : ''}>${L.loading ? 'Enviando…' : 'Enviar código'}</button>
-      ${modoApi ? '<p class="muted">Modo API: la solicitud se enviará a n8n (' + esc(global.APP_CONFIG.apiBaseUrl) + ').</p>' : ''}
+      <button class="btn btn-primary btn-block premium-login-primary" id="btnSolicitarCodigo" ${L.loading ? 'disabled' : ''}>${L.loading ? 'Enviando…' : 'Continuar'} <span>→</span></button>
+      ${modoApi ? '<p class="muted premium-api-note">Conexión segura mediante API corporativa.</p>' : ''}
     </div>
-    <div class="quick-access">
-      <p class="quick-access-title">Acceso rápido de demostración</p>
-      <p class="muted" style="margin-bottom:8px">Solo disponible en modo demo. Solicita y valida el código automáticamente con el código de demostración <strong>${esc(global.APP_CONFIG.demoCode)}</strong>.</p>
-      <button class="btn btn-outline btn-block" data-quick="10001" ${modoApi ? 'disabled' : ''}>Entrar como colaborador — Laura Hernández (10001)</button>
-      <button class="btn btn-outline btn-block" data-quick="20001" ${modoApi ? 'disabled' : ''}>Entrar como líder — Carlos Martínez (20001)</button>
-      <button class="btn btn-outline btn-block" data-quick="90001" ${modoApi ? 'disabled' : ''}>Entrar como administrador — Administrador RH (90001)</button>
-    </div>`;
+    ${!modoApi ? `<details class="premium-demo-access"><summary>Accesos de demostración</summary><div class="quick-access">
+      <button class="btn btn-outline btn-block" data-quick="10001">Colaborador · Laura Hernández</button>
+      <button class="btn btn-outline btn-block" data-quick="20001">Líder · Carlos Martínez</button>
+      <button class="btn btn-outline btn-block" data-quick="90001">Administrador · RH</button>
+      <small>Código demo: ${esc(global.APP_CONFIG.demoCode)}</small>
+    </div></details>` : ''}`;
   }
 
   function viewLoginValidar(L) {
     const modoApi = global.APP_CONFIG.mode === 'api';
     return `
-    <div class="login-form">
-      <p class="muted">Enviamos un código temporal de un solo uso${L.maskedEmail ? ' a ' + esc(L.maskedEmail) : ''}. Vence en <span id="loginCountdown">${esc(global.APP_CONFIG.codeValidityMinutes)}:00</span> minutos.</p>
-      <label>Código temporal (6 dígitos)</label>
-      <input id="loginCodigo" type="text" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" />
-      ${!modoApi ? `<p class="muted">Código de demostración: <strong>${esc(global.APP_CONFIG.demoCode)}</strong> (exclusivo para pruebas; no válido en modo API).</p>` : ''}
+    <div class="login-form premium-login-form">
+      <div class="premium-code-sent">✓ Código enviado${L.maskedEmail ? ' a <strong>' + esc(L.maskedEmail) + '</strong>' : ''}</div>
+      <label for="loginCodigo">Código temporal</label>
+      <input class="premium-code-input" id="loginCodigo" type="text" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" />
+      <p class="premium-field-help">El código vence en <strong id="loginCountdown">${esc(global.APP_CONFIG.codeValidityMinutes)}:00</strong> minutos.</p>
+      ${!modoApi ? `<p class="muted premium-demo-code">Código de demostración: <strong>${esc(global.APP_CONFIG.demoCode)}</strong></p>` : ''}
       ${L.error ? `<p class="alert alert-danger">${esc(L.error)}</p>` : ''}
       ${L.info ? `<p class="alert alert-info">${esc(L.info)}</p>` : ''}
-      <button class="btn btn-primary btn-block" id="btnValidarCodigo" ${L.loading ? 'disabled' : ''}>${L.loading ? 'Validando…' : 'Ingresar'}</button>
-      <div class="login-secondary-actions">
+      <button class="btn btn-primary btn-block premium-login-primary" id="btnValidarCodigo" ${L.loading ? 'disabled' : ''}>${L.loading ? 'Validando…' : 'Ingresar a la plataforma'} <span>→</span></button>
+      <div class="login-secondary-actions premium-login-secondary">
         <button class="btn btn-outline btn-sm" id="btnReenviarCodigo" ${L.loading ? 'disabled' : ''}>Reenviar código</button>
-        <button class="btn btn-outline btn-sm" id="btnCorregirEmpleado" ${L.loading ? 'disabled' : ''}>Corregir número de empleado</button>
+        <button class="btn btn-outline btn-sm" id="btnCorregirEmpleado" ${L.loading ? 'disabled' : ''}>Cambiar empleado</button>
       </div>
     </div>`;
   }
@@ -331,6 +344,7 @@
     }
     if (page === 'autoevaluacion') return viewAutoevaluacion(col, periodoId, estado);
     if (page === 'retroalimentacion') return viewRetroalimentacion(col, periodoId, estado);
+    if (page === 'enviado') return viewEnvioExitoso(col);
     return viewColaboradorInicio(col, periodoId, estado);
   }
 
@@ -437,6 +451,19 @@
     </section>`;
   }
 
+  function viewEnvioExitoso(col, yaEnviada) {
+    return `
+    <section class="premium-success-page">
+      <div class="premium-success-icon">✓</div>
+      <div class="premium-success-confetti" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <h1>${yaEnviada ? 'Tu evaluación ya fue enviada' : '¡Evaluación enviada con éxito!'}</h1>
+      <p>Gracias por tu participación, ${esc((col.nombre || '').split(/\s+/)[0] || '')}.</p>
+      <div class="premium-success-note"><span>✉</span><div><strong>Tu autoevaluación ha sido registrada correctamente.</strong><small>Tu líder recibirá la notificación correspondiente para continuar con el proceso.</small></div></div>
+      <a class="btn btn-primary premium-success-home" href="#/colaborador/inicio">⌂ &nbsp; Ir al inicio</a>
+      <div class="premium-success-footer">◇ &nbsp; Tu compromiso impulsa tu desarrollo y el éxito de Inter-Con.</div>
+    </section>`;
+  }
+
   function viewColaboradorInicio(col, periodoId, estado) {
     const autoEval = S.getEvaluacion(col.empleado, periodoId, 'autoevaluacion');
     let avance = 0;
@@ -484,30 +511,52 @@
   function viewAutoevaluacion(col, periodoId, estado) {
     const ev = ensureWizard(col, periodoId);
     if (ev.estado === D.ESTADOS.COMPLETADA) {
-      return `<div class="card"><h2>Autoevaluación ya enviada</h2><p>Tu autoevaluación para este periodo ya fue enviada el ${esc((ev.completedAt || '').slice(0, 10))}. No es posible modificarla.</p><a class="btn btn-outline" href="#/colaborador/inicio">Volver al inicio</a></div>`;
+      return viewEnvioExitoso(col, true);
     }
     const idx = state.wizard.seccionIdx;
     const seccion = SECCIONES_WIZARD[idx];
-    const stepsHtml = SECCIONES_WIZARD.map((s, i) => `<div class="wizard-step ${i === idx ? 'active' : ''} ${i < idx ? 'done' : ''}">${i + 1}. ${labelSeccion(s)}</div>`).join('');
+    const progreso = Math.round(((idx + (seccion === 'resumen' ? 1 : 0)) / SECCIONES_WIZARD.length) * 100);
+    const respuestasPorSeccion = S.getRespuestasPorSeccion(ev.id);
+    const counts = {
+      actitud: (respuestasPorSeccion.actitud || []).filter(r => r.valor !== '' && r.valor !== null && r.valor !== undefined).length,
+      habilidades: (respuestasPorSeccion.habilidades || []).filter(r => r.valor !== '' && r.valor !== null && r.valor !== undefined).length,
+      conocimientos: (respuestasPorSeccion.conocimientos || []).filter(r => r.valor !== '' && r.valor !== null && r.valor !== undefined).length,
+      objetivos: S.getObjetivos(ev.id).filter(o => (o.descripcion || '').trim() && o.calificacion).length
+    };
+    const total = { actitud:D.COMPETENCIAS.actitud.length, habilidades:D.COMPETENCIAS.habilidades.length, conocimientos:D.COMPETENCIAS.conocimientos.length, objetivos:5 };
 
     let contenido = '';
     if (seccion === 'objetivos') contenido = renderObjetivosForm(ev, false);
     else if (seccion === 'resumen') contenido = renderResumenAuto(ev);
     else contenido = renderSeccionForm(ev, seccion, false);
 
+    const sideSections = ['actitud','habilidades','conocimientos','objetivos'].map((s,i) => `
+      <button class="premium-section-step ${seccion === s ? 'active' : ''} ${i < idx ? 'done' : ''}" onclick="App.irSeccionWizard(${i})">
+        <span><strong>${labelSeccion(s)}</strong><small>${s === 'actitud' ? 'Eje ACTITUD' : 'Eje DESEMPEÑO'}</small></span>
+        <b>${counts[s]}/${total[s]}</b>
+      </button>`).join('');
+
     return `
-    <div class="card wizard-card">
-      <div class="wizard-steps">${stepsHtml}</div>
-      <h2>${labelSeccion(seccion)}</h2>
-      ${contenido}
-      <div class="wizard-nav">
-        <button class="btn btn-outline" ${idx === 0 ? 'disabled' : ''} onclick="App.wizardPrev()">Anterior</button>
-        ${seccion === 'resumen'
-          ? `<label class="confirm-check"><input type="checkbox" id="confirmEnvioAuto"/> Confirmo que la información capturada es correcta.</label>
-             <button class="btn btn-primary" onclick="App.enviarAutoevaluacion()">Enviar autoevaluación</button>`
-          : `<button class="btn btn-primary" onclick="App.wizardNext('${seccion}')">Siguiente</button>`}
+    <section class="premium-evaluation-page">
+      <div class="premium-progress-head"><div><span>Progreso general</span><div class="progress"><div class="progress-bar" style="width:${progreso}%"></div></div></div><strong>${progreso}%</strong></div>
+      <div class="premium-evaluation-layout">
+        <aside class="premium-evaluation-sidebar">
+          ${sideSections}
+          <div class="premium-reminder-card"><strong>Recordatorio</strong><p>Puedes guardar tu progreso en cualquier momento. Tu evaluación es confidencial.</p></div>
+        </aside>
+        <div class="premium-evaluation-main">
+          <div class="premium-evaluation-title"><span class="premium-section-kicker">${seccion === 'resumen' ? 'Revisión final' : 'Sección ' + (idx + 1) + ' de 4'}</span><h1>${labelSeccion(seccion)}${seccion !== 'resumen' ? ` <em>${D.SECCIONES_META[seccion] ? '(' + D.SECCIONES_META[seccion].peso + '%)' : ''}</em>` : ''}</h1></div>
+          ${contenido}
+          <div class="wizard-nav premium-wizard-nav">
+            <button class="btn btn-outline" ${idx === 0 ? 'disabled' : ''} onclick="App.wizardPrev()">← Anterior</button>
+            <button class="btn btn-outline premium-save-btn" onclick="App.guardarProgresoVisual()">Guardar progreso</button>
+            ${seccion === 'resumen'
+              ? `<label class="confirm-check premium-confirm"><input type="checkbox" id="confirmEnvioAuto"/> Confirmo que la información capturada es correcta.</label><button class="btn btn-primary premium-next-btn" onclick="App.enviarAutoevaluacion()">Finalizar y enviar ✓</button>`
+              : `<button class="btn btn-primary premium-next-btn" onclick="App.wizardNext('${seccion}')">Siguiente →</button>`}
+          </div>
+        </div>
       </div>
-    </div>`;
+    </section>`;
   }
 
   function labelSeccion(s) {
@@ -1533,6 +1582,8 @@
       render();
     },
     wizardPrev() { state.wizard.seccionIdx = Math.max(state.wizard.seccionIdx - 1, 0); render(); },
+    irSeccionWizard(idx) { state.wizard.seccionIdx = Math.max(0, Math.min(Number(idx) || 0, SECCIONES_WIZARD.length - 1)); render(); },
+    guardarProgresoVisual() { const btn = document.querySelector('.premium-save-btn'); if (!btn) return; const original = btn.textContent; btn.textContent = '✓ Guardado'; btn.classList.add('saved'); setTimeout(() => { btn.textContent = original; btn.classList.remove('saved'); }, 1400); },
     rate(evaluacionId, seccion, competenciaId, valor) {
       const existentes = S.getRespuestas(evaluacionId);
       const actual = existentes.find((r) => r.competenciaId === competenciaId);
@@ -1580,8 +1631,7 @@
       const objetivos = S.getObjetivos(evaluacionId).filter((o) => o.descripcion && o.descripcion.trim());
       if (!objetivos.length) { alert('Registra al menos un objetivo antes de enviar.'); return; }
       S.completarEvaluacion(evaluacionId, state.user.nombre);
-      alert('Tu autoevaluación fue enviada correctamente. El proceso continúa con la evaluación de tu líder.');
-      navigate('#/colaborador/inicio');
+      navigate('#/colaborador/enviado');
     },
     editarObjetivoLider(evaluacionId, index, descripcion, resultado, calificacion) {
       S.saveObjetivo(evaluacionId, index, descripcion, resultado, calificacion);
