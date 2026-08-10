@@ -76,8 +76,14 @@
   // navegación posterior al login/logout y el registro en auditoría local.
   // =========================================================================
   function irAHomeDePerfil(perfil) {
-    navigate(perfil === 'colaborador' ? '#/colaborador/inicio' : (perfil === 'lider' ? '#/lider/dashboard' : '#/admin/dashboard'));
+    navigate(perfil === 'colaborador' ? '#/colaborador/bienvenida' : (perfil === 'lider' ? '#/lider/dashboard' : '#/admin/dashboard'));
   }
+
+  function introKey() {
+    return state.user ? `edd_intro_rev4_${state.user.empleado}` : 'edd_intro_rev4';
+  }
+  function introVista() { return sessionStorage.getItem(introKey()) === '1'; }
+  function marcarIntroVista() { sessionStorage.setItem(introKey(), '1'); }
 
   function resetLoginState(paso) {
     state.login = {
@@ -92,7 +98,10 @@
   }
 
   async function logout() {
-    if (state.user) S.addAudit(state.user.nombre, 'Cierre de sesión', 'usuarios', state.user.empleado, null, null);
+    if (state.user) {
+      S.addAudit(state.user.nombre, 'Cierre de sesión', 'usuarios', state.user.empleado, null, null);
+      sessionStorage.removeItem(introKey());
+    }
     await A.logout();
     state.user = null;
     resetLoginState('solicitar');
@@ -316,9 +325,52 @@
     const periodoId = state.periodo.id;
     const estado = S.estadoProceso(col.empleado, periodoId);
 
+    if (page === 'bienvenida') return viewBienvenidaEvaluacion(col, periodoId, estado);
+    if (page === 'autoevaluacion' && !introVista() && (estado === D.ESTADOS.NO_INICIADA || estado === D.ESTADOS.EN_PROGRESO)) {
+      return viewBienvenidaEvaluacion(col, periodoId, estado);
+    }
     if (page === 'autoevaluacion') return viewAutoevaluacion(col, periodoId, estado);
     if (page === 'retroalimentacion') return viewRetroalimentacion(col, periodoId, estado);
     return viewColaboradorInicio(col, periodoId, estado);
+  }
+
+  function viewBienvenidaEvaluacion(col, periodoId, estado) {
+    const enProgreso = estado === D.ESTADOS.EN_PROGRESO;
+    return `
+    <section class="intro-evaluacion">
+      <div class="intro-hero">
+        <div class="intro-kicker">Evaluación de Desempeño Administrativo</div>
+        <h1>¡Bienvenido(a) a tu Evaluación de Desempeño!</h1>
+        <p class="intro-lead">Conoce tu desempeño, reconoce tus fortalezas e identifica oportunidades de desarrollo que impulsen tu crecimiento dentro de Inter-Con.</p>
+        <div class="intro-persona"><strong>${esc(col.nombre)}</strong><span>${esc(col.puesto)} · ${esc(col.area)}</span></div>
+      </div>
+
+      <div class="intro-grid">
+        <article class="intro-card"><div class="intro-icon">⏱️</div><h3>Duración</h3><p><strong>15 a 20 minutos.</strong> Procura realizar la evaluación en un solo momento y sin interrupciones.</p></article>
+        <article class="intro-card"><div class="intro-icon">👥</div><h3>¿Quién participa?</h3><p>El proceso contempla tu <strong>autoevaluación</strong>, la <strong>evaluación de tu líder</strong> y la <strong>retroalimentación</strong> para tu desarrollo.</p></article>
+        <article class="intro-card"><div class="intro-icon">⭐</div><h3>Antes de comenzar</h3><p>Responde con honestidad y objetividad, considera tu desempeño durante el periodo evaluado y lee cuidadosamente cada pregunta.</p></article>
+        <article class="intro-card"><div class="intro-icon">🔒</div><h3>Confidencialidad</h3><p>Tus respuestas serán tratadas de forma confidencial y se utilizarán exclusivamente para apoyar tu desarrollo y fortalecer nuestro proceso de gestión del desempeño.</p></article>
+      </div>
+
+      <div class="intro-como-califica">
+        <div>
+          <h3>¿Cómo se integra tu evaluación?</h3>
+          <p><strong>Competencias 70%</strong> + <strong>Cumplimiento de Objetivos 30%</strong>.</p>
+          <div class="intro-pesos">
+            <span>Valores y Actitud <b>40%</b></span>
+            <span>Habilidades <b>20%</b></span>
+            <span>Conocimientos <b>10%</b></span>
+            <span>Objetivos <b>30%</b></span>
+          </div>
+        </div>
+        <details class="intro-escala"><summary>Ver escala de evaluación</summary>${escalaHelpHTML()}</details>
+      </div>
+
+      <div class="intro-actions">
+        <p>Tu opinión y compromiso contribuyen a construir un mejor Inter-Con.</p>
+        <button class="btn btn-primary btn-lg" onclick="App.comenzarEvaluacion()">${enProgreso ? 'Continuar mi evaluación' : 'Comenzar mi evaluación'}</button>
+      </div>
+    </section>`;
   }
 
   function viewColaboradorInicio(col, periodoId, estado) {
@@ -335,7 +387,7 @@
 
     let accion = '';
     if (estado === D.ESTADOS.NO_INICIADA || estado === D.ESTADOS.EN_PROGRESO) {
-      accion = `<a class="btn btn-primary" href="#/colaborador/autoevaluacion">${estado === D.ESTADOS.NO_INICIADA ? 'Iniciar autoevaluación' : 'Continuar autoevaluación'}</a>`;
+      accion = `<a class="btn btn-primary" href="#/${estado === D.ESTADOS.NO_INICIADA ? 'colaborador/bienvenida' : 'colaborador/autoevaluacion'}">${estado === D.ESTADOS.NO_INICIADA ? 'Iniciar autoevaluación' : 'Continuar autoevaluación'}</a>`;
     } else if (estado === D.ESTADOS.RETRO_PENDIENTE || estado === D.ESTADOS.CERRADA) {
       accion = `<a class="btn btn-primary" href="#/colaborador/retroalimentacion">Ver retroalimentación</a>`;
     } else {
@@ -1234,7 +1286,7 @@
     return `
     <div class="card">
       <h2>Matriz 9-Box</h2>
-      <p class="muted">Umbrales configurables (ver calculations.js → CONFIG_9BOX): nivel bajo hasta ${C.CONFIG_9BOX.nivel1Max}, medio hasta ${C.CONFIG_9BOX.nivel2Max}, alto hasta ${C.CONFIG_9BOX.nivel3Max}. Pendientes de validación por RH antes de producción.</p>
+      <p class="muted">Criterio oficial Rev4 para ambos ejes: Bajo &lt;60, Medio / esperado 60–79, Alto 80–100 (base 100).</p>
       ${gridHtml}
       ${panelDetalle}
     </div>`;
@@ -1398,6 +1450,10 @@
         state.login.error = mensajeErrorLogin(err);
         render();
       }
+    },
+    comenzarEvaluacion() {
+      marcarIntroVista();
+      navigate('#/colaborador/autoevaluacion');
     },
     wizardNext(seccionActual) {
       if (seccionActual !== 'resumen') {

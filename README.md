@@ -1,5 +1,8 @@
 # Plataforma EDD Inter-Con — Demo funcional
 
+> **Rev4 aplicada (10-08-2026):** esta compilación adopta como fuente oficial el documento `EDD_Inter-Con_Rev4_ponderacion_y_herramientas version2`: Competencias 70% (Valores y Actitud 40%, Habilidades 20%, Conocimientos 10%) + Objetivos 30%; clasificación final 90/80/60/40; ejes 9-box ACTITUD/DESEMPEÑO en base 100. También incorpora una pantalla de bienvenida previa a la autoevaluación.
+
+
 Demo web funcional (sin backend) de la Evaluación del Desempeño Administrativo de
 **INTER-CON SERVICIOS DE SEGURIDAD PRIVADA, S.A. DE C.V.**, construida a partir del
 documento oficial `EDD_Inter-Con_alineada.docx` (FOR-CAP-003 Rev. 3): competencias,

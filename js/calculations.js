@@ -16,10 +16,8 @@
   // ===========================================================================
   // 1. PONDERACIÓN GENERAL
   //
-  // ⚠ PROPUESTA PRELIMINAR — acuerdo de la reunión de actualización de la beta.
-  // Sustituye la ponderación original del documento FOR-CAP-003 Rev. 3
-  // (Actitud 40 / Habilidades 20 / Conocimientos 10 / Objetivos 30).
-  // Pendiente de validación definitiva por RH antes de pasar a producción.
+  // Ponderación oficial conforme a EDD_Inter-Con_Rev4_ponderacion_y_herramientas
+  // version2 (FOR-CAP-003 Rev. 3): Competencias 70% + Objetivos 30%.
   //
   // Única fuente de verdad de los porcentajes: NO se deben hardcodear
   // porcentajes en app.js, data.js ni en ningún otro módulo. Cualquier
@@ -27,23 +25,23 @@
   // vez reparte estos mismos totales entre las competencias de cada sección).
   // ===========================================================================
   const PESOS_SECCION = {
-    actitud: 20,       // A. Valores y Actitud (Eje POTENCIAL preliminar)
-    habilidades: 15,   // B. Habilidades (Eje DESEMPEÑO)
-    conocimientos: 15, // C. Conocimientos técnicos (Eje DESEMPEÑO)
-    objetivos: 50       // D. Cumplimiento de Objetivos (Eje DESEMPEÑO) — ahora es la sección con mayor peso
+    actitud: 40,       // A. Valores y Actitud (Eje ACTITUD)
+    habilidades: 20,   // B. Habilidades (Eje DESEMPEÑO)
+    conocimientos: 10, // C. Conocimientos (Eje DESEMPEÑO)
+    objetivos: 30      // D. Cumplimiento de Objetivos (Eje DESEMPEÑO)
   };
-  // Suma de control: 20 + 15 + 15 + 50 = 100. Ver test-runner / auditoría de pesos.
+  // Suma de control: 40 + 20 + 10 + 30 = 100.
 
   // ===========================================================================
   // 2. CLASIFICACIÓN NUMÉRICA DEL RESULTADO FINAL (0-100)
   //    Documento oficial + precisión decimal indicada por el cliente.
   // ===========================================================================
   const NIVELES_DESEMPENO = [
-    { min: 95, max: 100, nivel: 'Sobresaliente', color: '#1e7e34' },
-    { min: 90, max: 94.99, nivel: 'Excede las expectativas', color: '#28a745' },
-    { min: 80, max: 89.99, nivel: 'Cumple las expectativas', color: '#3b82c4' },
-    { min: 70, max: 79.99, nivel: 'Cumple parcialmente', color: '#e0a800' },
-    { min: -Infinity, max: 69.99, nivel: 'Requiere mejorar', color: '#c0392b' }
+    { min: 90, max: 100, nivel: 'Sobresaliente', color: '#1e7e34' },
+    { min: 80, max: 89.99, nivel: 'Excede las expectativas', color: '#28a745' },
+    { min: 60, max: 79.99, nivel: 'Cumple las expectativas', color: '#3b82c4' },
+    { min: 40, max: 59.99, nivel: 'Cumple parcialmente; requiere plan de mejora', color: '#e0a800' },
+    { min: -Infinity, max: 39.99, nivel: 'No cumple las expectativas del puesto', color: '#c0392b' }
   ];
 
   function clasificarNivel(total) {
@@ -60,27 +58,16 @@
 
   // ===========================================================================
   // 3. UMBRALES Y EJES DE LA MATRIZ 9-BOX
-  //    Configurables. Deben validarse por RH antes de producción.
-  //    Escala 1-5 para cada eje (Potencial preliminar / Desempeño).
-  //
-  //    ⚠ NOTA SOBRE EL EJE VERTICAL (POTENCIAL PRELIMINAR):
-  //    En esta versión beta, el potencial se estima provisionalmente mediante
-  //    los componentes conductuales y de habilidades disponibles (se reutiliza
-  //    el promedio de la sección "Valores y Actitud" como aproximación). En
-  //    producción deberá incorporarse una evaluación específica de potencial
-  //    (por ejemplo, un cuestionario dedicado). La función/variable interna
-  //    sigue llamándose "actitud" por compatibilidad con el resto del código;
-  //    lo que cambia es exclusivamente la ETIQUETA visible al usuario.
+  //    Documento oficial Rev4: ambos ejes se convierten a base 100.
+  //    Nivel 1: <60 · Nivel 2: 60-79 · Nivel 3: 80-100.
   // ===========================================================================
   const CONFIG_9BOX = {
-    nivel1Max: 2.49,
-    nivel2Max: 3.99,
-    nivel3Max: 5,
-    // Etiquetas de eje mostradas en la interfaz (matriz global e individual).
-    ejeVertical: 'Potencial (preliminar)',
+    ejeVertical: 'Actitud',
     ejeHorizontal: 'Desempeño',
-    // Etiquetas de nivel por tercio (1, 2, 3), compartidas por ambos ejes.
-    etiquetasNivel: ['Bajo', 'Medio', 'Alto']
+    etiquetasNivel: ['Bajo', 'Medio / esperado', 'Alto'],
+    nivel1MaxBase100: 59.9999,
+    nivel2MaxBase100: 79.9999,
+    nivel3MaxBase100: 100
   };
 
   // Umbrales de comparación de brechas entre autoevaluación y evaluación del líder.
@@ -245,16 +232,15 @@
 
   function nivelEje(promedio) {
     if (promedio === null || promedio === undefined) return null;
-    if (promedio <= CONFIG_9BOX.nivel1Max) return 1;
-    if (promedio <= CONFIG_9BOX.nivel2Max) return 2;
+    const base100 = (Number(promedio) / 5) * 100;
+    if (base100 < 60) return 1;
+    if (base100 < 80) return 2;
     return 3;
   }
 
   /**
-   * actitudProm: promedio 1-5 de la sección A (Valores y Actitud).
-   *   Se usa como aproximación provisional del eje "Potencial" — ver nota en
-   *   CONFIG_9BOX más arriba. El nombre del parámetro no cambió para no
-   *   romper compatibilidad con el resto del código y los datos existentes.
+   * actitudProm: promedio 1-5 de la sección A (Valores y Actitud), convertido
+   *   a base 100 para determinar el nivel del eje ACTITUD.
    * desempenoProm: promedio ponderado 1-5 de B+C+D (Habilidades + Conocimientos
    *   + Objetivos), usando los pesos actuales de PESOS_SECCION.
    * Fórmula validada contra el documento oficial:

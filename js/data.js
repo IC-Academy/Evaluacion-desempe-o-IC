@@ -27,27 +27,21 @@
   ];
 
   // ===========================================================================
-  // SECCIONES Y COMPETENCIAS (con conductas observables textuales del documento)
-  //
-  // ⚠ PONDERACIÓN PRELIMINAR (acuerdo de la reunión de actualización de la
-  // beta), pendiente de validación definitiva por RH. Los totales por sección
-  // (peso) DEBEN coincidir siempre con calculations.js -> PESOS_SECCION, que
-  // es la fuente de verdad para el cálculo. Aquí solo se reparte ese total
-  // entre las competencias de la sección, para fines de despliegue en pantalla
-  // (el cálculo real promedia las calificaciones de la sección sin ponderar
-  // cada competencia de forma individual; ver calculations.js).
+  // SECCIONES Y COMPETENCIAS
+  // Ponderación oficial Rev4: Competencias 70% (40/20/10) + Objetivos 30%.
   // ===========================================================================
   const SECCIONES_META = {
-    actitud: { titulo: 'A. Valores y Actitud', peso: 20, eje: 'POTENCIAL (preliminar)', descripcion: 'Evalúa la vivencia diaria de los valores ESPÍRITU de Inter-Con. Esta sección alimenta, de forma preliminar, el eje vertical (Potencial) de la matriz 9-box mientras no exista un instrumento de potencial dedicado.' },
-    habilidades: { titulo: 'B. Habilidades', peso: 15, eje: 'DESEMPEÑO', descripcion: 'Evalúa las capacidades funcionales para ejecutar el puesto con eficiencia.' },
-    conocimientos: { titulo: 'C. Conocimientos técnicos', peso: 15, eje: 'DESEMPEÑO', descripcion: 'Evalúa el dominio técnico del puesto y de los procesos/herramientas del área.' },
-    objetivos: { titulo: 'D. Cumplimiento de Objetivos', peso: 50, eje: 'DESEMPEÑO', descripcion: 'Registre hasta cinco objetivos específicos del periodo, el resultado obtenido y su calificación (1-5). Es la sección con mayor peso en la ponderación preliminar.' }
+    actitud: { titulo: 'A. Valores y Actitud', peso: 40, eje: 'ACTITUD', descripcion: 'Evalúa la vivencia diaria de los valores ESPÍRITU de Inter-Con. Esta sección determina la posición del colaborador en el eje vertical (Actitud) de la matriz 9-box.' },
+    habilidades: { titulo: 'B. Habilidades', peso: 20, eje: 'DESEMPEÑO', descripcion: 'Evalúa las capacidades funcionales para ejecutar el puesto con eficiencia.' },
+    conocimientos: { titulo: 'C. Conocimientos', peso: 10, eje: 'DESEMPEÑO', descripcion: 'Evalúa el dominio técnico del puesto y de los procesos/herramientas del área.' },
+    objetivos: { titulo: 'D. Cumplimiento de Objetivos', peso: 30, eje: 'DESEMPEÑO', descripcion: 'Se evalúa de forma independiente al bloque de competencias. Registra hasta cinco objetivos acordados al inicio del periodo, su meta o indicador, resultado alcanzado y calificación.' }
   };
+
 
   const COMPETENCIAS = {
     actitud: [
       {
-        id: 'A1', nombre: 'Compromiso Organizacional (Integridad y Excelencia)', peso: 4,
+        id: 'A1', nombre: 'Compromiso Organizacional (Integridad y Excelencia)', peso: 8,
         conductas: [
           'Actúa conforme a los valores ESPÍRITU de Inter-Con.',
           'Muestra responsabilidad y ética profesional.',
@@ -55,7 +49,7 @@
         ]
       },
       {
-        id: 'A2', nombre: 'Actitud de Servicio (Pasión y Respeto)', peso: 4,
+        id: 'A2', nombre: 'Actitud de Servicio (Pasión y Respeto)', peso: 8,
         conductas: [
           'Atiende oportunamente las solicitudes de clientes internos y externos.',
           'Demuestra disposición y pasión para apoyar a otros.',
@@ -63,7 +57,7 @@
         ]
       },
       {
-        id: 'A3', nombre: 'Trabajo en Equipo y Unión', peso: 4,
+        id: 'A3', nombre: 'Trabajo en Equipo y Unión', peso: 8,
         conductas: [
           'Colabora con otras áreas para lograr objetivos comunes.',
           'Mantiene relaciones laborales basadas en el respeto.',
@@ -71,7 +65,7 @@
         ]
       },
       {
-        id: 'A4', nombre: 'Innovación y Creatividad (Capacidad de Cambio y Flexibilidad)', peso: 4,
+        id: 'A4', nombre: 'Innovación y Creatividad (Capacidad de Cambio y Flexibilidad)', peso: 8,
         conductas: [
           'Se adapta positivamente a cambios y nuevas prioridades.',
           'Propone ideas para mejorar procesos.',
@@ -79,7 +73,7 @@
         ]
       },
       {
-        id: 'A5', nombre: 'Compromiso con la Sustentabilidad', peso: 4,
+        id: 'A5', nombre: 'Compromiso con la Sustentabilidad', peso: 8,
         conductas: [
           'Hace uso responsable de los recursos materiales y energéticos a su cargo.',
           'Promueve prácticas de cuidado ambiental y ahorro de recursos en su área de trabajo.'
@@ -88,7 +82,7 @@
     ],
     habilidades: [
       {
-        id: 'B1', nombre: 'Orientación a Resultados', peso: 3,
+        id: 'B1', nombre: 'Orientación a Resultados', peso: 4,
         conductas: [
           'Cumple consistentemente los objetivos establecidos.',
           'Mantiene altos estándares de calidad en su trabajo.',
@@ -96,7 +90,7 @@
         ]
       },
       {
-        id: 'B2', nombre: 'Planeación y Organización', peso: 3,
+        id: 'B2', nombre: 'Planeación y Organización', peso: 4,
         conductas: [
           'Organiza adecuadamente sus actividades y prioridades.',
           'Cumple los plazos establecidos.',
@@ -104,7 +98,7 @@
         ]
       },
       {
-        id: 'B3', nombre: 'Comunicación Efectiva', peso: 3,
+        id: 'B3', nombre: 'Comunicación Efectiva', peso: 4,
         conductas: [
           'Se comunica de forma clara, respetuosa y oportuna.',
           'Escucha activamente y considera diferentes puntos de vista.',
@@ -112,7 +106,7 @@
         ]
       },
       {
-        id: 'B4', nombre: 'Seguimiento y Control', peso: 3,
+        id: 'B4', nombre: 'Seguimiento y Control', peso: 4,
         conductas: [
           'Da seguimiento oportuno a sus actividades.',
           'Cumple políticas y procedimientos internos.',
@@ -120,7 +114,7 @@
         ]
       },
       {
-        id: 'B5', nombre: 'Desarrollo de Personas (Liderazgo)', peso: 3,
+        id: 'B5', nombre: 'Desarrollo de Personas (Liderazgo)', peso: 4,
         conductas: [
           'Comparte conocimientos con sus compañeros.',
           'Brinda apoyo cuando otros lo requieren.',
@@ -130,7 +124,7 @@
     ],
     conocimientos: [
       {
-        id: 'C1', nombre: 'Dominio del Puesto', peso: 7.5,
+        id: 'C1', nombre: 'Dominio del Puesto', peso: 5,
         conductas: [
           'Aplica correctamente los conocimientos de su puesto.',
           'Resuelve problemas relacionados con sus funciones.',
@@ -138,7 +132,7 @@
         ]
       },
       {
-        id: 'C2', nombre: 'Procesos y Herramientas de Trabajo', peso: 7.5,
+        id: 'C2', nombre: 'Procesos y Herramientas de Trabajo', peso: 5,
         conductas: [
           'Conoce y aplica correctamente los procesos, políticas y procedimientos de su área.',
           'Utiliza adecuadamente las herramientas y sistemas de automatización disponibles para su puesto.'
@@ -152,11 +146,11 @@
   // vive en calculations.js -> NIVELES_DESEMPENO)
   // ===========================================================================
   const REFERENCIA_NIVELES = [
-    { rango: '95 – 100', nivel: 'Sobresaliente' },
-    { rango: '90 – 94.99', nivel: 'Excede las expectativas' },
-    { rango: '80 – 89.99', nivel: 'Cumple las expectativas' },
-    { rango: '70 – 79.99', nivel: 'Cumple parcialmente' },
-    { rango: 'Menor a 70', nivel: 'Requiere mejorar' }
+    { rango: '90 – 100', nivel: 'Sobresaliente' },
+    { rango: '80 – 89', nivel: 'Excede las expectativas' },
+    { rango: '60 – 79', nivel: 'Cumple las expectativas' },
+    { rango: '40 – 59', nivel: 'Cumple parcialmente; requiere plan de mejora' },
+    { rango: 'Menor a 40', nivel: 'No cumple las expectativas del puesto' }
   ];
 
   // ===========================================================================

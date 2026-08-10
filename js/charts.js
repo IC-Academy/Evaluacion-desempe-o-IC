@@ -223,9 +223,9 @@
   function leyendaEjes() {
     const c = C();
     return `<div class="ninebox-legend">
-      <p><strong>${esc(c.CONFIG_9BOX.ejeHorizontal)}</strong> (eje horizontal): promedio ponderado de Habilidades + Conocimientos técnicos + Cumplimiento de Objetivos, con los pesos vigentes en calculations.js.</p>
-      <p><strong>${esc(c.CONFIG_9BOX.ejeVertical)}</strong> (eje vertical): en esta versión beta se estima de forma provisional a partir de la sección "Valores y Actitud". <em>En producción deberá incorporarse una evaluación específica de potencial.</em></p>
-      <p class="muted">Niveles por eje: ${c.CONFIG_9BOX.etiquetasNivel.join(' · ')} (umbrales configurables en CONFIG_9BOX, pendientes de validación por RH).</p>
+      <p><strong>${esc(c.CONFIG_9BOX.ejeHorizontal)}</strong> (eje horizontal): Habilidades + Conocimientos + Cumplimiento de Objetivos, convertido a base 100 conforme a la ponderación oficial 20% + 10% + 30%.</p>
+      <p><strong>${esc(c.CONFIG_9BOX.ejeVertical)}</strong> (eje vertical): se obtiene de la sección "Valores y Actitud" y se convierte a base 100 conforme al documento Rev4.</p>
+      <p class="muted">Niveles por eje: ${c.CONFIG_9BOX.etiquetasNivel.join(' · ')} · Bajo &lt;60 · Medio 60–79 · Alto 80–100.</p>
     </div>`;
   }
 
