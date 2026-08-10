@@ -48,22 +48,11 @@
     return visible + '***@' + dominio;
   }
 
-  function randomSeguro(bytes) {
-    const arr = new Uint8Array(bytes || 16);
-    if (!global.crypto || typeof global.crypto.getRandomValues !== 'function') {
-      throw new Error('El navegador no dispone de un generador criptográfico seguro.');
-    }
-    global.crypto.getRandomValues(arr);
-    return Array.from(arr, (b) => b.toString(16).padStart(2, '0')).join('');
-  }
-
   function generarTokenDemo() {
-    // Sigue siendo un token SOLO de demo, pero evita Math.random() para no
-    // normalizar un patrón inseguro antes de la integración con backend.
-    return 'DEMO-' + Date.now().toString(36) + '-' + randomSeguro(16);
+    return 'DEMO-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
   }
   function generarRequestId() {
-    return 'REQ-' + randomSeguro(8);
+    return 'REQ-' + Math.floor(100000 + Math.random() * 900000);
   }
 
   function esperar(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
@@ -230,53 +219,6 @@
     return s ? s.token : null;
   }
 
-  // ===========================================================================
-  // AUTORIZACIÓN EN FRONTEND (defensa en profundidad para la demo).
-  // IMPORTANTE: en modo API el backend/n8n DEBE repetir estas validaciones.
-  // Nunca se debe confiar únicamente en el rol o los IDs enviados por el navegador.
-  // ===========================================================================
-  function normalizarRol(rol) {
-    return String(rol || '')
-      .trim()
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '');
-  }
-
-  function getRolInterno(session) {
-    const appUser = getAppUser(session);
-    return appUser ? normalizarRol(appUser.perfil) : null;
-  }
-
-  function requireRole(rolesPermitidos) {
-    const session = getSession();
-    if (!session) {
-      const err = new Error('Sesión no válida o expirada.');
-      err.code = 'unauthenticated';
-      throw err;
-    }
-
-    const rol = getRolInterno(session);
-    const permitidos = (Array.isArray(rolesPermitidos) ? rolesPermitidos : [rolesPermitidos])
-      .map(normalizarRol);
-
-    if (!permitidos.includes(rol)) {
-      const err = new Error('No tienes permisos para realizar esta acción.');
-      err.code = 'forbidden';
-      throw err;
-    }
-    return getAppUser(session);
-  }
-
-  function canAccessArea(area) {
-    const session = getSession();
-    if (!session) return false;
-    const rol = getRolInterno(session);
-    const areaNormalizada = normalizarRol(area);
-    const areaPorRol = { colaborador: 'colaborador', lider: 'lider', administrador: 'admin' };
-    return areaPorRol[rol] === areaNormalizada;
-  }
-
   async function logout() {
     const session = getSession();
     clearSession();
@@ -299,7 +241,6 @@
   global.EDDAuth = {
     requestCode, verifyCode, getSession, clearSession, getAppUser, getToken, logout,
     maskEmail, pendienteActual, limpiarPendiente,
-    normalizarRol, requireRole, canAccessArea,
     ROL_INTERNO_A_API
   };
 })(window);

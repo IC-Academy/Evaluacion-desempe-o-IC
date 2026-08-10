@@ -615,19 +615,3 @@ funciones por llamadas a una API real, sin tocar `app.js`:
 Esta demo **no implementa** esas integraciones; deja la arquitectura (separación
 datos / cálculo / persistencia / interfaz) lista para que ese reemplazo sea
 incremental.
-
----
-
-## Hardening de seguridad — Beta 3.1
-
-Esta copia incorpora defensa en profundidad para la demo antes de conectar el backend:
-
-- El router valida que el portal solicitado (`colaborador`, `lider`, `admin`) coincida con el rol de la sesión. Cambiar manualmente el hash ya no renderiza un portal ajeno.
-- Las acciones sensibles validan rol antes de modificar datos: calibración, habilitación de retroalimentación, configuración, Nine Box, filtros administrativos y reinicio de demo.
-- Las acciones de colaborador validan propiedad del recurso: una autoevaluación/evidencia/aceptación solo puede modificarse por el mismo número de empleado autenticado.
-- Las acciones de líder validan relación jerárquica y que la evaluación corresponda al líder autenticado antes de modificar respuestas, objetivos, fortalezas, comentarios o planes del colaborador.
-- Los tokens e identificadores simulados dejaron de usar `Math.random()` y ahora usan `crypto.getRandomValues()`.
-
-### Límite importante
-
-Estas validaciones protegen la interfaz y reducen modificaciones accidentales o por manipulación simple del navegador, pero **no convierten `localStorage` en un backend confiable**. En modo API, n8n/API debe volver a validar token, rol, relación líder-colaborador y propiedad de cada recurso antes de leer o escribir en Airtable/SQL. La auditoría definitiva también debe generarse en servidor.

@@ -128,26 +128,14 @@
     state.periodo = S.getPeriodoActivo();
 
     const parts = parseHash();
-    const areaEsperada = state.user.perfil === 'colaborador' ? 'colaborador' : state.user.perfil === 'lider' ? 'lider' : 'admin';
-    const area = parts[0] || areaEsperada;
-    const page = parts[1] || (areaEsperada === 'colaborador' ? 'inicio' : 'dashboard');
+    const area = parts[0] || (state.user.perfil === 'colaborador' ? 'colaborador' : state.user.perfil === 'lider' ? 'lider' : 'admin');
+    const page = parts[1] || 'inicio';
     const param = parts[2];
-
-    // Control de acceso por rol: cambiar manualmente el hash no debe permitir
-    // renderizar otro portal. En producción esta validación se repite en n8n/API.
-    if (!A.canAccessArea(area)) {
-      navigate(areaEsperada === 'colaborador' ? '#/colaborador/inicio' : areaEsperada === 'lider' ? '#/lider/dashboard' : '#/admin/dashboard');
-      return;
-    }
 
     let body = '';
     if (area === 'colaborador') body = renderColaborador(page);
     else if (area === 'lider') body = renderLider(page, param);
-    else if (area === 'admin') body = renderAdmin(page, param);
-    else {
-      navigate(areaEsperada === 'colaborador' ? '#/colaborador/inicio' : areaEsperada === 'lider' ? '#/lider/dashboard' : '#/admin/dashboard');
-      return;
-    }
+    else body = renderAdmin(page, param);
 
     root.innerHTML = renderHeader(area, page) + `<main class="container">${body}</main>` + renderFooter();
     bindGlobal();
@@ -581,17 +569,6 @@
         <div>${badge(nivel.nivel, null)}<div class="muted">Puntaje final sobre 100</div></div>
       </div>
       ${progressBar(totalFinal, nivel.color)}
-
-      <h3>Indicadores</h3>
-      <div class="kpi-grid">
-        ${kpi('Cumplimiento de objetivos', f1(promedios.objetivos) + ' /5')}
-        ${kpi('Valores y actitud', f1(promedios.actitud) + ' /5')}
-        ${kpi('Habilidades', f1(promedios.habilidades) + ' /5')}
-        ${kpi('Conocimientos técnicos', f1(promedios.conocimientos) + ' /5')}
-        ${kpi('Potencial preliminar', f1(promedios.actitud) + ' /5')}
-        ${kpi('Cuadrante 9-Box', cuad.cuadrante ? cuad.cuadrante + '. ' + cuad.info.nombre : '—')}
-        ${diferenciaGlobal !== null ? kpi('Diferencia auto vs. líder', (diferenciaGlobal > 0 ? '+' : '') + f1(diferenciaGlobal), brechaGlobal.etiqueta === 'Brecha significativa' ? 'red' : (brechaGlobal.etiqueta === 'Revisar' ? 'yellow' : 'green')) : ''}
-      </div>
 
       <h3>Resultados por sección</h3>
       <div class="seccion-cards">${seccionesCards}</div>
@@ -1290,61 +1267,6 @@
   // =========================================================================
   // ACCIONES (expuestas a los onclick del HTML)
   // =========================================================================
-  // AUTORIZACIÓN DE ACCIONES / RECURSOS
-  // =========================================================================
-  function denyAccess(message) {
-    console.warn('EDD acceso denegado:', message || 'Operación no autorizada');
-    alert(message || 'No tienes permisos para realizar esta acción.');
-    return false;
-  }
-
-  function requireRole(roles) {
-    try {
-      A.requireRole(roles);
-      return true;
-    } catch (err) {
-      return denyAccess(err && err.message);
-    }
-  }
-
-  function getEvaluacionById(evaluacionId) {
-    return S.load().evaluaciones.find((e) => e.id === String(evaluacionId));
-  }
-
-  function requireOwnEvaluation(evaluacionId, tipoEsperado) {
-    if (!requireRole('colaborador')) return null;
-    const ev = getEvaluacionById(evaluacionId);
-    if (!ev || ev.tipo !== tipoEsperado || String(ev.colaboradorId) !== String(state.user.empleado)) {
-      denyAccess('No tienes permiso para modificar esta evaluación.');
-      return null;
-    }
-    return ev;
-  }
-
-  function requireLeaderEvaluation(evaluacionId, colaboradorId) {
-    if (!requireRole('lider')) return null;
-    const ev = getEvaluacionById(evaluacionId);
-    const col = S.getColaborador(colaboradorId || (ev && ev.colaboradorId));
-    if (!ev || ev.tipo !== 'lider' || !col || String(col.liderId) !== String(state.user.empleado) || String(ev.liderId) !== String(state.user.empleado) || String(ev.colaboradorId) !== String(col.empleado)) {
-      denyAccess('Ese colaborador no pertenece a tu equipo.');
-      return null;
-    }
-    return ev;
-  }
-
-  function requireOwnCollaboratorResource(colaboradorId) {
-    if (!requireRole('colaborador')) return false;
-    if (String(colaboradorId) !== String(state.user.empleado)) return denyAccess('No tienes permiso para modificar información de otro colaborador.');
-    return true;
-  }
-
-  function requireLeaderCollaborator(colaboradorId) {
-    if (!requireRole('lider')) return false;
-    const col = S.getColaborador(colaboradorId);
-    if (!col || String(col.liderId) !== String(state.user.empleado)) return denyAccess('Ese colaborador no pertenece a tu equipo.');
-    return true;
-  }
-
   const Actions = {
     logout,
     async solicitarCodigo(numeroEmpleado) {
@@ -1411,9 +1333,6 @@
       }
     },
     wizardNext(seccionActual) {
-      if (state.wizard.tipo === 'autoevaluacion') { if (!requireOwnEvaluation(state.wizard.evaluacionId, 'autoevaluacion')) return; }
-      else if (state.wizard.tipo === 'lider') { if (!requireLeaderEvaluation(state.wizard.evaluacionId, state.wizard.colaboradorId)) return; }
-      else { if (!requireRole([state.user && state.user.perfil])) return; }
       if (seccionActual !== 'resumen') {
         const ev = { id: state.wizard.evaluacionId };
         const seccion = seccionActual;
@@ -1431,51 +1350,33 @@
       state.wizard.seccionIdx = Math.min(state.wizard.seccionIdx + 1, SECCIONES_WIZARD.length - 1);
       render();
     },
-    wizardPrev() {
-      if (state.wizard.tipo === 'autoevaluacion' && !requireOwnEvaluation(state.wizard.evaluacionId, 'autoevaluacion')) return;
-      if (state.wizard.tipo === 'lider' && !requireLeaderEvaluation(state.wizard.evaluacionId, state.wizard.colaboradorId)) return;
-      state.wizard.seccionIdx = Math.max(state.wizard.seccionIdx - 1, 0); render();
-    },
+    wizardPrev() { state.wizard.seccionIdx = Math.max(state.wizard.seccionIdx - 1, 0); render(); },
     rate(evaluacionId, seccion, competenciaId, valor) {
-      const ev = getEvaluacionById(evaluacionId);
-      if (!ev) return denyAccess('Evaluación no encontrada.');
-      if (ev.tipo === 'autoevaluacion') { if (!requireOwnEvaluation(evaluacionId, 'autoevaluacion')) return; }
-      else if (!requireLeaderEvaluation(evaluacionId, ev.colaboradorId)) return;
       const existentes = S.getRespuestas(evaluacionId);
       const actual = existentes.find((r) => r.competenciaId === competenciaId);
       S.saveRespuesta(evaluacionId, seccion, competenciaId, valor, actual ? actual.comentario : '');
     },
     comentar(evaluacionId, seccion, competenciaId, comentario) {
-      const ev = getEvaluacionById(evaluacionId);
-      if (!ev) return denyAccess('Evaluación no encontrada.');
-      if (ev.tipo === 'autoevaluacion') { if (!requireOwnEvaluation(evaluacionId, 'autoevaluacion')) return; }
-      else if (!requireLeaderEvaluation(evaluacionId, ev.colaboradorId)) return;
       const existentes = S.getRespuestas(evaluacionId);
       const actual = existentes.find((r) => r.competenciaId === competenciaId);
       S.saveRespuesta(evaluacionId, seccion, competenciaId, actual ? actual.valor : '', comentario);
     },
     agregarObjetivo(evaluacionId) {
-      const ev = getEvaluacionById(evaluacionId);
-      if (!ev) return denyAccess('Evaluación no encontrada.');
-      if (ev.tipo === 'autoevaluacion') { if (!requireOwnEvaluation(evaluacionId, 'autoevaluacion')) return; }
-      else if (!requireLeaderEvaluation(evaluacionId, ev.colaboradorId)) return;
       const objetivos = S.getObjetivos(evaluacionId);
       if (objetivos.length >= 5) return;
       S.saveObjetivo(evaluacionId, objetivos.length, '', '', '');
       render();
     },
     editarObjetivo(evaluacionId, index, campo, valor) {
-      if (!requireOwnEvaluation(evaluacionId, 'autoevaluacion')) return;
       const objetivos = S.getObjetivos(evaluacionId);
       const o = objetivos.find((x) => x.index === index) || { descripcion: '', resultado: '', calificacion: '' };
       o[campo] = valor;
       S.saveObjetivo(evaluacionId, index, o.descripcion, o.resultado, o.calificacion);
     },
-    quitarObjetivo(evaluacionId, index) { if (!requireOwnEvaluation(evaluacionId, 'autoevaluacion')) return; S.removeObjetivo(evaluacionId, index); render(); },
+    quitarObjetivo(evaluacionId, index) { S.removeObjetivo(evaluacionId, index); render(); },
     enviarAutoevaluacion() {
-      const evaluacionId = state.wizard.evaluacionId;
-      if (!requireOwnEvaluation(evaluacionId, 'autoevaluacion')) return;
       if (!$('#confirmEnvioAuto').checked) { alert('Confirma que la información es correcta antes de enviar.'); return; }
+      const evaluacionId = state.wizard.evaluacionId;
       const objetivos = S.getObjetivos(evaluacionId).filter((o) => o.descripcion && o.descripcion.trim());
       if (!objetivos.length) { alert('Registra al menos un objetivo antes de enviar.'); return; }
       S.completarEvaluacion(evaluacionId, state.user.nombre);
@@ -1483,54 +1384,36 @@
       navigate('#/colaborador/inicio');
     },
     editarObjetivoLider(evaluacionId, index, descripcion, resultado, calificacion) {
-      const ev = getEvaluacionById(evaluacionId);
-      if (!ev || !requireLeaderEvaluation(evaluacionId, ev.colaboradorId)) return;
       S.saveObjetivo(evaluacionId, index, descripcion, resultado, calificacion);
     },
     setFortalezas(evaluacionId, valor) {
-      const evAuth = getEvaluacionById(evaluacionId); if (!evAuth || !requireLeaderEvaluation(evaluacionId, evAuth.colaboradorId)) return;
       const db = S.load(); const ev = db.evaluaciones.find((e) => e.id === evaluacionId); if (ev) { ev.fortalezas = valor; S.persist(); }
     },
     setComentarios(evaluacionId, valor) {
-      const evAuth = getEvaluacionById(evaluacionId); if (!evAuth || !requireLeaderEvaluation(evaluacionId, evAuth.colaboradorId)) return;
       const db = S.load(); const ev = db.evaluaciones.find((e) => e.id === evaluacionId); if (ev) { ev.comentarios = valor; S.persist(); }
     },
     agregarAreaOportunidad(colaboradorId) {
-      if (!requireLeaderCollaborator(colaboradorId)) return;
       const area = prompt('Área de oportunidad:'); if (!area) return;
       const plan = prompt('Plan de mejora:'); if (!plan) return;
       S.addAreaOportunidad(colaboradorId, state.periodo.id, area, plan, state.user.nombre);
       render();
     },
-    quitarAreaOportunidad(id) {
-      if (!requireRole('lider')) return;
-      const item = S.load().areas_oportunidad.find((x) => x.id === id);
-      if (!item || !requireLeaderCollaborator(item.colaboradorId)) return;
-      S.removeAreaOportunidad(id, state.user.nombre); render();
-    },
+    quitarAreaOportunidad(id) { S.removeAreaOportunidad(id, state.user.nombre); render(); },
     agregarPlanDesarrollo(colaboradorId, liderId) {
-      if (!requireLeaderCollaborator(colaboradorId) || String(liderId) !== String(state.user.empleado)) return;
       const competencia = prompt('Competencia a desarrollar:'); if (!competencia) return;
       const accion = prompt('Acción:'); if (!accion) return;
       const fecha = prompt('Fecha compromiso (AAAA-MM-DD):', '2026-09-01') || '2026-09-01';
       S.addPlanDesarrollo(colaboradorId, state.periodo.id, { competencia, accion, responsable: liderId, fechaCompromiso: fecha }, state.user.nombre);
       render();
     },
-    quitarPlanDesarrollo(id) {
-      if (!requireRole('lider')) return;
-      const item = S.load().planes_desarrollo.find((x) => x.id === id);
-      if (!item || !requireLeaderCollaborator(item.colaboradorId)) return;
-      S.removePlanDesarrollo(id, state.user.nombre); render();
-    },
+    quitarPlanDesarrollo(id) { S.removePlanDesarrollo(id, state.user.nombre); render(); },
     enviarEvaluacionLider(colaboradorId) {
-      const evaluacionId = state.wizard.evaluacionId;
-      if (!requireLeaderEvaluation(evaluacionId, colaboradorId)) return;
       if (!$('#confirmEnvioLider').checked) { alert('Confirma que la evaluación está completa antes de enviar.'); return; }
+      const evaluacionId = state.wizard.evaluacionId;
       S.completarEvaluacion(evaluacionId, state.user.nombre);
       navigate('#/lider/comparacion/' + colaboradorId);
     },
     cargarEvidencia(colaboradorId, periodoId) {
-      if (!requireOwnCollaboratorResource(colaboradorId)) return;
       const nombre = prompt('Nombre del archivo a cargar (simulado), ej. retroalimentacion_firmada.pdf:');
       if (!nombre) return;
       const tipo = prompt('Tipo (PDF firmado / Imagen / Documento de retroalimentación):', 'PDF firmado') || 'Documento';
@@ -1538,16 +1421,14 @@
       render();
     },
     aceptar(colaboradorId, periodoId) {
-      if (!requireOwnCollaboratorResource(colaboradorId)) return;
       const evidencias = S.getEvidencias(colaboradorId, periodoId);
       if (!evidencias.length) { alert('Carga al menos una evidencia antes de aceptar el resultado.'); return; }
       S.aceptarResultado(colaboradorId, periodoId, state.user.nombre);
       render();
     },
-    setFiltroAdmin(campo, valor) { if (!requireRole('administrador')) return; state.adminFiltros[campo] = valor || undefined; render(); },
-    limpiarFiltrosAdmin() { if (!requireRole('administrador')) return; state.adminFiltros = {}; render(); },
+    setFiltroAdmin(campo, valor) { state.adminFiltros[campo] = valor || undefined; render(); },
+    limpiarFiltrosAdmin() { state.adminFiltros = {}; render(); },
     guardarCalibracion(colaboradorId, periodoId, totalLider) {
-      if (!requireRole('administrador')) return;
       const ajuste = parseFloat($('#calAjuste').value) || 0;
       const justificacion = $('#calJustificacion').value.trim();
       if (ajuste !== 0 && !justificacion) { alert('La justificación es obligatoria cuando existe un ajuste distinto de 0.'); return; }
@@ -1567,7 +1448,6 @@
       render();
     },
     habilitarRetro(colaboradorId, periodoId) {
-      if (!requireRole('administrador')) return;
       const cal = S.getCalibracion(colaboradorId, periodoId);
       if (!cal || cal.resultadoCalibrado === undefined) { alert('Guarda la calibración antes de habilitar la retroalimentación.'); return; }
       if (cal.resultadoCalibrado < 80) {
@@ -1578,9 +1458,8 @@
       alert('Retroalimentación habilitada para el colaborador.');
       render();
     },
-    selNinebox(numero) { if (!requireRole('administrador')) return; state.nineboxSel = numero; state.nineboxSelEmpleado = null; render(); },
+    selNinebox(numero) { state.nineboxSel = numero; state.nineboxSelEmpleado = null; render(); },
     selNineboxColaborador(empleado) {
-      if (!requireRole('administrador')) return;
       const col = S.getColaborador(empleado);
       const periodoId = state.periodo.id;
       const resLider = S.getUltimoResultadoPorOrigen(empleado, periodoId, 'lider');
@@ -1589,9 +1468,8 @@
       state.nineboxSel = cuad ? cuad.cuadrante : state.nineboxSel;
       render();
     },
-    limpiarSeleccionNinebox() { if (!requireRole('administrador')) return; state.nineboxSelEmpleado = null; render(); },
+    limpiarSeleccionNinebox() { state.nineboxSelEmpleado = null; render(); },
     guardarConfigBrecha() {
-      if (!requireRole('administrador')) return;
       const alineadaMax = parseFloat($('#cfgAlineada').value);
       const revisarMax = parseFloat($('#cfgRevisar').value);
       if (isNaN(alineadaMax) || isNaN(revisarMax) || alineadaMax >= revisarMax) { alert('Verifica que "Alineada" sea menor que "Revisar".'); return; }
@@ -1600,7 +1478,6 @@
       render();
     },
     reiniciarDemo() {
-      if (!requireRole('administrador')) return;
       if (!confirm('¿Reiniciar todos los datos de la demo? Esta acción no se puede deshacer.')) return;
       S.reset();
       A.clearSession();
@@ -1609,10 +1486,10 @@
       location.hash = '#/login';
       render();
     },
-    setFiltroUsuarios(campo, valor) { if (!requireRole('administrador')) return; state.usuariosFiltros[campo] = valor || undefined; render(); },
-    limpiarFiltrosUsuarios() { if (!requireRole('administrador')) return; state.usuariosFiltros = {}; render(); },
-    setFiltroJerarquias(campo, valor) { if (!requireRole('administrador')) return; state.jerarquiasFiltros[campo] = valor || undefined; render(); },
-    limpiarFiltrosJerarquias() { if (!requireRole('administrador')) return; state.jerarquiasFiltros = {}; render(); }
+    setFiltroUsuarios(campo, valor) { state.usuariosFiltros[campo] = valor || undefined; render(); },
+    limpiarFiltrosUsuarios() { state.usuariosFiltros = {}; render(); },
+    setFiltroJerarquias(campo, valor) { state.jerarquiasFiltros[campo] = valor || undefined; render(); },
+    limpiarFiltrosJerarquias() { state.jerarquiasFiltros = {}; render(); }
   };
 
   global.App = Actions;
