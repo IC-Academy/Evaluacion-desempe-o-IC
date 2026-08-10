@@ -315,3 +315,20 @@ textarea { min-height: 60px; resize: vertical; }
   .ninebox-haxis-spacer { display: none; }
   .ficha-ejecutiva .ficha-header { flex-direction: column; align-items: flex-start; }
 }
+
+/* Validación visual de campos obligatorios */
+.competency-card.validation-error,
+.objetivo-row.validation-error {
+  border-color: #c62828;
+  background: #fff5f5;
+  box-shadow: 0 0 0 2px rgba(198, 40, 40, 0.10);
+}
+.validation-message {
+  display: none;
+  margin-top: 7px;
+  color: #b71c1c;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.validation-error .validation-message { display: block; }
+.validation-error .rating-empty-hint { color: #b71c1c; font-weight: 700; }

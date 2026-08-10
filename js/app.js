@@ -446,7 +446,7 @@
     const groupName = 'rate_' + evaluacionId + '_' + c.id;
     const onchangeJs = `App.rate('${evaluacionId}','${seccion}','${c.id}',this.value)`;
     return `
-    <div class="competency-card">
+    <div class="competency-card" data-competencia-id="${esc(c.id)}">
       <div class="competency-header">
         <div>
           <strong>${esc(c.nombre)}</strong>
@@ -458,7 +458,7 @@
           ${ratingWidget(groupName, valor, onchangeJs, soloLectura, false)}
         </div>
       </div>
-      ${!soloLectura ? `<textarea class="comentario-box" placeholder="Comentario (opcional)" onchange="App.comentar('${evaluacionId}','${seccion}','${c.id}',this.value)">${esc(comentario)}</textarea>` : (comentario ? `<div class="comentario-lectura">${esc(comentario)}</div>` : '')}
+      ${!soloLectura ? `<div class="validation-message" aria-live="polite">Selecciona una calificación para continuar.</div><textarea class="comentario-box" placeholder="Comentario (opcional)" onchange="App.comentar('${evaluacionId}','${seccion}','${c.id}',this.value)">${esc(comentario)}</textarea>` : (comentario ? `<div class="comentario-lectura">${esc(comentario)}</div>` : '')}
     </div>`;
   }
 
@@ -484,6 +484,7 @@
         <textarea placeholder="Descripción del objetivo" ${soloLecturaDescripcion ? 'disabled' : ''} onchange="App.editarObjetivo('${evaluacionId}',${index},'descripcion',this.value)">${esc(o.descripcion)}</textarea>
         <textarea placeholder="Resultado obtenido" ${soloLecturaDescripcion ? 'disabled' : ''} onchange="App.editarObjetivo('${evaluacionId}',${index},'resultado',this.value)">${esc(o.resultado)}</textarea>
         ${ratingWidget(groupName, o.calificacion, onchangeJs, false, true)}
+        <div class="validation-message" aria-live="polite">Completa la descripción y selecciona una calificación.</div>
       </div>
       <button class="btn btn-outline btn-sm" onclick="App.quitarObjetivo('${evaluacionId}',${index})">Quitar</button>
     </div>`;
@@ -770,6 +771,7 @@
           <div class="objetivo-lectura"><strong>Objetivo:</strong> ${esc(o.descripcion)}</div>
           <div class="objetivo-lectura"><strong>Resultado:</strong> ${esc(o.resultado)}</div>
           ${ratingWidget(groupName, calif, onchangeJs, false, true)}
+          <div class="validation-message" aria-live="polite">Selecciona una calificación para continuar.</div>
         </div>
       </div>`;
     }).join('')}`;
@@ -1279,6 +1281,59 @@
   // =========================================================================
   // ACCIONES (expuestas a los onclick del HTML)
   // =========================================================================
+
+  function limpiarErroresVisuales(root) {
+    (root || document).querySelectorAll('.validation-error').forEach((el) => el.classList.remove('validation-error'));
+  }
+
+  function marcarErroresYEnfocar(elementos) {
+    const faltantes = (elementos || []).filter(Boolean);
+    faltantes.forEach((el) => el.classList.add('validation-error'));
+    if (faltantes.length) {
+      const primero = faltantes[0];
+      primero.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const focusable = primero.querySelector('input:not([disabled]), textarea:not([disabled]), button:not([disabled])');
+      if (focusable) setTimeout(() => focusable.focus({ preventScroll: true }), 300);
+    }
+    return faltantes.length;
+  }
+
+  function validarSeccionVisual(evaluacionId, seccion) {
+    const wizard = document.querySelector('.wizard-card') || document;
+    limpiarErroresVisuales(wizard);
+    const faltantes = [];
+
+    if (seccion !== 'objetivos') {
+      const respuestas = S.getRespuestasPorSeccion(evaluacionId)[seccion] || [];
+      const respondidas = new Set(respuestas.filter((r) => r.valor !== '' && r.valor !== null && r.valor !== undefined).map((r) => String(r.competenciaId)));
+      (D.COMPETENCIAS[seccion] || []).forEach((c) => {
+        if (!respondidas.has(String(c.id))) {
+          faltantes.push(Array.from(wizard.querySelectorAll('.competency-card')).find((el) => el.dataset.competenciaId === String(c.id)));
+        }
+      });
+    } else if (state.wizard.tipo === 'lider') {
+      const objetivos = S.getObjetivos(evaluacionId) || [];
+      const filas = wizard.querySelectorAll('.objetivo-row');
+      filas.forEach((fila, i) => {
+        const o = objetivos.find((x) => Number(x.index) === i);
+        if (!o || o.calificacion === '' || o.calificacion === null || o.calificacion === undefined) faltantes.push(fila);
+      });
+    } else {
+      const objetivos = S.getObjetivos(evaluacionId) || [];
+      const filas = wizard.querySelectorAll('.objetivo-row');
+      filas.forEach((fila, i) => {
+        const o = objetivos.find((x) => Number(x.index) === i);
+        const tieneAlgo = o && ((o.descripcion || '').trim() || (o.resultado || '').trim() || o.calificacion);
+        if (tieneAlgo && (!(o.descripcion || '').trim() || !o.calificacion)) faltantes.push(fila);
+      });
+      if (!objetivos.some((o) => (o.descripcion || '').trim() && o.calificacion)) {
+        if (!faltantes.length && filas[0]) faltantes.push(filas[0]);
+      }
+    }
+
+    return marcarErroresYEnfocar(faltantes);
+  }
+
   const Actions = {
     logout,
     async solicitarCodigo(numeroEmpleado) {
@@ -1348,15 +1403,10 @@
       if (seccionActual !== 'resumen') {
         const ev = { id: state.wizard.evaluacionId };
         const seccion = seccionActual;
-        if (seccion !== 'objetivos') {
-          const resp = S.getRespuestasPorSeccion(ev.id)[seccion];
-          const totalReq = D.COMPETENCIAS[seccion].length;
-          if (resp.length < totalReq) { alert('Debes calificar todas las competencias de esta sección antes de continuar.'); return; }
-        } else {
-          const objetivos = S.getObjetivos(ev.id).filter((o) => o.descripcion && o.descripcion.trim());
-          if (!objetivos.length) { alert('Registra al menos un objetivo con descripción antes de continuar.'); return; }
-          const sinDescripcion = S.getObjetivos(ev.id).some((o) => o.calificacion && (!o.descripcion || !o.descripcion.trim()));
-          if (sinDescripcion) { alert('No puedes calificar un objetivo sin descripción.'); return; }
+        const faltantes = validarSeccionVisual(ev.id, seccion);
+        if (faltantes) {
+          alert(`No puedes continuar. Tienes ${faltantes} campo${faltantes === 1 ? '' : 's'} pendiente${faltantes === 1 ? '' : 's'}. Revisa lo marcado en rojo.`);
+          return;
         }
       }
       state.wizard.seccionIdx = Math.min(state.wizard.seccionIdx + 1, SECCIONES_WIZARD.length - 1);
@@ -1367,6 +1417,8 @@
       const existentes = S.getRespuestas(evaluacionId);
       const actual = existentes.find((r) => r.competenciaId === competenciaId);
       S.saveRespuesta(evaluacionId, seccion, competenciaId, valor, actual ? actual.comentario : '');
+      const card = Array.from(document.querySelectorAll('.competency-card')).find((el) => el.dataset.competenciaId === String(competenciaId));
+      if (card) card.classList.remove('validation-error');
     },
     comentar(evaluacionId, seccion, competenciaId, comentario) {
       const existentes = S.getRespuestas(evaluacionId);
@@ -1384,11 +1436,27 @@
       const o = objetivos.find((x) => x.index === index) || { descripcion: '', resultado: '', calificacion: '' };
       o[campo] = valor;
       S.saveObjetivo(evaluacionId, index, o.descripcion, o.resultado, o.calificacion);
+      const fila = document.querySelector(`.objetivo-row[data-idx="${index}"]`);
+      if (fila && (o.descripcion || '').trim() && o.calificacion) fila.classList.remove('validation-error');
     },
     quitarObjetivo(evaluacionId, index) { S.removeObjetivo(evaluacionId, index); render(); },
     enviarAutoevaluacion() {
       if (!$('#confirmEnvioAuto').checked) { alert('Confirma que la información es correcta antes de enviar.'); return; }
       const evaluacionId = state.wizard.evaluacionId;
+      for (let i = 0; i < SECCIONES_WIZARD.length - 1; i++) {
+        const sec = SECCIONES_WIZARD[i];
+        const incompleta = sec === 'objetivos'
+          ? !S.getObjetivos(evaluacionId).some((o) => (o.descripcion || '').trim() && o.calificacion)
+          : (S.getRespuestasPorSeccion(evaluacionId)[sec] || []).filter((r) => r.valor !== '' && r.valor !== null && r.valor !== undefined).length < D.COMPETENCIAS[sec].length;
+        if (incompleta) {
+          state.wizard.seccionIdx = i; render();
+          setTimeout(() => {
+            const n = validarSeccionVisual(evaluacionId, sec);
+            alert(`No puedes enviar. Tienes ${n || 'campos'} pendientes; revisa lo marcado en rojo.`);
+          }, 0);
+          return;
+        }
+      }
       const objetivos = S.getObjetivos(evaluacionId).filter((o) => o.descripcion && o.descripcion.trim());
       if (!objetivos.length) { alert('Registra al menos un objetivo antes de enviar.'); return; }
       S.completarEvaluacion(evaluacionId, state.user.nombre);
@@ -1397,6 +1465,8 @@
     },
     editarObjetivoLider(evaluacionId, index, descripcion, resultado, calificacion) {
       S.saveObjetivo(evaluacionId, index, descripcion, resultado, calificacion);
+      const fila = document.querySelectorAll('.objetivo-row')[index];
+      if (fila && calificacion) fila.classList.remove('validation-error');
     },
     setFortalezas(evaluacionId, valor) {
       const db = S.load(); const ev = db.evaluaciones.find((e) => e.id === evaluacionId); if (ev) { ev.fortalezas = valor; S.persist(); }
@@ -1422,6 +1492,20 @@
     enviarEvaluacionLider(colaboradorId) {
       if (!$('#confirmEnvioLider').checked) { alert('Confirma que la evaluación está completa antes de enviar.'); return; }
       const evaluacionId = state.wizard.evaluacionId;
+      for (let i = 0; i < SECCIONES_WIZARD.length - 1; i++) {
+        const sec = SECCIONES_WIZARD[i];
+        const incompleta = sec === 'objetivos'
+          ? S.getObjetivos(evaluacionId).some((o) => !o.calificacion)
+          : (S.getRespuestasPorSeccion(evaluacionId)[sec] || []).filter((r) => r.valor !== '' && r.valor !== null && r.valor !== undefined).length < D.COMPETENCIAS[sec].length;
+        if (incompleta) {
+          state.wizard.seccionIdx = i; render();
+          setTimeout(() => {
+            const n = validarSeccionVisual(evaluacionId, sec);
+            alert(`No puedes enviar. Tienes ${n || 'campos'} pendientes; revisa lo marcado en rojo.`);
+          }, 0);
+          return;
+        }
+      }
       S.completarEvaluacion(evaluacionId, state.user.nombre);
       navigate('#/lider/comparacion/' + colaboradorId);
     },
