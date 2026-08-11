@@ -663,21 +663,50 @@
     const filas = [];
     for (let i = 0; i < Math.max(objetivos.length, 1); i++) filas.push(objetivos[i] || { index: i, descripcion: '', meta: '', fechaCompromiso: '', alcanzable: false, relevante: false, resultado: '', calificacion: '' });
     return `
-    <div class="smart-info-card">
-      <div class="smart-info-icon">SMART</div>
-      <div>
-        <h3>Define objetivos SMART</h3>
-        <p>Cada objetivo debe ser <strong>Específico</strong>, <strong>Medible</strong>, <strong>Alcanzable</strong>, <strong>Relevante</strong> y <strong>Temporal</strong>. La página verificará estos cinco criterios antes de permitirte continuar.</p>
-        <div class="smart-legend">
-          <span><b>S</b> Qué quieres lograr</span><span><b>M</b> Cómo lo medirás</span><span><b>A</b> Que sea realista</span><span><b>R</b> Que aporte al puesto/área</span><span><b>T</b> Cuándo debe cumplirse</span>
+    <div class="smart-workspace">
+      <aside class="smart-guide-panel" aria-label="Guía para redactar objetivos SMART">
+        <div class="smart-guide-badge">GUÍA SMART</div>
+        <h3>¿Qué es un objetivo SMART?</h3>
+        <p class="smart-guide-definition">Un objetivo SMART es <strong>específico, medible, alcanzable, relevante y con un plazo definido</strong> para garantizar claridad y efectividad.</p>
+
+        <div class="smart-guide-criteria">
+          <div><b>S</b><span><strong>Específico</strong><small>Define claramente qué quieres lograr.</small></span></div>
+          <div><b>M</b><span><strong>Medible</strong><small>Incluye una meta, porcentaje o indicador.</small></span></div>
+          <div><b>A</b><span><strong>Alcanzable</strong><small>Debe ser realista con los recursos disponibles.</small></span></div>
+          <div><b>R</b><span><strong>Relevante</strong><small>Debe aportar al puesto, área u objetivos de Inter-Con.</small></span></div>
+          <div><b>T</b><span><strong>Temporal</strong><small>Establece un plazo o fecha de cumplimiento.</small></span></div>
         </div>
-        <div class="smart-example"><strong>Ejemplo:</strong> Incrementar en 10% la captación de nuevos clientes del sector bancario antes del 30 de septiembre de 2026, medido por contratos nuevos cerrados.</div>
-      </div>
+
+        <div class="smart-guide-example">
+          <div class="smart-example-label">EJEMPLO</div>
+          <p><strong>Objetivo general:</strong><br>“Quiero mejorar la capacitación de los colaboradores.”</p>
+          <p><strong>Objetivo SMART:</strong><br>“Incrementar del <b>75% al 90%</b> el porcentaje de colaboradores que concluyen satisfactoriamente la capacitación de inducción, durante los <b>próximos 3 meses</b>, mediante seguimiento semanal, recordatorios y evaluación de conocimientos al finalizar el curso.”</p>
+          <div class="smart-why-title">¿Por qué es SMART?</div>
+          <ul>
+            <li><b>S – Específico:</b> Mejorar la conclusión satisfactoria de la capacitación.</li>
+            <li><b>M – Medible:</b> Pasar del 75% al 90%.</li>
+            <li><b>A – Alcanzable:</b> Se establecen acciones concretas de seguimiento.</li>
+            <li><b>R – Relevante:</b> Fortalece la preparación de los colaboradores.</li>
+            <li><b>T – Temporal:</b> Se debe lograr en 3 meses.</li>
+          </ul>
+        </div>
+        <div class="smart-guide-tip"><span>💡</span><p>Usa esta guía como referencia. La plataforma revisará cada objetivo antes de dejarte continuar.</p></div>
+      </aside>
+
+      <section class="smart-capture-panel">
+        <div class="smart-capture-head">
+          <div>
+            <span class="smart-capture-kicker">CUMPLIMIENTO DE OBJETIVOS · 30%</span>
+            <h3>Captura tus objetivos del periodo</h3>
+            <p>Registra hasta cinco objetivos. Completa la meta, fecha y criterios SMART; solo se promedian los objetivos con descripción y calificación válida.</p>
+          </div>
+          <div class="smart-capture-chip">SMART 5/5</div>
+        </div>
+        ${escalaHelpInline()}
+        <div id="objetivosWrap">${filas.map((o, i) => renderObjetivoRow(ev.id, o, i, soloLecturaDescripcion)).join('')}</div>
+        ${filas.length < 5 ? `<button class="btn btn-outline btn-sm smart-add-objective" onclick="App.agregarObjetivo('${ev.id}')">+ Agregar objetivo</button>` : ''}
+      </section>
     </div>
-    <p class="muted">Registra hasta cinco objetivos del periodo. Solo se promedian los objetivos con descripción y calificación válida.</p>
-    ${escalaHelpInline()}
-    <div id="objetivosWrap">${filas.map((o, i) => renderObjetivoRow(ev.id, o, i, soloLecturaDescripcion)).join('')}</div>
-    ${filas.length < 5 ? `<button class="btn btn-outline btn-sm" onclick="App.agregarObjetivo('${ev.id}')">+ Agregar objetivo</button>` : ''}
     `;
   }
 
