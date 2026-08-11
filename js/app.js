@@ -715,7 +715,10 @@
     const onchangeJs = `App.editarObjetivo('${evaluacionId}',${index},'calificacion',this.value)`;
     return `
     <div class="objetivo-row smart-objective" data-idx="${index}">
-      <div class="objetivo-num">#${index + 1}</div>
+      <div class="smart-objective-head">
+        <div class="objetivo-num">#${index + 1}</div>
+        <button class="smart-remove-objective" type="button" onclick="App.quitarObjetivo('${evaluacionId}',${index})" aria-label="Quitar objetivo ${index + 1}" title="Quitar objetivo">× <span>Quitar</span></button>
+      </div>
       <div class="objetivo-fields smart-objective-fields">
         <div class="smart-field smart-field-wide"><label>Objetivo específico</label><textarea placeholder="Ej. Incrementar la cobertura..." ${soloLecturaDescripcion ? 'disabled' : ''} oninput="App.editarObjetivoSmart('${evaluacionId}',${index},'descripcion',this.value)">${esc(o.descripcion)}</textarea></div>
         <div class="smart-field"><label>Meta / indicador</label><input type="text" placeholder="Ej. +10% / 25 contratos" value="${esc(o.meta || '')}" ${soloLecturaDescripcion ? 'disabled' : ''} oninput="App.editarObjetivoSmart('${evaluacionId}',${index},'meta',this.value)"></div>
@@ -725,7 +728,6 @@
         <div class="smart-field smart-rating-field"><label>Calificación</label>${ratingWidget(groupName, o.calificacion, onchangeJs, false, true)}</div>
         <div class="validation-message" aria-live="polite">Completa el objetivo y asegúrate de que cumpla los 5 criterios SMART.</div>
       </div>
-      <button class="btn btn-outline btn-sm" onclick="App.quitarObjetivo('${evaluacionId}',${index})">Quitar</button>
     </div>`;
   }
 
