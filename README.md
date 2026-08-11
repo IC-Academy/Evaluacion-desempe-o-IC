@@ -618,3 +618,9 @@ funciones por llamadas a una API real, sin tocar `app.js`:
 Esta demo **no implementa** esas integraciones; deja la arquitectura (separación
 datos / cálculo / persistencia / interfaz) lista para que ese reemplazo sea
 incremental.
+
+## Selector de idioma ES / EN
+
+Esta versión incorpora un selector visible **ES / EN** tanto en login como dentro del portal. La preferencia se conserva en `localStorage` bajo `edd_language`. La traducción es únicamente de interfaz; nombres de personas, áreas, puestos, comentarios y datos capturados por usuarios se conservan tal como están registrados.
+
+El selector no modifica cálculos, ponderaciones, evaluaciones ni el almacenamiento. La versión en inglés es una capa de presentación para la futura operación en Estados Unidos.

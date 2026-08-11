@@ -18,6 +18,117 @@
   const S = global.EDDStorage;
   const A = global.EDDAuth;
 
+
+
+  // =========================================================================
+  // IDIOMA ES / EN — traducción de interfaz sin alterar datos ni lógica.
+  // Se guarda localmente para que el usuario conserve su preferencia.
+  // =========================================================================
+  const LANG_KEY = 'edd_language';
+  let currentLang = localStorage.getItem(LANG_KEY) || 'es';
+
+  const EN = {
+    'Inicio':'Home','Autoevaluación':'Self-assessment','Retroalimentación':'Feedback',
+    'Mi equipo':'My team','Pendientes por evaluar':'Pending evaluations','Dashboard':'Dashboard',
+    'Calibración':'Calibration','Matriz 9-Box':'9-Box Matrix','Usuarios':'Users','Jerarquías':'Hierarchy',
+    'Auditoría':'Audit','Configuración':'Settings','Cerrar sesión':'Sign out',
+    'Plataforma corporativa':'Corporate platform','Bienvenido(a)':'Welcome','Verificación de identidad':'Identity verification',
+    'Utiliza tu número de empleado para acceder a tu evaluación.':'Use your employee number to access your evaluation.',
+    'Revisa tu correo corporativo y captura el código temporal de 6 dígitos.':'Check your corporate email and enter the 6-digit temporary code.',
+    'Acceso protegido · Uso exclusivo de personal autorizado':'Protected access · Authorized personnel only',
+    'Número de empleado':'Employee number','Ingresa tu número de empleado':'Enter your employee number',
+    'Continuar':'Continue','Enviando…':'Sending…','Código temporal':'Temporary code',
+    'Ingresar a la plataforma':'Enter platform','Validando…':'Validating…',
+    'El código vence en':'The code expires in','minutos.':'minutes.','vencido':'expired',
+    'Evaluación de Desempeño Administrativo':'Administrative Performance Evaluation',
+    'Duración estimada':'Estimated duration','¿Quién participa?':'Who participates?','Antes de comenzar':'Before you begin',
+    'Confidencialidad':'Confidentiality','¿Cómo se integra?':'How is it structured?','Escala de evaluación':'Rating scale',
+    'Comenzar mi evaluación':'Start my evaluation','Tu autoevaluación.':'Your self-assessment.',
+    'La evaluación de tu líder.':'Your manager’s evaluation.','Retroalimentación para tu desarrollo.':'Feedback for your development.',
+    'Valores y Actitud':'Values and Attitude','Habilidades':'Skills','Conocimientos':'Knowledge','Objetivos':'Objectives',
+    'Cumplimiento de Objetivos':'Goal Achievement','Guardar progreso':'Save progress','Siguiente':'Next','Anterior':'Back',
+    'Siguiente sección':'Next section','Finalizar y enviar ✓':'Finish and submit ✓','Progreso general':'Overall progress',
+    'Progreso de la sección':'Section progress','Recordatorio':'Reminder','Puedes guardar tu progreso en cualquier momento.':'You can save your progress at any time.',
+    'Tu evaluación es confidencial.':'Your evaluation is confidential.','Comentarios (opcional)':'Comments (optional)',
+    'Resumen de tu evaluación':'Evaluation summary','Revisa tus resultados antes de finalizar.':'Review your results before finishing.',
+    'Puntaje global':'Overall score','Nivel global':'Overall level','Interpretación de nivel':'Level interpretation',
+    'Finalizar y enviar mi evaluación':'Finish and submit my evaluation','¡Evaluación enviada con éxito!':'Evaluation submitted successfully!',
+    'Gracias por tu participación.':'Thank you for your participation.','Ir al inicio':'Go to home',
+    'Tu autoevaluación ha sido enviada correctamente.':'Your self-assessment was submitted successfully.',
+    'Tu líder recibirá una notificación para realizar su evaluación.':'Your manager will receive a notification to complete their evaluation.',
+    'Pendientes de retroalimentación':'Pending feedback','Nombre':'Name','Puesto':'Position','Área':'Area',
+    'Evaluación líder':'Manager evaluation','Comparación':'Comparison','Evaluar':'Evaluate','Ver':'View',
+    'No tienes evaluaciones pendientes en este momento.':'You have no pending evaluations at this time.',
+    'Guardar calibración':'Save calibration','Habilitar retroalimentación':'Enable feedback','Retroalimentación habilitada':'Feedback enabled',
+    'Resultado calibrado':'Calibrated result','Autoevaluación':'Self-assessment','Percepción del colaborador':'Employee self-perception',
+    'Resultado líder':'Manager result','Resultado final':'Final result','Justificación':'Justification',
+    'Fortalezas':'Strengths','Áreas de oportunidad':'Development opportunities','Plan de desarrollo':'Development plan',
+    'Competencia a desarrollar':'Competency to develop','Acción':'Action','Responsable':'Owner','Fecha compromiso':'Due date',
+    'Objetivo específico':'Specific objective','Meta / indicador':'Target / indicator','Resultado obtenido':'Result achieved','Calificación':'Rating',
+    'Validación SMART':'SMART validation','Específico':'Specific','Medible':'Measurable','Alcanzable':'Achievable','Relevante':'Relevant','Temporal':'Time-bound',
+    'Completa los criterios pendientes antes de continuar.':'Complete the pending criteria before continuing.',
+    '¿Qué es un objetivo SMART?':'What is a SMART objective?','Guía SMART':'SMART guide','Ejemplo':'Example',
+    'Objetivo general:':'General objective:','Objetivo SMART:':'SMART objective:','¿Por qué es SMART?':'Why is it SMART?',
+    'Quitar':'Remove','Agregar objetivo':'Add objective','Ver escala de evaluación':'View rating scale',
+    'Excede significativamente las expectativas. Es un referente para otros.':'Significantly exceeds expectations. Serves as a role model for others.',
+    'Supera las expectativas de manera constante.':'Consistently exceeds expectations.',
+    'Cumple con lo esperado para su puesto.':'Meets expectations for the role.',
+    'Cumple parcialmente; requiere mejorar.':'Partially meets expectations; improvement is required.',
+    'No cumple con las expectativas del puesto.':'Does not meet the expectations of the role.',
+    'No aplica o no cuento con elementos suficientes para evaluarlo.':'Not applicable or insufficient information to evaluate.',
+    'Sobresaliente':'Outstanding','Excede las expectativas':'Exceeds expectations','Cumple las expectativas':'Meets expectations',
+    'Cumple parcialmente; requiere plan de mejora':'Partially meets expectations; improvement plan required',
+    'No cumple las expectativas del puesto':'Does not meet role expectations','Alto':'High','Medio':'Medium','Bajo':'Low',
+    'Activo':'Active','Inactivo':'Inactive','Completada':'Completed','En progreso':'In progress','No iniciada':'Not started',
+    'Pendiente de líder':'Pending manager','Pendiente de calibración':'Pending calibration','Calibrada':'Calibrated',
+    'Retroalimentación pendiente':'Feedback pending','Cerrada':'Closed','Vencida':'Overdue',
+    'Buscar':'Search','Limpiar filtros':'Clear filters','Todos':'All','Todas':'All','Estado':'Status','Periodo':'Period',
+    'Guardar':'Save','Cancelar':'Cancel','Aceptar':'Accept','Cerrar':'Close','Sí':'Yes','No':'No'
+  };
+
+  const ATTR_EN = {
+    'Cerrar sesión':'Sign out',
+    'Ingresa tu número de empleado':'Enter your employee number',
+    'Competencia a desarrollar:':'Competency to develop:',
+    'Acción:':'Action:',
+    'Fecha compromiso (AAAA-MM-DD):':'Due date (YYYY-MM-DD):'
+  };
+
+  function t(text) { return currentLang === 'en' ? (EN[text] || text) : text; }
+  function setLanguage(lang) {
+    currentLang = lang === 'en' ? 'en' : 'es';
+    localStorage.setItem(LANG_KEY, currentLang);
+    document.documentElement.lang = currentLang;
+    render();
+  }
+
+  function translateDOM(root) {
+    document.documentElement.lang = currentLang;
+    if (currentLang !== 'en' || !root) return;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach((node) => {
+      const raw = node.nodeValue || '';
+      const trimmed = raw.trim();
+      if (!trimmed) return;
+      if (EN[trimmed]) node.nodeValue = raw.replace(trimmed, EN[trimmed]);
+    });
+    root.querySelectorAll('[placeholder],[title],[aria-label]').forEach((el) => {
+      ['placeholder','title','aria-label'].forEach((attr) => {
+        const v = el.getAttribute(attr);
+        if (v && (EN[v] || ATTR_EN[v])) el.setAttribute(attr, EN[v] || ATTR_EN[v]);
+      });
+    });
+  }
+
+  function languageSwitcher(compact) {
+    return `<div class="language-switch ${compact ? 'language-switch-compact' : ''}" role="group" aria-label="Idioma / Language">
+      <button type="button" class="language-option ${currentLang === 'es' ? 'active' : ''}" onclick="App.setLanguage('es')">ES</button>
+      <button type="button" class="language-option ${currentLang === 'en' ? 'active' : ''}" onclick="App.setLanguage('en')">EN</button>
+    </div>`;
+  }
+
   const state = {
     user: null,       // {empleado, nombre, perfil} — derivado de EDDAuth.getAppUser()
     periodo: null,
@@ -132,6 +243,7 @@
       }
       root.innerHTML = viewLogin();
       bindLogin();
+      translateDOM(root);
       return;
     }
     state.periodo = S.getPeriodoActivo();
@@ -160,6 +272,7 @@
 
     root.innerHTML = renderHeader(area, page) + `<main class="container">${body}</main>` + renderFooter();
     bindGlobal();
+    translateDOM(root);
   }
 
   // =========================================================================
@@ -188,6 +301,7 @@
         <div class="premium-user-menu">
           <span class="premium-user-avatar">${iniciales}</span>
           <span class="premium-user-copy"><strong>${esc(u.nombre)}</strong><small>${capitalize(u.perfil)} · ${esc(per ? per.nombre : '')}</small></span>
+          ${languageSwitcher(true)}
           <button class="premium-logout" onclick="App.logout()" title="Cerrar sesión"><span class="logout-icon">↪</span><span class="logout-label">Cerrar sesión</span></button>
         </div>
       </div>
@@ -261,6 +375,7 @@
         </div>
         <div class="premium-login-form-panel">
           <div class="premium-login-form-wrap">
+            <div class="premium-login-lang">${languageSwitcher(false)}</div>
             <div class="premium-login-mobile-logo"><img src="assets/ic-seguridad-privada.png" alt="IC Seguridad Privada" /></div>
             <div class="premium-login-step">${L.paso === 'validar' ? 'Verificación de identidad' : 'Bienvenido(a)'}</div>
             <h2>${L.paso === 'validar' ? 'Ingresa tu código de acceso' : 'Inicia sesión'}</h2>
@@ -1587,6 +1702,7 @@
   }
 
   const Actions = {
+    setLanguage(lang) { setLanguage(lang); },
     logout,
     async solicitarCodigo(numeroEmpleado) {
       state.login.error = null; state.login.info = null;
