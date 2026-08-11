@@ -1283,6 +1283,7 @@
     const liderCompletadas = datos.filter((d) => S.getEvaluacion(d.c.empleado, periodoId, 'lider') && S.getEvaluacion(d.c.empleado, periodoId, 'lider').estado === D.ESTADOS.COMPLETADA).length;
     const calibradas = datos.filter((d) => S.getCalibracion(d.c.empleado, periodoId)).length;
     const cerradas = datos.filter((d) => d.estado === D.ESTADOS.CERRADA).length;
+    const pendientesCal = datos.filter((d) => d.estado === D.ESTADOS.PENDIENTE_CALIBRACION).length;
     const vencidas = datos.filter((d) => {
       const auto = S.getEvaluacion(d.c.empleado, periodoId, 'autoevaluacion');
       return (!auto || auto.estado !== D.ESTADOS.COMPLETADA) && esVencido(state.periodo.fechaLimiteAutoevaluacion);
@@ -1295,94 +1296,101 @@
     const areas = [...new Set(datos.map((d) => d.c.area))];
     const filtrados = datos.filter((d) => (!filtros.area || d.c.area === filtros.area) && (!filtros.estado || d.estado === filtros.estado) && (!filtros.cuadrante || String(d.cuad.cuadrante) === filtros.cuadrante));
 
-    // Avance por área
     const avancePorArea = areas.map((a) => {
       const arr = datos.filter((d) => d.c.area === a);
       const cerr = arr.filter((d) => d.estado === D.ESTADOS.CERRADA).length;
       return { area: a, pct: arr.length ? pct((cerr / arr.length) * 100) : 0, total: arr.length };
     });
 
-    // Distribución de niveles
     const nivelesCount = {};
     D.REFERENCIA_NIVELES.forEach((n) => nivelesCount[n.nivel] = 0);
     datos.forEach((d) => { if (d.totalFinal !== null) nivelesCount[d.nivel.nivel] = (nivelesCount[d.nivel.nivel] || 0) + 1; });
 
-    // Distribución por cuadrante
     const cuadranteCount = {}; for (let i = 1; i <= 9; i++) cuadranteCount[i] = 0;
     datos.forEach((d) => { if (d.cuad.cuadrante) cuadranteCount[d.cuad.cuadrante]++; });
-
-    // Ranking de áreas con mayor rezago (menor avance primero)
     const ranking = avancePorArea.slice().sort((a, b) => a.pct - b.pct);
 
     return `
-    <div class="kpi-grid">
-      ${kpi('Personal a evaluar', total)}
-      ${kpi('Autoevaluaciones completadas', autoCompletadas)}
-      ${kpi('Evaluaciones de líder completadas', liderCompletadas)}
-      ${kpi('Calibradas', calibradas, 'blue')}
-      ${kpi('Cerradas', cerradas, 'green')}
-      ${kpi('Vencidas', vencidas, vencidas ? 'red' : 'gray')}
-      ${kpi('Avance nacional', avanceNacional + '%', 'blue')}
-      ${kpi('Promedio general', f1(promedioGeneral))}
-    </div>
-
-    <div class="card">
-      <h2>Avance por área</h2>
-      ${avancePorArea.map((a) => `<div class="bar-row"><span class="bar-label">${esc(a.area)} (${a.total})</span>${progressBar(a.pct)}</div>`).join('')}
-    </div>
-
-    <div class="two-col">
-      <div class="card">
-        <h2>Distribución de calificaciones</h2>
-        ${Object.keys(nivelesCount).map((n) => `<div class="bar-row"><span class="bar-label">${esc(n)}</span>${progressBar(total ? (nivelesCount[n] / total) * 100 : 0)}<span class="bar-count">${nivelesCount[n]}</span></div>`).join('')}
+    <section class="admin-premium-shell">
+      <div class="admin-premium-hero">
+        <div>
+          <span class="admin-kicker">PANEL RH · ${esc(periodoId)}</span>
+          <h1>Evaluación de Desempeño</h1>
+          <p>Seguimiento nacional, calibración, cierre y distribución de talento en un solo lugar.</p>
+        </div>
+        <div class="admin-hero-progress">
+          <div class="admin-progress-value">${avanceNacional}%</div>
+          <div><strong>Avance del ciclo</strong><span>${cerradas} de ${total} evaluaciones cerradas</span></div>
+        </div>
       </div>
-      <div class="card">
-        <h2>Distribución por cuadrante</h2>
-        ${Object.keys(cuadranteCount).map((n) => `<div class="bar-row"><span class="bar-icon-mini">${(global.EDDIcons && global.EDDIcons.SVG[n]) || ''}</span><span class="bar-label">${n}. ${esc(C.CUADRANTES_INFO[n].nombre)}</span>${progressBar(total ? (cuadranteCount[n] / total) * 100 : 0, C.CUADRANTES_INFO[n].color)}<span class="bar-count">${cuadranteCount[n]}</span></div>`).join('')}
+
+      <div class="admin-kpi-grid">
+        <div class="admin-kpi-card"><span>Personal a evaluar</span><strong>${total}</strong><small>Universo del periodo</small></div>
+        <div class="admin-kpi-card"><span>Autoevaluaciones</span><strong>${autoCompletadas}</strong><small>${total ? pct(autoCompletadas/total*100) : 0}% completadas</small></div>
+        <div class="admin-kpi-card"><span>Evaluaciones líder</span><strong>${liderCompletadas}</strong><small>${total ? pct(liderCompletadas/total*100) : 0}% completadas</small></div>
+        <div class="admin-kpi-card attention"><span>Por calibrar</span><strong>${pendientesCal}</strong><small>Requieren revisión RH</small></div>
+        <div class="admin-kpi-card success"><span>Calibradas</span><strong>${calibradas}</strong><small>Con resultado RH</small></div>
+        <div class="admin-kpi-card"><span>Promedio general</span><strong>${f1(promedioGeneral)}</strong><small>Resultado disponible</small></div>
       </div>
-    </div>
 
-    <div class="card">
-      <h2>Ranking de áreas con mayor rezago</h2>
-      <table class="table"><thead><tr><th>#</th><th>Área</th><th>Avance</th></tr></thead><tbody>
-      ${ranking.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.area)}</td><td>${r.pct}%</td></tr>`).join('')}
-      </tbody></table>
-    </div>
+      <div class="admin-dashboard-grid">
+        <article class="admin-panel admin-panel-wide">
+          <div class="admin-panel-head"><div><span class="admin-section-kicker">COBERTURA</span><h2>Avance por área</h2></div><span class="admin-panel-note">Cierre del proceso</span></div>
+          <div class="admin-area-progress">
+            ${avancePorArea.map((a) => `<div class="admin-area-row"><div><strong>${esc(a.area)}</strong><span>${a.total} colaboradores</span></div><div class="admin-area-track"><i style="width:${a.pct}%"></i></div><b>${a.pct}%</b></div>`).join('')}
+          </div>
+        </article>
 
-    <div class="card">
-      <h2>Tabla de pendientes</h2>
-      <div class="filters-bar">
-        <select onchange="App.setFiltroAdmin('area', this.value)"><option value="">Todas las áreas</option>${areas.map((a) => `<option value="${a}" ${filtros.area === a ? 'selected' : ''}>${a}</option>`).join('')}</select>
-        <select onchange="App.setFiltroAdmin('estado', this.value)"><option value="">Todos los estados</option>${Object.values(D.ESTADOS).map((e) => `<option value="${e}" ${filtros.estado === e ? 'selected' : ''}>${e}</option>`).join('')}</select>
-        <select onchange="App.setFiltroAdmin('cuadrante', this.value)"><option value="">Todos los cuadrantes</option>${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => `<option value="${n}" ${filtros.cuadrante === String(n) ? 'selected' : ''}>${n}. ${C.CUADRANTES_INFO[n].nombre}</option>`).join('')}</select>
-        <button class="btn btn-outline btn-sm" onclick="App.limpiarFiltrosAdmin()">Limpiar filtros</button>
+        <article class="admin-panel">
+          <div class="admin-panel-head"><div><span class="admin-section-kicker">RESULTADOS</span><h2>Niveles de desempeño</h2></div></div>
+          <div class="admin-distribution-list">
+            ${Object.keys(nivelesCount).map((n) => `<div><span>${esc(n)}</span><strong>${nivelesCount[n]}</strong><i style="width:${total ? (nivelesCount[n]/total)*100 : 0}%"></i></div>`).join('')}
+          </div>
+        </article>
+
+        <article class="admin-panel">
+          <div class="admin-panel-head"><div><span class="admin-section-kicker">TALENTO</span><h2>Distribución 9-Box</h2></div><a href="#/admin/9box" class="admin-text-link">Abrir matriz →</a></div>
+          <div class="admin-nine-mini">
+            ${Object.keys(cuadranteCount).map((n) => `<div title="${esc(C.CUADRANTES_INFO[n].nombre)}"><span>${n}</span><b>${cuadranteCount[n]}</b><small>${esc(C.CUADRANTES_INFO[n].nombre)}</small></div>`).join('')}
+          </div>
+        </article>
       </div>
-      <table class="table"><thead><tr><th>Nombre</th><th>Área</th><th>Líder</th><th>Estado</th><th>Puntaje</th><th>Cuadrante</th><th></th></tr></thead><tbody>
-      ${filtrados.map((d) => {
-        const lider = S.getLider(d.c.liderId);
-        let accion = '';
-        if ([D.ESTADOS.PENDIENTE_CALIBRACION, D.ESTADOS.CALIBRADA, D.ESTADOS.RETRO_PENDIENTE].includes(d.estado)) accion = `<a class="btn btn-primary btn-sm" href="#/admin/calibracion/${d.c.empleado}">Calibrar</a>`;
-        return `<tr><td>${esc(d.c.nombre)}</td><td>${esc(d.c.area)}</td><td>${esc(lider ? lider.nombre : '—')}</td><td>${badge(d.estado)}</td><td>${f1(d.totalFinal)}</td><td>${d.cuad.cuadrante ? d.cuad.cuadrante + '. ' + esc(d.cuad.info.nombre) : '—'}</td><td>${accion}</td></tr>`;
-      }).join('')}
-      </tbody></table>
-    </div>
 
-    <div class="card">
-      <h2>Alertas</h2>
-      <ul class="alertas-list">
-        ${vencidas ? `<li class="alert alert-danger">${vencidas} colaborador(es) con autoevaluación vencida (límite ${state.periodo.fechaLimiteAutoevaluacion}).</li>` : ''}
-        ${datos.filter((d) => d.estado === D.ESTADOS.PENDIENTE_CALIBRACION).length ? `<li class="alert alert-warning">${datos.filter((d) => d.estado === D.ESTADOS.PENDIENTE_CALIBRACION).length} evaluación(es) esperando calibración de RH.</li>` : ''}
-        ${!vencidas && !datos.filter((d) => d.estado === D.ESTADOS.PENDIENTE_CALIBRACION).length ? '<li class="muted">Sin alertas activas.</li>' : ''}
-      </ul>
-    </div>`;
+      <article class="admin-panel admin-pending-panel">
+        <div class="admin-panel-head"><div><span class="admin-section-kicker">OPERACIÓN RH</span><h2>Seguimiento de evaluaciones</h2></div><span class="admin-panel-note">${filtrados.length} registros</span></div>
+        <div class="filters-bar admin-filters">
+          <select onchange="App.setFiltroAdmin('area', this.value)"><option value="">Todas las áreas</option>${areas.map((a) => `<option value="${a}" ${filtros.area === a ? 'selected' : ''}>${a}</option>`).join('')}</select>
+          <select onchange="App.setFiltroAdmin('estado', this.value)"><option value="">Todos los estados</option>${Object.values(D.ESTADOS).map((e) => `<option value="${e}" ${filtros.estado === e ? 'selected' : ''}>${e}</option>`).join('')}</select>
+          <select onchange="App.setFiltroAdmin('cuadrante', this.value)"><option value="">Todos los cuadrantes</option>${[1,2,3,4,5,6,7,8,9].map((n) => `<option value="${n}" ${filtros.cuadrante === String(n) ? 'selected' : ''}>${n}. ${C.CUADRANTES_INFO[n].nombre}</option>`).join('')}</select>
+          <button class="btn btn-outline btn-sm" onclick="App.limpiarFiltrosAdmin()">Limpiar</button>
+        </div>
+        <div class="admin-table-wrap"><table class="table admin-table"><thead><tr><th>Colaborador</th><th>Área</th><th>Líder</th><th>Estado</th><th>Puntaje</th><th>9-Box</th><th></th></tr></thead><tbody>
+        ${filtrados.map((d) => {
+          const lider = S.getLider(d.c.liderId);
+          let accion = '';
+          if ([D.ESTADOS.PENDIENTE_CALIBRACION,D.ESTADOS.CALIBRADA,D.ESTADOS.RETRO_PENDIENTE].includes(d.estado)) accion = `<a class="btn btn-primary btn-sm" href="#/admin/calibracion/${d.c.empleado}">Revisar</a>`;
+          return `<tr><td><strong>${esc(d.c.nombre)}</strong><small>${esc(d.c.puesto || '')}</small></td><td>${esc(d.c.area)}</td><td>${esc(lider ? lider.nombre : '—')}</td><td>${badge(d.estado)}</td><td><b>${f1(d.totalFinal)}</b></td><td>${d.cuad.cuadrante ? `<span class="admin-box-pill">${d.cuad.cuadrante} · ${esc(d.cuad.info.nombre)}</span>` : '—'}</td><td>${accion}</td></tr>`;
+        }).join('')}
+        </tbody></table></div>
+      </article>
+
+      <div class="admin-bottom-grid">
+        <article class="admin-panel"><div class="admin-panel-head"><div><span class="admin-section-kicker">PRIORIDAD</span><h2>Áreas con mayor rezago</h2></div></div><ol class="admin-ranking">${ranking.slice(0,6).map((r,i)=>`<li><span>${i+1}</span><div><strong>${esc(r.area)}</strong><small>${r.total} personas</small></div><b>${r.pct}%</b></li>`).join('')}</ol></article>
+        <article class="admin-panel"><div class="admin-panel-head"><div><span class="admin-section-kicker">ALERTAS</span><h2>Atención requerida</h2></div></div><div class="admin-alert-stack">${vencidas ? `<div class="admin-alert danger"><b>${vencidas}</b><span>autoevaluaciones vencidas</span></div>` : ''}${pendientesCal ? `<div class="admin-alert warning"><b>${pendientesCal}</b><span>evaluaciones esperando calibración</span></div>` : ''}${!vencidas&&!pendientesCal ? '<div class="admin-alert success"><b>✓</b><span>Sin alertas activas</span></div>' : ''}</div></article>
+      </div>
+    </section>`;
   }
 
   function viewCalibracionLista(periodoId) {
     const datos = datosGlobales(periodoId).filter((d) => [D.ESTADOS.PENDIENTE_CALIBRACION, D.ESTADOS.CALIBRADA, D.ESTADOS.RETRO_PENDIENTE, D.ESTADOS.CERRADA].includes(d.estado));
-    return `<div class="card"><h2>Calibración de RH</h2>
-    <table class="table"><thead><tr><th>Colaborador</th><th>Área</th><th>Estado</th><th>Puntaje</th><th></th></tr></thead><tbody>
-    ${datos.map((d) => `<tr><td>${esc(d.c.nombre)}</td><td>${esc(d.c.area)}</td><td>${badge(d.estado)}</td><td>${f1(d.totalFinal)}</td><td><a class="btn btn-outline btn-sm" href="#/admin/calibracion/${d.c.empleado}">Abrir</a></td></tr>`).join('') || '<tr><td colspan="5" class="muted">No hay evaluaciones pendientes de calibración.</td></tr>'}
-    </tbody></table></div>`;
+    const porCalibrar = datos.filter((d) => d.estado === D.ESTADOS.PENDIENTE_CALIBRACION).length;
+    const calibradas = datos.filter((d) => S.getCalibracion(d.c.empleado, periodoId)).length;
+    return `<section class="calibration-shell">
+      <div class="calibration-list-hero"><div><span class="admin-kicker">CALIBRACIÓN RH</span><h1>Revisión y calibración</h1><p>Contrasta autoevaluación, evaluación del líder y contexto del colaborador antes de liberar resultados.</p></div><div class="calibration-list-stats"><div><strong>${porCalibrar}</strong><span>Por revisar</span></div><div><strong>${calibradas}</strong><span>Calibradas</span></div></div></div>
+      <div class="calibration-card-list">
+      ${datos.map((d) => { const lider=S.getLider(d.c.liderId); const cal=S.getCalibracion(d.c.empleado,periodoId); return `<article class="calibration-person-card"><div class="calibration-avatar">${esc(d.c.nombre).split(' ').slice(0,2).map(x=>x[0]).join('')}</div><div class="calibration-person-main"><div class="calibration-person-title"><strong>${esc(d.c.nombre)}</strong>${badge(d.estado)}</div><span>${esc(d.c.puesto||'')} · ${esc(d.c.area)}</span><small>Líder: ${esc(lider?lider.nombre:'—')}</small></div><div class="calibration-score"><span>Resultado</span><strong>${f1(d.totalFinal)}</strong><small>${cal&&cal.resultadoCalibrado!==undefined?'Calibrado':'Líder'}</small></div><a class="btn btn-primary btn-sm" href="#/admin/calibracion/${d.c.empleado}">${cal?'Revisar':'Calibrar'}</a></article>`; }).join('') || '<div class="admin-empty-state">No hay evaluaciones disponibles para calibración.</div>'}
+      </div>
+    </section>`;
   }
 
   function viewCalibracionDetalle(colaboradorId, periodoId) {
@@ -1395,61 +1403,50 @@
     const brechaGeneral = C.clasificarBrecha(diferencia);
     const planes = S.getPlanesDesarrollo(colaboradorId, periodoId);
     const liderDirecto = S.getLider(col.liderId);
-    const radarHtml = global.EDDCharts.renderRadarChart({
-      autoevaluacion: resAuto.promedios,
-      evaluacionLider: resLider.promedios,
-      calibracion: (cal.resultadoCalibrado !== undefined) ? { resultadoLider: resLider.puntajes.total, resultadoCalibrado: cal.resultadoCalibrado } : null
-    });
-    const ninaBoxHtml = global.EDDCharts.renderNineBoxIndividual({
-      actitudProm: resLider.promedios.actitud, desempenoProm: resLider.promedios.desempeno, nombreColaborador: col.nombre
-    });
+    const radarHtml = global.EDDCharts.renderRadarChart({autoevaluacion: resAuto.promedios,evaluacionLider: resLider.promedios,calibracion: (cal.resultadoCalibrado !== undefined) ? { resultadoLider: resLider.puntajes.total, resultadoCalibrado: cal.resultadoCalibrado } : null});
+    const ninaBoxHtml = global.EDDCharts.renderNineBoxIndividual({actitudProm: resLider.promedios.actitud, desempenoProm: resLider.promedios.desempeno, nombreColaborador: col.nombre});
+    const iniciales = esc(col.nombre).split(' ').slice(0,2).map(x=>x[0]).join('');
+    const resultadoActual = cal.resultadoCalibrado !== undefined ? cal.resultadoCalibrado : resLider.puntajes.total;
 
-    return `
-    <div class="card">
-      <h2>Calibración — ${esc(col.nombre)}</h2>
-      <div class="info-grid">
-        <div><span class="label">Área</span><span class="value">${esc(col.area)}</span></div>
-        <div><span class="label">Ciudad operativa</span><span class="value">${esc(col.ciudad)}</span></div>
-        <div><span class="label">Antigüedad</span><span class="value">${esc(col.antiguedad)}</span></div>
-        <div><span class="label">Líder directo</span><span class="value">${esc(liderDirecto ? liderDirecto.nombre : '—')}</span></div>
+    return `<section class="calibration-shell calibration-detail-shell">
+      <a href="#/admin/calibracion" class="calibration-back">← Volver a calibración</a>
+      <div class="calibration-profile-hero">
+        <div class="calibration-avatar large">${iniciales}</div>
+        <div class="calibration-profile-copy"><span class="admin-kicker">EXPEDIENTE DE CALIBRACIÓN</span><h1>${esc(col.nombre)}</h1><p>${esc(col.puesto||'')} · ${esc(col.area)} · ${esc(col.ciudad||'')}</p><div class="calibration-meta"><span>Líder: <b>${esc(liderDirecto ? liderDirecto.nombre : '—')}</b></span><span>Antigüedad: <b>${esc(col.antiguedad||'—')}</b></span></div></div>
+        <div class="calibration-final-score"><span>Resultado actual</span><strong>${f1(resultadoActual)}</strong>${badge(C.clasificarNivel(resultadoActual).nivel,'blue')}</div>
       </div>
-      <div class="kpi-grid kpi-grid-3">
-        ${kpi('Autoevaluación', f1(resAuto.puntajes.total))}
-        ${kpi('Evaluación líder', f1(resLider.puntajes.total))}
-        ${kpi('Diferencia', f1(diferencia))}
+
+      <div class="calibration-score-grid">
+        <div class="calibration-score-card"><span>Autoevaluación</span><strong>${f1(resAuto.puntajes.total)}</strong><small>Percepción del colaborador</small></div>
+        <div class="calibration-score-card"><span>Evaluación líder</span><strong>${f1(resLider.puntajes.total)}</strong><small>Resultado base de calibración</small></div>
+        <div class="calibration-score-card ${Math.abs(diferencia)>=10?'attention':''}"><span>Brecha auto vs líder</span><strong>${diferencia>0?'+':''}${f1(diferencia)}</strong><small>${esc(brechaGeneral.etiqueta)}</small></div>
+        <div class="calibration-score-card success"><span>Resultado calibrado</span><strong>${f1(resultadoActual)}</strong><small>${cal.resultadoCalibrado!==undefined?'Guardado por RH':'Sin ajuste aún'}</small></div>
       </div>
-      <p>Brecha general auto vs. líder: ${badge(brechaGeneral.etiqueta, brechaGeneral.etiqueta === 'Alineada' ? 'green' : (brechaGeneral.etiqueta === 'Revisar' ? 'yellow' : 'red'))}</p>
-      <div class="two-col">
-        <div>
-          <h3>Radar comparativo</h3>
-          ${radarHtml}
-        </div>
-        <div>
-          <h3>Ubicación en la Matriz 9-Box</h3>
-          ${ninaBoxHtml}
-        </div>
+
+      <div class="calibration-analysis-grid">
+        <article class="admin-panel calibration-chart-card"><div class="admin-panel-head"><div><span class="admin-section-kicker">COMPARATIVO</span><h2>Radar de evaluación</h2></div></div>${radarHtml}</article>
+        <article class="admin-panel calibration-chart-card"><div class="admin-panel-head"><div><span class="admin-section-kicker">TALENTO</span><h2>Ubicación 9-Box</h2></div></div>${ninaBoxHtml}</article>
       </div>
-      <div class="form-row">
-        <div class="form-group"><label>Número de actas administrativas (simulado)</label><input type="number" min="0" id="calActas" value="${cal.actas || 0}"/></div>
-        <div class="form-group"><label>Resultado / indicador NOM-035 (simulado)</label><input type="text" id="calNom035" value="${esc(cal.nom035 || '')}"/></div>
+
+      <div class="calibration-workspace-grid">
+        <article class="admin-panel calibration-context-card">
+          <div class="admin-panel-head"><div><span class="admin-section-kicker">CONTEXTO</span><h2>Alertas para RH</h2></div></div>
+          <div class="calibration-context-grid"><label><span>Actas administrativas</span><input type="number" min="0" id="calActas" value="${cal.actas || 0}"/></label><label><span>Indicador / referencia NOM-035</span><input type="text" id="calNom035" value="${esc(cal.nom035 || '')}" placeholder="Sin dato"/></label></div>
+          <div class="calibration-info-note">Estos datos son contextuales. En esta demo no generan un descuento automático sobre la calificación.</div>
+          <label class="calibration-field"><span>Observaciones de RH</span><textarea id="calObs" placeholder="Registra hechos, contexto o acuerdos relevantes...">${esc(cal.observacionesRH || '')}</textarea></label>
+        </article>
+
+        <article class="admin-panel calibration-decision-card">
+          <div class="admin-panel-head"><div><span class="admin-section-kicker">DECISIÓN</span><h2>Ajuste de calibración</h2></div><span class="calibration-live-result" id="calLiveBadge">${f1(resultadoActual)}</span></div>
+          <div class="calibration-adjust-row"><label><span>Ajuste en puntos</span><input type="number" step="0.1" id="calAjuste" value="${cal.ajuste || 0}" oninput="App.previewCalibracion(${resLider.puntajes.total})"/></label><label><span>Resultado calibrado</span><input type="text" id="calResultadoPreview" value="${f1(resultadoActual)}" disabled/></label></div>
+          <label class="calibration-field"><span>Justificación <em>obligatoria cuando exista ajuste</em></span><textarea id="calJustificacion" placeholder="Explica la razón del ajuste y la evidencia utilizada...">${esc(cal.justificacion || '')}</textarea></label>
+          <div class="calibration-actions"><button class="btn btn-primary" onclick="App.guardarCalibracion('${colaboradorId}','${periodoId}',${resLider.puntajes.total})">Guardar calibración</button><button class="btn btn-outline" ${cal.resultadoCalibrado === undefined ? 'disabled' : ''} onclick="App.habilitarRetro('${colaboradorId}','${periodoId}')">${cal.retroHabilitada ? '✓ Retroalimentación habilitada' : 'Habilitar retroalimentación'}</button></div>
+          ${planes.length < 1 ? '<div class="calibration-warning-note">Si el resultado calibrado es menor a 80, se requerirá al menos un plan de desarrollo antes de liberar la retroalimentación.</div>' : ''}
+        </article>
       </div>
-      <p class="alert alert-info">Las actas administrativas y el indicador NOM-035 se muestran como alerta contextual. La metodología de descuento automático aún debe ser validada por RH; no se aplica ningún descuento definitivo en esta demo.</p>
-      <div class="form-group"><label>Observaciones de RH</label><textarea id="calObs">${esc(cal.observacionesRH || '')}</textarea></div>
-      <div class="form-row">
-        <div class="form-group"><label>Ajuste al resultado (puntos, puede ser negativo)</label><input type="number" step="0.1" id="calAjuste" value="${cal.ajuste || 0}"/></div>
-        <div class="form-group"><label>Resultado calibrado</label><input type="text" id="calResultadoPreview" value="${f1((cal.resultadoCalibrado !== undefined ? cal.resultadoCalibrado : resLider.puntajes.total))}" disabled/></div>
-      </div>
-      <div class="form-group"><label>Justificación ${'<span class="muted">(obligatoria si el ajuste es distinto de 0)</span>'}</label><textarea id="calJustificacion">${esc(cal.justificacion || '')}</textarea></div>
-      <div class="actions">
-        <button class="btn btn-primary" onclick="App.guardarCalibracion('${colaboradorId}','${periodoId}',${resLider.puntajes.total})">Guardar calibración</button>
-        <button class="btn btn-outline" ${cal.resultadoCalibrado === undefined ? 'disabled' : ''} onclick="App.habilitarRetro('${colaboradorId}','${periodoId}')">${cal.retroHabilitada ? 'Retroalimentación habilitada' : 'Habilitar retroalimentación'}</button>
-      </div>
-      ${planes.length < 1 ? '<p class="muted">Nota: si el resultado calibrado es menor a 80, se exigirá al menos un plan de desarrollo antes de habilitar la retroalimentación.</p>' : ''}
-      <h3>Trazabilidad de cambios</h3>
-      <table class="table table-compact"><thead><tr><th>Campo</th><th>Valor anterior</th><th>Valor nuevo</th><th>Motivo</th><th>Usuario</th><th>Fecha</th><th>Hora</th></tr></thead><tbody>
-      ${(cal.historial || []).slice().reverse().map((h) => `<tr><td>${esc(h.campo)}</td><td>${esc(JSON.stringify(h.valorAnterior))}</td><td>${esc(JSON.stringify(h.valorNuevo))}</td><td>${esc(h.motivo)}</td><td>${esc(h.usuario)}</td><td>${esc(h.fecha)}</td><td>${esc(h.hora)}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">Sin cambios registrados.</td></tr>'}
-      </tbody></table>
-    </div>`;
+
+      <article class="admin-panel calibration-history-card"><div class="admin-panel-head"><div><span class="admin-section-kicker">AUDITORÍA</span><h2>Trazabilidad de cambios</h2></div><span class="admin-panel-note">${(cal.historial||[]).length} movimientos</span></div><div class="admin-table-wrap"><table class="table table-compact admin-table"><thead><tr><th>Campo</th><th>Anterior</th><th>Nuevo</th><th>Motivo</th><th>Usuario</th><th>Fecha</th><th>Hora</th></tr></thead><tbody>${(cal.historial || []).slice().reverse().map((h) => `<tr><td>${esc(h.campo)}</td><td>${esc(JSON.stringify(h.valorAnterior))}</td><td>${esc(JSON.stringify(h.valorNuevo))}</td><td>${esc(h.motivo)}</td><td>${esc(h.usuario)}</td><td>${esc(h.fecha)}</td><td>${esc(h.hora)}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">Sin cambios registrados.</td></tr>'}</tbody></table></div></article>
+    </section>`;
   }
 
   function view9BoxAdmin(periodoId) {
@@ -1816,6 +1813,16 @@
     },
     setFiltroAdmin(campo, valor) { state.adminFiltros[campo] = valor || undefined; render(); },
     limpiarFiltrosAdmin() { state.adminFiltros = {}; render(); },
+    previewCalibracion(totalLider) {
+      const ajusteEl = document.getElementById('calAjuste');
+      const previewEl = document.getElementById('calResultadoPreview');
+      const badgeEl = document.getElementById('calLiveBadge');
+      if (!ajusteEl || !previewEl) return;
+      const ajuste = parseFloat(ajusteEl.value || '0') || 0;
+      const valor = C.round1(Math.max(0, Math.min(100, totalLider + ajuste)));
+      previewEl.value = f1(valor);
+      if (badgeEl) badgeEl.textContent = f1(valor);
+    },
     guardarCalibracion(colaboradorId, periodoId, totalLider) {
       const ajuste = parseFloat($('#calAjuste').value) || 0;
       const justificacion = $('#calJustificacion').value.trim();
