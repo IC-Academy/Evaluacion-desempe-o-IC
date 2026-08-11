@@ -107,6 +107,81 @@
     'Semilla':'Seed','Cosecha':'Harvest','Sembrando':'Sowing','Sol':'Sun','Corazón':'Heart','En Maceta':'Potted','Agua':'Water'
   });
 
+
+  // Cobertura EN ampliada: textos compuestos, pantallas de líder/RH y etiquetas
+  // que antes quedaban en español al renderizarse dinámicamente.
+  Object.assign(EN, {
+    'Escala de evaluación':'Rating scale',
+    'Excede significativamente las expectativas.':'Significantly exceeds expectations.',
+    'Supera las expectativas de manera constante.':'Consistently exceeds expectations.',
+    'Cumple con lo esperado para su puesto.':'Meets expectations for the role.',
+    'Cumple parcialmente; requiere mejorar.':'Partially meets expectations; improvement is required.',
+    'No cumple con las expectativas del puesto.':'Does not meet role expectations.',
+    'EJEMPLO':'EXAMPLE','General objective:':'General objective:','SMART objective:':'SMART objective:',
+    'Quiero mejorar la capacitación de los colaboradores.':'I want to improve employee training.',
+    'Incrementar del 75% al 90% el porcentaje de colaboradores que concluyen satisfactoriamente la capacitación de inducción, durante los próximos 3 meses, mediante seguimiento semanal, recordatorios y evaluación de conocimientos al finalizar el curso.':'Increase from 75% to 90% the percentage of employees who successfully complete induction training over the next 3 months, through weekly follow-up, reminders, and a knowledge assessment at the end of the course.',
+    'S – Específico: Mejorar la conclusión satisfactoria de la capacitación.':'S – Specific: Improve successful completion of training.',
+    'M – Medible: Pasar del 75% al 90%.':'M – Measurable: Increase from 75% to 90%.',
+    'A – Alcanzable: Se establecen acciones concretas de seguimiento.':'A – Achievable: Concrete follow-up actions are established.',
+    'R – Relevante: Fortalece la preparación de los colaboradores.':'R – Relevant: Strengthens employee preparedness.',
+    'T – Temporal: Se debe lograr en 3 meses.':'T – Time-bound: It must be achieved within 3 months.',
+    'CUMPLIMIENTO DE OBJETIVOS · 25% DEL TOTAL':'GOAL ACHIEVEMENT · 25% OF TOTAL',
+    'Captura tus objetivos del periodo':'Enter your goals for the period',
+    'Registra hasta cinco objetivos. Completa la meta, fecha y criterios SMART; solo se promedian los objetivos con descripción y calificación válida.':'Enter up to five goals. Complete the target, due date, and SMART criteria; only goals with a valid description and rating are averaged.',
+    'criterios':'criteria','criterio':'criterion','Completa los criterios pendientes antes de continuar.':'Complete the pending criteria before continuing.',
+    'Es alcanzable con los recursos y responsabilidades disponibles.':'It is achievable with the available resources and responsibilities.',
+    'Está relacionado con las responsabilidades del puesto o prioridades del área.':'It is related to the role responsibilities or area priorities.',
+    'Resultado obtenido':'Result achieved','Calificación':'Rating','Quitar':'Remove',
+    'Confirmo que la información capturada es correcta.':'I confirm that the information entered is correct.',
+    'Confirma que la información es correcta antes de enviar.':'Confirm that the information is correct before submitting.',
+    'Evaluación de':'Evaluation of','N.º DE EMPLEADO':'EMPLOYEE NO.','N° DE EMPLEADO':'EMPLOYEE NO.','N.º de empleado':'Employee no.',
+    'PUESTO':'POSITION','ÁREA':'AREA','DIRECCIÓN':'DEPARTMENT','CIUDAD OPERATIVA':'OPERATING CITY','ANTIGÜEDAD':'TENURE','PERIODO':'PERIOD',
+    'Jefe directo':'Direct manager','MANAGER DIRECTO':'DIRECT MANAGER','Líder directo':'Direct manager','Antigüedad':'Tenure',
+    'La autoevaluación del colaborador permanecerá oculta hasta que envíes tu evaluación.':'The employee self-assessment will remain hidden until you submit your evaluation.',
+    'REVISIÓN FINAL':'FINAL REVIEW','Resumen y envío':'Summary and submission',
+    'Registra retroalimentación cualitativa. Estos campos se mostrarán al colaborador cuando RH habilite la fase de retroalimentación.':'Enter qualitative feedback. These fields will be shown to the employee when HR enables the feedback phase.',
+    'Fortalezas del colaborador':'Employee strengths','Comentarios generales':'General comments',
+    'Áreas de oportunidad y plan de mejora':'Development opportunities and improvement plan',
+    'Sin áreas registradas todavía.':'No development opportunities added yet.','+ Agregar área de oportunidad':'+ Add development opportunity',
+    'Sin acciones registradas todavía.':'No development actions added yet.','+ Agregar acción de desarrollo':'+ Add development action',
+    'Confirmo que la evaluación está completa.':'I confirm that the evaluation is complete.','Enviar evaluación ✓':'Submit evaluation ✓',
+    'Diferencias detalladas por competencia':'Detailed differences by competency','COMPETENCIA':'COMPETENCY','AUTOEVALUACIÓN':'SELF-ASSESSMENT',
+    'EVALUACIÓN LÍDER':'MANAGER EVALUATION','DIFERENCIA':'DIFFERENCE','BRECHA':'GAP','COMENTARIO LÍDER':'MANAGER COMMENT','COMENTARIO COLABORADOR':'EMPLOYEE COMMENT',
+    'Brecha significativa':'Significant gap','Alineada':'Aligned','Revisar':'Review','En revisión':'Under review',
+    'D. Cumplimiento de Objetivos (promedio)':'D. Goal Achievement (average)',
+    'Ubicación en la 9-Box Matrix':'9-Box Matrix placement','Desempeño':'Performance','Actitud':'Attitude',
+    'Cumple a satisfacción tanto en actitud como en desempeño.':'Meets expectations in both attitude and performance.',
+    'Prioridad: Alta':'Priority: High','Prioridad: Media':'Priority: Medium','Prioridad: Baja':'Priority: Low',
+    'Acción sugerida:':'Suggested action:','Seguimiento:':'Follow-up:','Promoción inmediata':'Immediate promotion',
+    'estrella de Inter-Con, lista para promoción inmediata.':'Inter-Con star, ready for immediate promotion.',
+    'Status actual del proceso:':'Current process status:','La calibración y liberación de retroalimentación las gestiona el administrador de RH.':'Calibration and feedback release are managed by the HR administrator.',
+    'Pendiente calibración':'Pending calibration','Pendiente líder':'Pending manager','Pendiente manager':'Pending manager',
+    'HR OPERATIONS':'HR OPERATIONS','Evaluation tracking':'Evaluation tracking','registros':'records','PUNTAJE':'SCORE','Puntaje':'Score','Revisar':'Review',
+    'Todos los estados':'All statuses','Todos los cuadrantes':'All quadrants','Todas las áreas':'All areas','Limpiar':'Clear',
+    'Resultados por sección':'Results by section','Puntaje final sobre 100':'Final score out of 100','promedio':'average','pts':'pts',
+    'Radar comparativo':'Comparison radar','AUTOEVAL.':'SELF-ASSESS.','LÍDER':'MANAGER','CALIBRADO*':'CALIBRATED*',
+    'La serie "Calibrado" es una proyección proporcional de la forma de la evaluación del líder (factor 1.00×), porque la calibración de RH ajusta el resultado global y no cada competencia.':'The “Calibrated” series is a proportional projection of the manager evaluation shape (factor 1.00×), because HR calibration adjusts the overall result rather than each competency.',
+    '9-Box Matrix (tu ubicación)':'9-Box Matrix (your placement)','tu ubicación':'your placement','Medio / esperado':'Medium / expected',
+    'Desempeño (esc. 1-5)':'Performance (scale 1-5)','Potencial preliminar (esc. 1-5)':'Preliminary potential (scale 1-5)',
+    'Evaluación de Desempeño':'Performance Evaluation','Seguimiento nacional, calibración, cierre y distribución de talento en un solo lugar.':'National tracking, calibration, closure, and talent distribution in one place.',
+    'Personal a evaluar':'Employees to evaluate','Autoevaluaciones':'Self-assessments','Evaluaciones líder':'Manager evaluations','Por calibrar':'Pending calibration','Calibradas':'Calibrated','Promedio general':'Overall average',
+    'Avance del ciclo':'Cycle progress','evaluaciones cerradas':'evaluations closed','Universo del periodo':'Period population','completadas':'completed','Requieren revisión RH':'Require HR review','Con resultado RH':'With HR result','Resultado disponible':'Result available',
+    'COBERTURA':'COVERAGE','Avance por área':'Progress by area','Cierre del proceso':'Process closure','colaboradores':'employees',
+    'RESULTADOS':'RESULTS','Niveles de desempeño':'Performance levels','TALENTO':'TALENT','Distribución 9-Box':'9-Box distribution','Abrir matriz →':'Open matrix →',
+    'OPERACIÓN RH':'HR OPERATIONS','Seguimiento de evaluaciones':'Evaluation tracking','PRIORIDAD':'PRIORITY','Áreas con mayor rezago':'Areas with greatest delay','ALERTAS':'ALERTS','Atención requerida':'Attention required',
+    'autoevaluaciones vencidas':'overdue self-assessments','evaluaciones esperando calibración':'evaluations awaiting calibration',
+    'CALIBRACIÓN RH':'HR CALIBRATION','Revisión y calibración':'Review and calibration','Contrasta autoevaluación, evaluación del líder y contexto del colaborador antes de liberar resultados.':'Compare the self-assessment, manager evaluation, and employee context before releasing results.',
+    'EXPEDIENTE DE CALIBRACIÓN':'CALIBRATION FILE','Resultado actual':'Current result','Resultado base de calibración':'Calibration baseline','Brecha auto vs líder':'Self vs manager gap','Guardado por RH':'Saved by HR','Sin ajuste aún':'No adjustment yet',
+    'COMPARATIVO':'COMPARISON','Radar de evaluación':'Evaluation radar','Ubicación 9-Box':'9-Box placement','CONTEXTO':'CONTEXT','Alertas para RH':'HR alerts',
+    'DECISIÓN':'DECISION','Ajuste de calibración':'Calibration adjustment','Ajuste en puntos':'Point adjustment','Justificación obligatoria cuando exista ajuste':'Justification required when an adjustment is made',
+    'AUDITORÍA':'AUDIT','Trazabilidad de cambios':'Change history','movimientos':'changes',
+    'Alineada hasta':'Aligned up to','Guardar umbrales':'Save thresholds','Reinicio de datos':'Data reset','Reiniciar datos de la demo':'Reset demo data',
+    'Carga al menos una evidencia antes de aceptar el resultado.':'Upload at least one piece of evidence before accepting the result.',
+    'Verifica que "Alineada" sea menor que "Revisar".':'Make sure “Aligned” is lower than “Review”.','Umbrales actualizados.':'Thresholds updated.',
+    '¿Reiniciar todos los datos de la demo? Esta acción no se puede deshacer.':'Reset all demo data? This action cannot be undone.',
+    'No puedes enviar. Tienes':'You cannot submit. You have','pendientes; revisa lo marcado en rojo.':'pending fields; review those marked in red.'
+  });
+
   const ATTR_EN = {
     'Cerrar sesión':'Sign out',
     'Ingresa tu número de empleado':'Enter your employee number',
@@ -133,15 +208,15 @@
       const raw = node.nodeValue || '';
       const trimmed = raw.trim();
       if (!trimmed) return;
-      let translated = trimmed;
-      if (EN[trimmed]) translated = EN[trimmed];
-      else {
+      const normalized = trimmed.replace(/\s+/g, ' ');
+      let translated = EN[trimmed] || EN[normalized] || normalized;
+      if (translated === normalized) {
         const keys = Object.keys(EN).sort((a, b) => b.length - a.length);
         keys.forEach((key) => {
           if (translated.includes(key)) translated = translated.split(key).join(EN[key]);
         });
       }
-      if (translated !== trimmed) node.nodeValue = raw.replace(trimmed, translated);
+      if (translated !== normalized) node.nodeValue = raw.replace(trimmed, translated);
     });
     root.querySelectorAll('[placeholder],[title],[aria-label]').forEach((el) => {
       ['placeholder','title','aria-label'].forEach((attr) => {
@@ -194,7 +269,7 @@
     'Retroalimentación pendiente': 'yellow', 'Cerrada': 'green'
   };
   function badge(texto, color) {
-    return `<span class="badge badge-${color || ESTADO_COLOR[texto] || 'gray'}">${esc(texto)}</span>`;
+    return `<span class="badge badge-${color || ESTADO_COLOR[texto] || 'gray'}">${esc(t(texto))}</span>`;
   }
 
   function progressBar(percent, color) {
@@ -1806,7 +1881,7 @@
         const seccion = seccionActual;
         const faltantes = validarSeccionVisual(ev.id, seccion);
         if (faltantes) {
-          alert(`No puedes continuar. Tienes ${faltantes} campo${faltantes === 1 ? '' : 's'} pendiente${faltantes === 1 ? '' : 's'}. Revisa lo marcado en rojo.`);
+          alert(currentLang === 'en' ? `You cannot continue. You have ${faltantes} pending field${faltantes === 1 ? '' : 's'}. Review the fields marked in red.` : `No puedes continuar. Tienes ${faltantes} campo${faltantes === 1 ? '' : 's'} pendiente${faltantes === 1 ? '' : 's'}. Revisa lo marcado en rojo.`);
           return;
         }
       }
@@ -1859,7 +1934,7 @@
     },
     quitarObjetivo(evaluacionId, index) { S.removeObjetivo(evaluacionId, index); render(); },
     enviarAutoevaluacion() {
-      if (!$('#confirmEnvioAuto').checked) { alert('Confirma que la información es correcta antes de enviar.'); return; }
+      if (!$('#confirmEnvioAuto').checked) { alert(t('Confirma que la información es correcta antes de enviar.')); return; }
       const evaluacionId = state.wizard.evaluacionId;
       for (let i = 0; i < SECCIONES_WIZARD.length - 1; i++) {
         const sec = SECCIONES_WIZARD[i];
@@ -1870,13 +1945,13 @@
           state.wizard.seccionIdx = i; render();
           setTimeout(() => {
             const n = validarSeccionVisual(evaluacionId, sec);
-            alert(`No puedes enviar. Tienes ${n || 'campos'} pendientes; revisa lo marcado en rojo.`);
+            alert(currentLang === 'en' ? `You cannot submit. You have ${n || 'some'} pending fields; review those marked in red.` : `No puedes enviar. Tienes ${n || 'campos'} pendientes; revisa lo marcado en rojo.`);
           }, 0);
           return;
         }
       }
       const objetivos = S.getObjetivos(evaluacionId).filter((o) => o.descripcion && o.descripcion.trim());
-      if (!objetivos.length) { alert('Registra al menos un objetivo antes de enviar.'); return; }
+      if (!objetivos.length) { alert(t('Registra al menos un objetivo antes de enviar.')); return; }
       S.completarEvaluacion(evaluacionId, state.user.nombre);
       navigate('#/colaborador/enviado');
     },
@@ -1915,7 +1990,7 @@
     },
     quitarPlanDesarrollo(id) { S.removePlanDesarrollo(id, state.user.nombre); render(); },
     enviarEvaluacionLider(colaboradorId) {
-      if (!$('#confirmEnvioLider').checked) { alert('Confirma que la evaluación está completa antes de enviar.'); return; }
+      if (!$('#confirmEnvioLider').checked) { alert(t('Confirma que la evaluación está completa antes de enviar.')); return; }
       const evaluacionId = state.wizard.evaluacionId;
       for (let i = 0; i < SECCIONES_WIZARD.length - 1; i++) {
         const sec = SECCIONES_WIZARD[i];
@@ -1935,7 +2010,7 @@
           state.wizard.seccionIdx = i; render();
           setTimeout(() => {
             const n = validarSeccionVisual(evaluacionId, sec);
-            alert(`No puedes enviar. Tienes ${n || 'campos'} pendientes; revisa lo marcado en rojo.`);
+            alert(currentLang === 'en' ? `You cannot submit. You have ${n || 'some'} pending fields; review those marked in red.` : `No puedes enviar. Tienes ${n || 'campos'} pendientes; revisa lo marcado en rojo.`);
           }, 0);
           return;
         }
@@ -1952,7 +2027,7 @@
     },
     aceptar(colaboradorId, periodoId) {
       const evidencias = S.getEvidencias(colaboradorId, periodoId);
-      if (!evidencias.length) { alert('Carga al menos una evidencia antes de aceptar el resultado.'); return; }
+      if (!evidencias.length) { alert(t('Carga al menos una evidencia antes de aceptar el resultado.')); return; }
       S.aceptarResultado(colaboradorId, periodoId, state.user.nombre);
       render();
     },
@@ -1971,7 +2046,7 @@
     guardarCalibracion(colaboradorId, periodoId, totalLider) {
       const ajuste = parseFloat($('#calAjuste').value) || 0;
       const justificacion = $('#calJustificacion').value.trim();
-      if (ajuste !== 0 && !justificacion) { alert('La justificación es obligatoria cuando existe un ajuste distinto de 0.'); return; }
+      if (ajuste !== 0 && !justificacion) { alert(t('La justificación es obligatoria cuando existe un ajuste distinto de 0.')); return; }
       const resultadoCalibrado = C.round1(Math.max(0, Math.min(100, totalLider + ajuste)));
       const resAuto = S.getUltimoResultadoPorOrigen(colaboradorId, periodoId, 'autoevaluacion');
       S.crearOActualizarCalibracion(colaboradorId, periodoId, {
@@ -1984,18 +2059,18 @@
         responsable: state.user.nombre,
         _motivo: justificacion || 'Calibración de RH'
       }, state.user.nombre);
-      alert('Calibración guardada.');
+      alert(t('Calibración guardada.'));
       render();
     },
     habilitarRetro(colaboradorId, periodoId) {
       const cal = S.getCalibracion(colaboradorId, periodoId);
-      if (!cal || cal.resultadoCalibrado === undefined) { alert('Guarda la calibración antes de habilitar la retroalimentación.'); return; }
+      if (!cal || cal.resultadoCalibrado === undefined) { alert(t('Guarda la calibración antes de habilitar la retroalimentación.')); return; }
       if (cal.resultadoCalibrado < 80) {
         const planes = S.getPlanesDesarrollo(colaboradorId, periodoId);
-        if (!planes.length) { alert('El resultado es menor a 80. Registra al menos un plan de desarrollo antes de habilitar la retroalimentación.'); return; }
+        if (!planes.length) { alert(t('El resultado es menor a 80. Registra al menos un plan de desarrollo antes de habilitar la retroalimentación.')); return; }
       }
       S.habilitarRetroalimentacion(colaboradorId, periodoId, state.user.nombre);
-      alert('Retroalimentación habilitada para el colaborador.');
+      alert(t('Retroalimentación habilitada para el colaborador.'));
       render();
     },
     selNinebox(numero) { state.nineboxSel = numero; state.nineboxSelEmpleado = null; render(); },
@@ -2012,13 +2087,13 @@
     guardarConfigBrecha() {
       const alineadaMax = parseFloat($('#cfgAlineada').value);
       const revisarMax = parseFloat($('#cfgRevisar').value);
-      if (isNaN(alineadaMax) || isNaN(revisarMax) || alineadaMax >= revisarMax) { alert('Verifica que "Alineada" sea menor que "Revisar".'); return; }
+      if (isNaN(alineadaMax) || isNaN(revisarMax) || alineadaMax >= revisarMax) { alert(t('Verifica que "Alineada" sea menor que "Revisar".')); return; }
       S.updateConfigBrecha({ alineadaMax, revisarMax }, state.user.nombre);
-      alert('Umbrales actualizados.');
+      alert(t('Umbrales actualizados.'));
       render();
     },
     reiniciarDemo() {
-      if (!confirm('¿Reiniciar todos los datos de la demo? Esta acción no se puede deshacer.')) return;
+      if (!confirm(t('¿Reiniciar todos los datos de la demo? Esta acción no se puede deshacer.'))) return;
       S.reset();
       A.clearSession();
       state.user = null;
