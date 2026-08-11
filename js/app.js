@@ -882,7 +882,7 @@
         <div class="welcome-scale-item score-5"><b>5</b><span><strong>Excede</strong> significativamente las expectativas.</span></div>
         <div class="welcome-scale-item score-4"><b>4</b><span><strong>Supera</strong> las expectativas de manera constante.</span></div>
         <div class="welcome-scale-item score-3"><b>3</b><span><strong>Cumple</strong> con lo esperado para su puesto.</span></div>
-        <div class="welcome-scale-item score-2"><b>2</b><span><strong>Cumple parcialmente</strong>; requiere mejorar.</span></div>
+        <div class="welcome-scale-item score-2"><b>2</b><span><strong>Cumple parcialmente;</strong> requiere mejorar.</span></div>
         <div class="welcome-scale-item score-1"><b>1</b><span><strong>No cumple</strong> con las expectativas del puesto.</span></div>
         <div class="welcome-scale-item score-na"><b>N/A</b><span>No aplica o no cuento con elementos suficientes para evaluarlo.</span></div>
       </div>
@@ -988,7 +988,7 @@
           <div class="premium-reminder-card"><strong>Recordatorio</strong><p>Puedes guardar tu progreso en cualquier momento. Tu evaluación es confidencial.</p></div>
         </aside>
         <div class="premium-evaluation-main">
-          <div class="premium-evaluation-title"><span class="premium-section-kicker">${seccion === 'resumen' ? 'Revisión final' : 'Sección ' + (idx + 1) + ' de 4'}</span><h1>${labelSeccion(seccion)}${seccion !== 'resumen' ? ` <em>${D.SECCIONES_META[seccion] ? '(' + D.SECCIONES_META[seccion].peso + '%)' : ''}</em>` : ''}</h1></div>
+          <div class="premium-evaluation-title">${seccion !== 'resumen' && D.SECCIONES_META[seccion] ? `<div class="premium-section-weight">Peso de la sección: <strong>${D.SECCIONES_META[seccion].peso}%</strong></div>` : ''}<span class="premium-section-kicker">${seccion === 'resumen' ? 'Revisión final' : 'Sección ' + (idx + 1) + ' de 4'}</span><h1>${labelSeccion(seccion)}</h1></div>
           ${contenido}
           <div class="wizard-nav premium-wizard-nav">
             <button class="btn btn-outline" ${idx === 0 ? 'disabled' : ''} onclick="App.wizardPrev()">← Anterior</button>
@@ -1012,7 +1012,7 @@
     const respuestas = S.getRespuestasPorSeccion(ev.id)[seccion];
     const mapVal = {}; respuestas.forEach((r) => { mapVal[r.competenciaId] = r; });
     return `
-    <p class="muted">${esc(meta.descripcion)} <span class="peso-tag">Peso de la sección: ${meta.peso}%</span></p>
+    <p class="muted">${esc(meta.descripcion)}</p>
     ${escalaHelpInline()}
     ${competencias.map((c) => renderCompetenciaCard(ev.id, seccion, c, mapVal[c.id], soloLectura)).join('')}
     `;
@@ -1139,7 +1139,7 @@
       <section class="smart-capture-panel">
         <div class="smart-capture-head">
           <div>
-            <span class="smart-capture-kicker">CUMPLIMIENTO DE OBJETIVOS · 25% DEL TOTAL</span>
+            <span class="smart-capture-kicker">CUMPLIMIENTO DE OBJETIVOS</span>
             <h3>Captura tus objetivos del periodo</h3>
             <p>Registra hasta cinco objetivos. Completa la meta, fecha y criterios SMART; solo se promedian los objetivos con descripción y calificación válida.</p>
           </div>
@@ -1163,9 +1163,9 @@
         <button class="smart-remove-objective" type="button" onclick="App.quitarObjetivo('${evaluacionId}',${index})" aria-label="Quitar objetivo ${index + 1}" title="Quitar objetivo">× <span>Quitar</span></button>
       </div>
       <div class="objetivo-fields smart-objective-fields">
-        <div class="smart-field smart-field-wide"><label>Objetivo específico</label><textarea placeholder="Ej. Incrementar la cobertura..." ${soloLecturaDescripcion ? 'disabled' : ''} oninput="App.editarObjetivoSmart('${evaluacionId}',${index},'descripcion',this.value)">${esc(o.descripcion)}</textarea></div>
-        <div class="smart-field"><label>Meta / indicador</label><input type="text" placeholder="Ej. +10% / 25 contratos" value="${esc(o.meta || '')}" ${soloLecturaDescripcion ? 'disabled' : ''} oninput="App.editarObjetivoSmart('${evaluacionId}',${index},'meta',this.value)"></div>
-        <div class="smart-field"><label>Fecha compromiso</label><input type="date" value="${esc(o.fechaCompromiso || '')}" ${soloLecturaDescripcion ? 'disabled' : ''} onchange="App.editarObjetivoSmart('${evaluacionId}',${index},'fechaCompromiso',this.value)"></div>
+        <div class="smart-field smart-field-meta"><label>Meta / indicador</label><input type="text" placeholder="Ej. +10% / 25 contratos" value="${esc(o.meta || '')}" ${soloLecturaDescripcion ? 'disabled' : ''} oninput="App.editarObjetivoSmart('${evaluacionId}',${index},'meta',this.value)"></div>
+        <div class="smart-field smart-field-date"><label>Fecha compromiso</label><input type="date" value="${esc(o.fechaCompromiso || '')}" ${soloLecturaDescripcion ? 'disabled' : ''} onchange="App.editarObjetivoSmart('${evaluacionId}',${index},'fechaCompromiso',this.value)"></div>
+        <div class="smart-field smart-field-objective"><label>Objetivo específico</label><textarea placeholder="Ej. Incrementar la cobertura..." ${soloLecturaDescripcion ? 'disabled' : ''} oninput="App.editarObjetivoSmart('${evaluacionId}',${index},'descripcion',this.value)">${esc(o.descripcion)}</textarea></div>
         ${smartChecklistHTML(o, evaluacionId, index, soloLecturaDescripcion)}
         <div class="smart-field"><label>Resultado obtenido</label><textarea placeholder="Resultado obtenido" ${soloLecturaDescripcion ? 'disabled' : ''} onchange="App.editarObjetivo('${evaluacionId}',${index},'resultado',this.value)">${esc(o.resultado)}</textarea></div>
         <div class="smart-field smart-rating-field"><label>Calificación</label>${ratingWidget(groupName, o.calificacion, onchangeJs, false, true)}<small class="objective-rating-help">1★ = 20% · 2★ = 40% · 3★ = 60% · 4★ = 80% · 5★ = 100%</small></div>
