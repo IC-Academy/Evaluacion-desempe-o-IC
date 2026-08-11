@@ -28,20 +28,20 @@
 
   // ===========================================================================
   // SECCIONES Y COMPETENCIAS
-  // Ponderación oficial Rev4: Competencias 70% (40/20/10) + Objetivos 30%.
+  // Ponderación acordada en demo 11-08-2026: 50% Valores/Actitud + 50% bloque técnico-funcional/objetivos.
   // ===========================================================================
   const SECCIONES_META = {
-    actitud: { titulo: 'A. Valores y Actitud', peso: 40, eje: 'ACTITUD', descripcion: 'Evalúa la vivencia diaria de los valores ESPÍRITU de Inter-Con. Esta sección determina la posición del colaborador en el eje vertical (Actitud) de la matriz 9-box.' },
-    habilidades: { titulo: 'B. Habilidades', peso: 20, eje: 'DESEMPEÑO', descripcion: 'Evalúa las capacidades funcionales para ejecutar el puesto con eficiencia.' },
-    conocimientos: { titulo: 'C. Conocimientos', peso: 10, eje: 'DESEMPEÑO', descripcion: 'Evalúa el dominio técnico del puesto y de los procesos/herramientas del área.' },
-    objetivos: { titulo: 'D. Cumplimiento de Objetivos', peso: 30, eje: 'DESEMPEÑO', descripcion: 'Se evalúa de forma independiente al bloque de competencias. Registra hasta cinco objetivos acordados al inicio del periodo, su meta o indicador, resultado alcanzado y calificación.' }
+    actitud: { titulo: 'A. Valores y Actitud', peso: 50, eje: 'ACTITUD', descripcion: 'Evalúa la vivencia diaria de los valores ESPÍRITU de Inter-Con. Esta sección determina la posición del colaborador en el eje vertical (Actitud) de la matriz 9-box.' },
+    habilidades: { titulo: 'B. Habilidades', peso: 16.7, eje: 'DESEMPEÑO', descripcion: 'Evalúa las capacidades funcionales para ejecutar el puesto con eficiencia.' },
+    conocimientos: { titulo: 'C. Conocimientos', peso: 8.3, eje: 'DESEMPEÑO', descripcion: 'Evalúa el dominio técnico del puesto y de los procesos/herramientas del área.' },
+    objetivos: { titulo: 'D. Cumplimiento de Objetivos', peso: 25, eje: 'DESEMPEÑO', descripcion: 'Se evalúa de forma independiente al bloque de competencias. Registra hasta cinco objetivos acordados al inicio del periodo, su meta o indicador, resultado alcanzado y calificación.' }
   };
 
 
   const COMPETENCIAS = {
     actitud: [
       {
-        id: 'A1', nombre: 'Compromiso Organizacional (Integridad y Excelencia)', peso: 8,
+        id: 'A1', nombre: 'Compromiso Organizacional (Integridad y Excelencia)', peso: 10,
         conductas: [
           'Actúa conforme a los valores ESPÍRITU de Inter-Con.',
           'Muestra responsabilidad y ética profesional.',
@@ -49,7 +49,7 @@
         ]
       },
       {
-        id: 'A2', nombre: 'Actitud de Servicio (Pasión y Respeto)', peso: 8,
+        id: 'A2', nombre: 'Actitud de Servicio (Pasión y Respeto)', peso: 10,
         conductas: [
           'Atiende oportunamente las solicitudes de clientes internos y externos.',
           'Demuestra disposición y pasión para apoyar a otros.',
@@ -57,7 +57,7 @@
         ]
       },
       {
-        id: 'A3', nombre: 'Trabajo en Equipo y Unión', peso: 8,
+        id: 'A3', nombre: 'Trabajo en Equipo y Unión', peso: 10,
         conductas: [
           'Colabora con otras áreas para lograr objetivos comunes.',
           'Mantiene relaciones laborales basadas en el respeto.',
@@ -65,7 +65,7 @@
         ]
       },
       {
-        id: 'A4', nombre: 'Innovación y Creatividad (Capacidad de Cambio y Flexibilidad)', peso: 8,
+        id: 'A4', nombre: 'Innovación y Creatividad (Capacidad de Cambio y Flexibilidad)', peso: 10,
         conductas: [
           'Se adapta positivamente a cambios y nuevas prioridades.',
           'Propone ideas para mejorar procesos.',
@@ -73,7 +73,7 @@
         ]
       },
       {
-        id: 'A5', nombre: 'Compromiso con la Sustentabilidad', peso: 8,
+        id: 'A5', nombre: 'Compromiso con la Sustentabilidad', peso: 10,
         conductas: [
           'Hace uso responsable de los recursos materiales y energéticos a su cargo.',
           'Promueve prácticas de cuidado ambiental y ahorro de recursos en su área de trabajo.'
@@ -82,7 +82,7 @@
     ],
     habilidades: [
       {
-        id: 'B1', nombre: 'Orientación a Resultados', peso: 4,
+        id: 'B1', nombre: 'Orientación a Resultados', peso: 3.3,
         conductas: [
           'Cumple consistentemente los objetivos establecidos.',
           'Mantiene altos estándares de calidad en su trabajo.',
@@ -90,7 +90,7 @@
         ]
       },
       {
-        id: 'B2', nombre: 'Planeación y Organización', peso: 4,
+        id: 'B2', nombre: 'Planeación y Organización', peso: 3.3,
         conductas: [
           'Organiza adecuadamente sus actividades y prioridades.',
           'Cumple los plazos establecidos.',
@@ -98,7 +98,7 @@
         ]
       },
       {
-        id: 'B3', nombre: 'Comunicación Efectiva', peso: 4,
+        id: 'B3', nombre: 'Comunicación Efectiva', peso: 3.3,
         conductas: [
           'Se comunica de forma clara, respetuosa y oportuna.',
           'Escucha activamente y considera diferentes puntos de vista.',
@@ -106,7 +106,7 @@
         ]
       },
       {
-        id: 'B4', nombre: 'Seguimiento y Control', peso: 4,
+        id: 'B4', nombre: 'Seguimiento y Control', peso: 3.3,
         conductas: [
           'Da seguimiento oportuno a sus actividades.',
           'Cumple políticas y procedimientos internos.',
@@ -114,7 +114,7 @@
         ]
       },
       {
-        id: 'B5', nombre: 'Desarrollo de Personas (Liderazgo)', peso: 4,
+        id: 'B5', nombre: 'Desarrollo de Personas (Liderazgo)', peso: 3.3,
         conductas: [
           'Comparte conocimientos con sus compañeros.',
           'Brinda apoyo cuando otros lo requieren.',
@@ -124,7 +124,7 @@
     ],
     conocimientos: [
       {
-        id: 'C1', nombre: 'Dominio del Puesto', peso: 5,
+        id: 'C1', nombre: 'Dominio del Puesto', peso: 4.2,
         conductas: [
           'Aplica correctamente los conocimientos de su puesto.',
           'Resuelve problemas relacionados con sus funciones.',
@@ -132,7 +132,7 @@
         ]
       },
       {
-        id: 'C2', nombre: 'Procesos y Herramientas de Trabajo', peso: 5,
+        id: 'C2', nombre: 'Procesos y Herramientas de Trabajo', peso: 4.2,
         conductas: [
           'Conoce y aplica correctamente los procesos, políticas y procedimientos de su área.',
           'Utiliza adecuadamente las herramientas y sistemas de automatización disponibles para su puesto.'

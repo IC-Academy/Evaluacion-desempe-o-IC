@@ -16,8 +16,10 @@
   // ===========================================================================
   // 1. PONDERACIÓN GENERAL
   //
-  // Ponderación oficial conforme a EDD_Inter-Con_Rev4_ponderacion_y_herramientas
-  // version2 (FOR-CAP-003 Rev. 3): Competencias 70% + Objetivos 30%.
+  // Ponderación acordada en demo del 11-08-2026: dos bloques 50/50.
+  // Valores y Actitud aporta 50% del total. El bloque técnico-funcional +
+  // objetivos aporta el otro 50%. Hasta que RH confirme otro reparto interno,
+  // se conserva la proporción previa B:C:D = 20:10:30 (2:1:3), escalada a 50%.
   //
   // Única fuente de verdad de los porcentajes: NO se deben hardcodear
   // porcentajes en app.js, data.js ni en ningún otro módulo. Cualquier
@@ -25,12 +27,12 @@
   // vez reparte estos mismos totales entre las competencias de cada sección).
   // ===========================================================================
   const PESOS_SECCION = {
-    actitud: 40,       // A. Valores y Actitud (Eje ACTITUD)
-    habilidades: 20,   // B. Habilidades (Eje DESEMPEÑO)
-    conocimientos: 10, // C. Conocimientos (Eje DESEMPEÑO)
-    objetivos: 30      // D. Cumplimiento de Objetivos (Eje DESEMPEÑO)
+    actitud: 50,                 // Bloque Valores y Actitud
+    habilidades: 16.6666666667,  // 1/3 del bloque técnico-funcional (50%)
+    conocimientos: 8.3333333333, // 1/6 del bloque técnico-funcional (50%)
+    objetivos: 25                 // 1/2 del bloque técnico-funcional (50%)
   };
-  // Suma de control: 40 + 20 + 10 + 30 = 100.
+  // Suma de control: 50 + 16.6667 + 8.3333 + 25 = 100.
 
   // ===========================================================================
   // 2. CLASIFICACIÓN NUMÉRICA DEL RESULTADO FINAL (0-100)

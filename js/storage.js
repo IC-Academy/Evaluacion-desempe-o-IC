@@ -33,8 +33,8 @@
   // no se intenta migrar/recalcular los datos viejos porque esta es una
   // demo sin backend (ver README, sección "Modelo de datos").
   //
-  // v4 (Rev4 oficial — ponderación 40/20/10/30): se fuerza una semilla limpia
-  // para recalcular resultados y 9-box con las reglas aprobadas del documento.
+  // v5 (acuerdo demo 11-08-2026 — ponderación por bloques 50/50): se fuerza
+  // semilla limpia para recalcular resultados y 9-box con el nuevo esquema.
   //
   // v3 (beta 3 — preparación Airtable/n8n): el modelo de datos de usuarios
   // cambió de forma incompatible con v2 (se agregan correoCorporativo,
@@ -46,7 +46,7 @@
   // limpia. La SESIÓN (login) es independiente de esto: vive en
   // sessionStorage bajo APP_CONFIG.sessionStorageKey (ver auth.js), no en
   // esta clave de localStorage.
-  const STORAGE_KEY = 'edd_interconn_db_v4_rev4';
+  const STORAGE_KEY = 'edd_interconn_db_v5_demo_50_50';
   let _db = null; // caché en memoria
 
   // ===========================================================================

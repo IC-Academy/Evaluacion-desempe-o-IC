@@ -665,3 +665,8 @@ body{background:linear-gradient(180deg,#f8fbff 0,#f2f7fc 100%);color:var(--premi
   .smart-remove-objective{width:28px;height:28px;padding:0;font-size:.85rem;border-radius:50%}
   .smart-objective-head{margin-bottom:8px}
 }
+
+/* Demo 11-08-2026 · navegación líder y ponderación 50/50 */
+.premium-logout{width:auto!important;min-width:38px;padding:7px 10px!important;gap:6px;border-radius:10px!important;display:inline-flex!important;align-items:center;justify-content:center}.premium-logout .logout-label{font-size:.66rem;font-weight:800}.premium-logout .logout-icon{font-size:.85rem}.objective-rating-help{display:block;margin-top:6px;color:#6c7f93;font-size:.58rem;line-height:1.35}.premium-leader-person{margin-bottom:16px}.premium-leader-evaluation{margin-top:0}
+@media(max-width:900px){.premium-logout .logout-label{display:none}.premium-logout{padding:7px!important}.premium-leader-person .info-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.premium-leader-person .info-grid{grid-template-columns:1fr}.objective-rating-help{font-size:.62rem}.premium-user-menu{gap:5px}.premium-logout{min-width:32px;height:32px}}

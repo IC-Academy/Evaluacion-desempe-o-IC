@@ -223,8 +223,8 @@
   function leyendaEjes() {
     const c = C();
     return `<div class="ninebox-legend">
-      <p><strong>${esc(c.CONFIG_9BOX.ejeHorizontal)}</strong> (eje horizontal): Habilidades + Conocimientos + Cumplimiento de Objetivos, convertido a base 100 conforme a la ponderación oficial 20% + 10% + 30%.</p>
-      <p><strong>${esc(c.CONFIG_9BOX.ejeVertical)}</strong> (eje vertical): se obtiene de la sección "Valores y Actitud" y se convierte a base 100 conforme al documento Rev4.</p>
+      <p><strong>${esc(c.CONFIG_9BOX.ejeHorizontal)}</strong> (eje horizontal): Habilidades + Conocimientos + Cumplimiento de Objetivos, convertido a base 100 dentro del bloque técnico-funcional y objetivos (50% del total).</p>
+      <p><strong>${esc(c.CONFIG_9BOX.ejeVertical)}</strong> (eje vertical): se obtiene de la sección "Valores y Actitud" y se convierte a base 100 conforme al acuerdo de ponderación 50/50 de la demo del 11-08-2026.</p>
       <p class="muted">Niveles por eje: ${c.CONFIG_9BOX.etiquetasNivel.join(' · ')} · Bajo &lt;60 · Medio 60–79 · Alto 80–100.</p>
     </div>`;
   }

@@ -172,7 +172,7 @@
     if (u.perfil === 'colaborador') {
       tabs = [['inicio', 'Inicio'], ['autoevaluacion', 'Autoevaluación'], ['retroalimentacion', 'Retroalimentación']];
     } else if (u.perfil === 'lider') {
-      tabs = [['dashboard', 'Dashboard de equipo']];
+      tabs = [['dashboard', 'Mi equipo'], ['pendientes', 'Pendientes por evaluar']];
     } else {
       tabs = [['dashboard', 'Dashboard'], ['calibracion', 'Calibración'], ['9box', 'Matriz 9-Box'], ['usuarios', 'Usuarios'], ['jerarquias', 'Jerarquías'], ['auditoria', 'Auditoría'], ['config', 'Configuración']];
     }
@@ -188,7 +188,7 @@
         <div class="premium-user-menu">
           <span class="premium-user-avatar">${iniciales}</span>
           <span class="premium-user-copy"><strong>${esc(u.nombre)}</strong><small>${capitalize(u.perfil)} · ${esc(per ? per.nombre : '')}</small></span>
-          <button class="premium-logout" onclick="App.logout()" title="Cerrar sesión">⌄</button>
+          <button class="premium-logout" onclick="App.logout()" title="Cerrar sesión"><span class="logout-icon">↪</span><span class="logout-label">Cerrar sesión</span></button>
         </div>
       </div>
     </header>`;
@@ -421,12 +421,12 @@
         <article class="welcome-card welcome-card-integracion">
           <div class="welcome-card-icon icon-blue">◔</div>
           <h3>¿Cómo se integra?</h3>
-          <p class="welcome-integracion-title"><strong>Competencias 70%</strong> +<br><strong>Cumplimiento de Objetivos 30%</strong></p>
+          <p class="welcome-integracion-title"><strong>Valores y Actitud 50%</strong> +<br><strong>Técnico-funcional y Objetivos 50%</strong></p>
           <div class="welcome-weight-list">
-            <span><i class="dot-blue"></i>Valores y Actitud <b>40%</b></span>
-            <span><i class="dot-purple"></i>Habilidades <b>20%</b></span>
-            <span><i class="dot-green"></i>Conocimientos <b>10%</b></span>
-            <span><i class="dot-yellow"></i>Objetivos <b>30%</b></span>
+            <span><i class="dot-blue"></i>Valores y Actitud <b>50%</b></span>
+            <span><i class="dot-purple"></i>Habilidades <b>16.7%</b></span>
+            <span><i class="dot-green"></i>Conocimientos <b>8.3%</b></span>
+            <span><i class="dot-yellow"></i>Objetivos <b>25%</b></span>
           </div>
         </article>
       </div>
@@ -696,7 +696,7 @@
       <section class="smart-capture-panel">
         <div class="smart-capture-head">
           <div>
-            <span class="smart-capture-kicker">CUMPLIMIENTO DE OBJETIVOS · 30%</span>
+            <span class="smart-capture-kicker">CUMPLIMIENTO DE OBJETIVOS · 25% DEL TOTAL</span>
             <h3>Captura tus objetivos del periodo</h3>
             <p>Registra hasta cinco objetivos. Completa la meta, fecha y criterios SMART; solo se promedian los objetivos con descripción y calificación válida.</p>
           </div>
@@ -725,7 +725,7 @@
         <div class="smart-field"><label>Fecha compromiso</label><input type="date" value="${esc(o.fechaCompromiso || '')}" ${soloLecturaDescripcion ? 'disabled' : ''} onchange="App.editarObjetivoSmart('${evaluacionId}',${index},'fechaCompromiso',this.value)"></div>
         ${smartChecklistHTML(o, evaluacionId, index, soloLecturaDescripcion)}
         <div class="smart-field"><label>Resultado obtenido</label><textarea placeholder="Resultado obtenido" ${soloLecturaDescripcion ? 'disabled' : ''} onchange="App.editarObjetivo('${evaluacionId}',${index},'resultado',this.value)">${esc(o.resultado)}</textarea></div>
-        <div class="smart-field smart-rating-field"><label>Calificación</label>${ratingWidget(groupName, o.calificacion, onchangeJs, false, true)}</div>
+        <div class="smart-field smart-rating-field"><label>Calificación</label>${ratingWidget(groupName, o.calificacion, onchangeJs, false, true)}<small class="objective-rating-help">1★ = 20% · 2★ = 40% · 3★ = 60% · 4★ = 80% · 5★ = 100%</small></div>
         <div class="validation-message" aria-live="polite">Completa el objetivo y asegúrate de que cumpla los 5 criterios SMART.</div>
       </div>
     </div>`;
@@ -884,17 +884,19 @@
     const periodoId = state.periodo.id;
     if (page === 'evaluar' && param) return viewLiderEvaluar(lider, param, periodoId);
     if (page === 'comparacion' && param) return viewComparacion(lider, param, periodoId);
-    return viewLiderDashboard(lider, periodoId);
+    if (page === 'pendientes') return viewLiderDashboard(lider, periodoId, true);
+    return viewLiderDashboard(lider, periodoId, false);
   }
 
-  function viewLiderDashboard(lider, periodoId) {
+  function viewLiderDashboard(lider, periodoId, soloPendientes) {
     const equipo = S.getColaboradoresDeLider(lider.empleado);
-    const filas = equipo.map((c) => {
+    let filas = equipo.map((c) => {
       const estado = S.estadoProceso(c.empleado, periodoId);
       const autoEval = S.getEvaluacion(c.empleado, periodoId, 'autoevaluacion');
       const liderEval = S.getEvaluacion(c.empleado, periodoId, 'lider');
       return { c, estado, autoEval, liderEval };
     });
+    if (soloPendientes) filas = filas.filter((f) => f.estado === D.ESTADOS.PENDIENTE_LIDER);
     const total = filas.length;
     const completadas = filas.filter((f) => f.estado === D.ESTADOS.CERRADA).length;
     const pendientesLider = filas.filter((f) => f.estado === D.ESTADOS.PENDIENTE_LIDER).length;
@@ -913,7 +915,8 @@
       ${kpi('Alertas por vencimiento', vencidas, vencidas ? 'red' : 'gray')}
     </div>
     <div class="card">
-      <h2>Equipo — ${esc(lider.area)}</h2>
+      <h2>${soloPendientes ? 'Pendientes por evaluar' : 'Mi equipo'} — ${esc(lider.area)}</h2>
+      ${soloPendientes && !filas.length ? '<p class="alert alert-success">No tienes evaluaciones pendientes en este momento.</p>' : ''}
       <table class="table">
         <thead><tr><th>Nombre</th><th>Puesto</th><th>Área</th><th>Autoevaluación</th><th>Evaluación líder</th><th>Retroalimentación</th><th></th></tr></thead>
         <tbody>
@@ -968,8 +971,10 @@
     else if (seccion === 'resumen') contenido = renderResumenLider(ev, col);
     else contenido = renderSeccionForm(ev, seccion, false);
 
+    const progresoLider = Math.round(((idx + (seccion === 'resumen' ? 1 : 0)) / SECCIONES_WIZARD.length) * 100);
+    const sidebarLider = SECCIONES_WIZARD.map((s, i) => `<button class="premium-section-step ${i === idx ? 'active' : ''} ${i < idx ? 'done' : ''}" type="button"><span><strong>${labelSeccion(s)}</strong><small>${s === 'resumen' ? 'Revisión final' : (D.SECCIONES_META[s] ? D.SECCIONES_META[s].eje || 'Evaluación' : '')}</small></span><b>${i < idx ? '✓' : (i + 1) + '/5'}</b></button>`).join('');
     return `
-    <div class="card">
+    <div class="card premium-leader-person">
       <h2>Evaluación de ${esc(col.nombre)}</h2>
       <div class="info-grid">
         <div><span class="label">Puesto</span><span class="value">${esc(col.puesto)}</span></div>
@@ -979,18 +984,23 @@
       </div>
       <p class="alert alert-info">La autoevaluación del colaborador permanecerá oculta hasta que envíes tu evaluación.</p>
     </div>
-    <div class="card wizard-card">
-      <div class="wizard-steps">${stepsHtml}</div>
-      <h2>${labelSeccion(seccion)}</h2>
-      ${contenido}
-      <div class="wizard-nav">
-        <button class="btn btn-outline" ${idx === 0 ? 'disabled' : ''} onclick="App.wizardPrev()">Anterior</button>
-        ${seccion === 'resumen'
-          ? `<label class="confirm-check"><input type="checkbox" id="confirmEnvioLider"/> Confirmo que la evaluación está completa.</label>
-             <button class="btn btn-primary" onclick="App.enviarEvaluacionLider('${colaboradorId}')">Enviar evaluación</button>`
-          : `<button class="btn btn-primary" onclick="App.wizardNext('${seccion}')">Siguiente</button>`}
+    <section class="premium-evaluation-page premium-leader-evaluation">
+      <div class="premium-progress-head"><div><span>Progreso de evaluación</span><div class="progress"><div class="progress-bar" style="width:${progresoLider}%"></div></div></div><strong>${progresoLider}%</strong></div>
+      <div class="premium-evaluation-layout">
+        <aside class="premium-evaluation-sidebar">${sidebarLider}<div class="premium-reminder-card"><strong>Evaluación del líder</strong><p>Guarda tu avance y verifica cada sección antes de enviar. La autoevaluación se mostrará después del envío.</p></div></aside>
+        <div class="premium-evaluation-main">
+          <div class="premium-evaluation-title"><span class="premium-section-kicker">${seccion === 'resumen' ? 'Revisión final' : 'Sección ' + (idx + 1) + ' de 4'}</span><h1>${labelSeccion(seccion)}${seccion !== 'resumen' && D.SECCIONES_META[seccion] ? ` <em>(${D.SECCIONES_META[seccion].peso}%)</em>` : ''}</h1></div>
+          ${contenido}
+          <div class="wizard-nav premium-wizard-nav">
+            <button class="btn btn-outline" ${idx === 0 ? 'disabled' : ''} onclick="App.wizardPrev()">← Anterior</button>
+            <button class="btn btn-outline premium-save-btn" onclick="App.guardarProgresoVisual()">Guardar progreso</button>
+            ${seccion === 'resumen'
+              ? `<label class="confirm-check premium-confirm"><input type="checkbox" id="confirmEnvioLider"/> Confirmo que la evaluación está completa.</label><button class="btn btn-primary premium-next-btn" onclick="App.enviarEvaluacionLider('${colaboradorId}')">Enviar evaluación ✓</button>`
+              : `<button class="btn btn-primary premium-next-btn" onclick="App.wizardNext('${seccion}')">Siguiente →</button>`}
+          </div>
+        </div>
       </div>
-    </div>`;
+    </section>`;
   }
 
   function renderObjetivosLider(ev, autoEval) {
@@ -999,7 +1009,7 @@
     const mapLider = {}; objetivosLider.forEach((o) => { mapLider[Number(o.index)] = o; });
     if (!objetivosAuto.length) return '<p class="muted">El colaborador no registró objetivos en este periodo.</p>';
     return `
-    <p class="muted">Califica el cumplimiento de cada objetivo declarado por el colaborador.</p>
+    <p class="muted">Califica el cumplimiento de cada objetivo declarado por el colaborador. Cada estrella equivale al 20% del cumplimiento del objetivo.</p>
     ${objetivosAuto.map((o, i) => {
       // Conservamos el índice REAL del objetivo de la autoevaluación. Si el colaborador
       // quitó un objetivo, los índices pueden no ser consecutivos (ej. 0, 2, 3).
