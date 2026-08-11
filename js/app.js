@@ -996,17 +996,20 @@
   function renderObjetivosLider(ev, autoEval) {
     const objetivosAuto = S.getObjetivos(autoEval.id).filter((o) => o.descripcion && o.descripcion.trim());
     const objetivosLider = S.getObjetivos(ev.id);
-    const mapLider = {}; objetivosLider.forEach((o) => mapLider[o.index] = o);
+    const mapLider = {}; objetivosLider.forEach((o) => { mapLider[Number(o.index)] = o; });
     if (!objetivosAuto.length) return '<p class="muted">El colaborador no registró objetivos en este periodo.</p>';
     return `
     <p class="muted">Califica el cumplimiento de cada objetivo declarado por el colaborador.</p>
     ${objetivosAuto.map((o, i) => {
-      const calif = mapLider[i] ? mapLider[i].calificacion : '';
-      const groupName = 'objl_' + ev.id + '_' + i;
-      const descEsc = esc(o.descripcion).replace(/'/g, "\\'");
-      const resEsc = esc(o.resultado).replace(/'/g, "\\'");
-      const onchangeJs = `App.editarObjetivoLider('${ev.id}',${i},'${descEsc}','${resEsc}',this.value)`;
-      return `<div class="objetivo-row">
+      // Conservamos el índice REAL del objetivo de la autoevaluación. Si el colaborador
+      // quitó un objetivo, los índices pueden no ser consecutivos (ej. 0, 2, 3).
+      // Usar el índice visual (i) hacía que el líder guardara/calificara otro registro y
+      // la validación impedía continuar aunque todas las estrellas estuvieran marcadas.
+      const sourceIndex = Number(o.index);
+      const calif = mapLider[sourceIndex] ? mapLider[sourceIndex].calificacion : '';
+      const groupName = 'objl_' + ev.id + '_' + sourceIndex;
+      const onchangeJs = `App.editarObjetivoLider('${ev.id}',${sourceIndex},this.value)`;
+      return `<div class="objetivo-row" data-idx="${sourceIndex}">
         <div class="objetivo-num">#${i + 1}</div>
         <div class="objetivo-fields">
           <div class="objetivo-lectura"><strong>Objetivo:</strong> ${esc(o.descripcion)}</div>
@@ -1555,8 +1558,9 @@
     } else if (state.wizard.tipo === 'lider') {
       const objetivos = S.getObjetivos(evaluacionId) || [];
       const filas = wizard.querySelectorAll('.objetivo-row');
-      filas.forEach((fila, i) => {
-        const o = objetivos.find((x) => Number(x.index) === i);
+      filas.forEach((fila) => {
+        const idx = Number(fila.dataset.idx);
+        const o = objetivos.find((x) => Number(x.index) === idx);
         if (!o || o.calificacion === '' || o.calificacion === null || o.calificacion === undefined) faltantes.push(fila);
       });
     } else {
@@ -1724,9 +1728,17 @@
       S.completarEvaluacion(evaluacionId, state.user.nombre);
       navigate('#/colaborador/enviado');
     },
-    editarObjetivoLider(evaluacionId, index, descripcion, resultado, calificacion) {
-      S.saveObjetivo(evaluacionId, index, descripcion, resultado, calificacion);
-      const fila = document.querySelectorAll('.objetivo-row')[index];
+    editarObjetivoLider(evaluacionId, index, calificacion) {
+      const autoEval = S.getEvaluacion(state.wizard.colaboradorId, state.periodo.id, 'autoevaluacion');
+      const fuente = autoEval ? S.getObjetivos(autoEval.id).find((o) => Number(o.index) === Number(index)) : null;
+      if (!fuente) {
+        console.error('No se encontró el objetivo origen para la evaluación del líder', { evaluacionId, index });
+        return;
+      }
+      // La descripción y el resultado siempre se toman del registro fuente del colaborador,
+      // evitando pasarlos interpolados dentro de HTML/JS y manteniendo la relación por índice.
+      S.saveObjetivo(evaluacionId, Number(index), fuente.descripcion || '', fuente.resultado || '', calificacion);
+      const fila = document.querySelector(`.objetivo-row[data-idx="${Number(index)}"]`);
       if (fila && calificacion) fila.classList.remove('validation-error');
     },
     setFortalezas(evaluacionId, valor) {
@@ -1755,9 +1767,18 @@
       const evaluacionId = state.wizard.evaluacionId;
       for (let i = 0; i < SECCIONES_WIZARD.length - 1; i++) {
         const sec = SECCIONES_WIZARD[i];
-        const incompleta = sec === 'objetivos'
-          ? S.getObjetivos(evaluacionId).some((o) => !o.calificacion)
-          : (S.getRespuestasPorSeccion(evaluacionId)[sec] || []).filter((r) => r.valor !== '' && r.valor !== null && r.valor !== undefined).length < D.COMPETENCIAS[sec].length;
+        let incompleta;
+        if (sec === 'objetivos') {
+          const autoEval = S.getEvaluacion(colaboradorId, state.periodo.id, 'autoevaluacion');
+          const objetivosAuto = autoEval ? S.getObjetivos(autoEval.id).filter((o) => (o.descripcion || '').trim()) : [];
+          const objetivosLider = S.getObjetivos(evaluacionId);
+          incompleta = objetivosAuto.some((oa) => {
+            const ol = objetivosLider.find((x) => Number(x.index) === Number(oa.index));
+            return !ol || ol.calificacion === '' || ol.calificacion === null || ol.calificacion === undefined;
+          });
+        } else {
+          incompleta = (S.getRespuestasPorSeccion(evaluacionId)[sec] || []).filter((r) => r.valor !== '' && r.valor !== null && r.valor !== undefined).length < D.COMPETENCIAS[sec].length;
+        }
         if (incompleta) {
           state.wizard.seccionIdx = i; render();
           setTimeout(() => {
