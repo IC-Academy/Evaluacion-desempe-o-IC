@@ -624,3 +624,259 @@ incremental.
 Esta versión incorpora un selector visible **ES / EN** tanto en login como dentro del portal. La preferencia se conserva en `localStorage` bajo `edd_language`. La traducción es únicamente de interfaz; nombres de personas, áreas, puestos, comentarios y datos capturados por usuarios se conservan tal como están registrados.
 
 El selector no modifica cálculos, ponderaciones, evaluaciones ni el almacenamiento. La versión en inglés es una capa de presentación para la futura operación en Estados Unidos.
+
+## Asistente de IA para objetivos SMART ("✨ Ayúdame con IA")
+
+> Agregado sobre esta misma base (`edd_ui_tune`), sin modificar diseño aprobado,
+> cálculos, ponderaciones, login, Nine Box, SMART existente, ni ninguna
+> funcionalidad previa. Verificado con 32 pruebas automatizadas simulando
+> eventos DOM reales (clicks, `input`, `change`) — no llamadas directas a
+> funciones internas — para no repetir el error de una beta anterior donde una
+> prueba que llamaba funciones directamente no detectó un bug real de
+> integración con el DOM.
+
+### A. Qué se agregó
+
+Dentro de cada tarjeta de objetivo de la autoevaluación (`renderObjetivoRow`,
+`js/app.js`) hay un botón discreto **"✨ Ayúdame con IA"**. Al presionarlo se
+abre un panel modal donde el colaborador describe una idea breve (5–500
+caracteres) y recibe una propuesta de objetivo SMART completa: objetivo
+específico, meta/indicador, plazo sugerido y la explicación de los 5
+criterios (S/M/A/R/T). El usuario puede **usarla, editarla o descartarla**;
+nunca se guarda, envía ni aprueba nada automáticamente. Al aceptar, los
+campos "Objetivo específico" y "Meta / indicador" se llenan y pasan por la
+**validación SMART que ya existía** (`evaluarSmartObjetivo`/
+`smartChecklistHTML`) sin duplicarla ni reemplazarla.
+
+**El líder no tiene este botón.** `renderObjetivosLider` (la vista donde el
+líder califica los objetivos del colaborador) es una función de renderizado
+completamente distinta a `renderObjetivoRow` y nunca lo incluye — no fue
+necesario un `if` de rol adicional, es estructural.
+
+### B. Archivos modificados
+
+| Archivo | Cambio |
+|---|---|
+| `js/api.js` | + `EDDApi.ai.generateSmartObjective(idea, language, employeeContext)` → `POST /ai/smart-objective`. Ningún `fetch()` nuevo fuera de este archivo. |
+| `js/app.js` | + Estado `state.aiSmart`; + `generarPropuestaSimuladaIA` (mock demo) y `generarPropuestaSmartIA` (orquestador demo/api); + `renderAiSmartModal`/`renderAiSmartForm`/`renderAiSmartLoading`/`renderAiSmartPreview`; + botón en `renderObjetivoRow`; + hint de plazo sugerido junto a "Fecha compromiso"; + 8 acciones nuevas (`abrirAsistenteIA`, `cerrarAsistenteIA`, `actualizarIdeaIA`, `generarPropuestaIA`, `regenerarPropuestaIA`, `editarPropuestaIA`, `usarPropuestaIA`); + entradas EN para el selector de idioma; + tecla ESC cierra el modal; + `setLanguage`/`logout` refrescan o cierran el modal (vive fuera de `#app-root`). |
+| `css/styles.css` | + ~90 líneas con prefijo `.ai-smart-*`: botón disparador, overlay, modal (bottom-sheet en móvil), formulario, loading, tarjeta de propuesta, criterios SMART, disclaimer. Ningún color corporativo existente se modificó. |
+
+Nada de `storage.js`, `auth.js`, `config.js`, `calculations.js`, `charts.js`,
+`data.js` ni `icons.js` se tocó.
+
+### C. `EDDApi.ai.generateSmartObjective` (nuevo en `api.js`)
+
+```js
+EDDApi.ai.generateSmartObjective(idea, language, employeeContext)
+// -> POST {apiBaseUrl}/ai/smart-objective
+```
+
+Usa el mismo `apiRequest()` centralizado de siempre (timeout, manejo de 401,
+errores tipados) — no es un cliente HTTP aparte.
+
+### D. Ejemplo de request
+
+```json
+POST /ai/smart-objective
+Authorization: Bearer <token de sesión>
+
+{
+  "idea": "mejorar la capacitación",
+  "language": "es",
+  "employeeContext": {
+    "position": "Analista de Recursos Humanos",
+    "area": "Recursos Humanos"
+  }
+}
+```
+
+`employeeContext` es opcional y **nunca** incluye correo, evaluaciones,
+calificaciones, comentarios privados ni información de otros empleados — el
+frontend solo manda `puesto`/`área` del propio colaborador autenticado
+(tomados de `S.getColaborador`, no de un formulario libre).
+
+### E. Ejemplo de response esperado
+
+```json
+{
+  "success": true,
+  "data": {
+    "objective": "Incrementar del 75% al 90% el porcentaje de colaboradores que concluyen satisfactoriamente la capacitación de inducción durante los próximos 3 meses.",
+    "indicator": "90% de colaboradores con capacitación concluida satisfactoriamente",
+    "suggestedDeadline": "3 meses",
+    "smart": {
+      "specific": "Incrementar la conclusión satisfactoria de la capacitación.",
+      "measurable": "Pasar del 75% al 90%.",
+      "achievable": "Se plantea una mejora progresiva con acciones de seguimiento.",
+      "relevant": "Contribuye al desarrollo y preparación del personal.",
+      "timeBound": "Debe alcanzarse dentro de los próximos 3 meses."
+    }
+  }
+}
+```
+
+Error esperado (el frontend nunca bloquea la evaluación por esto):
+
+```json
+{ "success": false, "message": "No fue posible generar la propuesta en este momento." }
+```
+
+`suggestedDeadline` **solo** se usa para prellenar el campo "Fecha
+compromiso" cuando viene en formato exacto `AAAA-MM-DD`; cualquier otro
+texto ("3 meses", "next quarter") se muestra como sugerencia junto al campo
+y la fecha se elige manualmente — nunca se inventa una fecha absoluta.
+
+### F. Prompt exacto de IA (para el nodo del LLM en n8n)
+
+```
+Eres un asistente especializado en redacción de objetivos SMART para evaluación de desempeño laboral.
+
+A partir de una idea breve, genera UNA propuesta clara y profesional.
+
+El objetivo debe ser:
+- específico;
+- medible;
+- alcanzable;
+- relevante;
+- temporal.
+
+No inventes datos organizacionales que no hayan sido proporcionados.
+
+Si el usuario no proporciona una cifra, puedes proponer una meta razonable únicamente como sugerencia y debe quedar explícito que debe validarse.
+
+No inventes fechas exactas.
+
+Si solo puede determinarse un plazo, devuelve el plazo.
+
+Utiliza lenguaje profesional, simple y entendible.
+
+No generes contenido discriminatorio, sensible ni relacionado con decisiones laborales automatizadas.
+
+Devuelve solamente JSON válido con esta estructura:
+
+{
+ "objective": "",
+ "indicator": "",
+ "suggestedDeadline": "",
+ "smart": {
+   "specific": "",
+   "measurable": "",
+   "achievable": "",
+   "relevant": "",
+   "timeBound": ""
+ }
+}
+```
+
+Si `language` = `"en"`, agregar al prompt: *"Respond entirely in English."* — la
+traducción la hace el modelo, nunca el frontend después (ver requerimiento 16
+del brief).
+
+### G. Diseño del workflow de n8n (nodo por nodo)
+
+```
+1. Webhook (POST /ai/smart-objective)
+        ↓
+2. Validar request
+   - idea presente, string, 5–500 caracteres
+   - language ∈ {"es","en"}
+   - employeeContext (si viene) solo con position/area, nada más
+        ↓
+3. Validar sesión / token
+   - mismo mecanismo que el resto de endpoints (Authorization: Bearer)
+   - 401 si el token no es válido o expiró
+        ↓
+4. Rate limit
+   - máximo propuesto: 10 generaciones por usuario por día (pruebas)
+   - contador por employeeId (Airtable/Redis/Data Table de n8n)
+   - 429 si se excede, con mensaje seguro para el usuario
+        ↓
+5. Preparar prompt
+   - Inserta el prompt de sistema (sección F) + idea + employeeContext
+   - Si language = "en", agrega la instrucción de responder en inglés
+        ↓
+6. LLM (nodo del proveedor de IA)
+   - Forzar salida JSON estructurada (function calling / JSON mode del
+     proveedor, no "pedir JSON" en texto libre)
+   - Timeout corto (sugerido 15-20s, igual que requestTimeout del frontend)
+        ↓
+7. Validar JSON
+   - Parsear la respuesta; si no es JSON válido o le faltan campos, no
+     reintentar automáticamente con más tokens — responder success:false
+   - Sanitizar longitudes (evitar respuestas absurdamente largas)
+        ↓
+8. Normalizar respuesta
+   - Forma exacta de la sección E
+   - No dejar pasar fechas absolutas inventadas: si el modelo devolvió una
+     fecha exacta que no fue solicitada explícitamente por el usuario,
+     preferir degradar a texto de plazo relativo
+        ↓
+9. Registrar auditoría (opcional en este paso; el frontend ya registra
+   AI_SMART_REQUEST/ACCEPTED/DISCARDED del lado cliente vía consola — en
+   producción esto debe escribirse en Airtable/Bitácora desde n8n)
+        ↓
+10. Responder al frontend (200 + JSON de la sección E, o error controlado)
+```
+
+### H. Variables requeridas en n8n
+
+- URL del webhook → debe coincidir con `APP_CONFIG.apiBaseUrl + '/ai/smart-objective'` en `js/config.js`.
+- Credencial del proveedor de IA (API key) — **vive únicamente en n8n**, nunca en el frontend.
+- Límite de tasa: contador por `employeeId` (10/día sugerido durante pruebas).
+- Timeout del nodo LLM (sugerido 15–20s, coherente con `APP_CONFIG.requestTimeout`).
+- Longitud máxima de `idea` validada en el nodo 2 (500 caracteres) para controlar costo.
+
+### I. Modo demo vs. modo API
+
+- **`APP_CONFIG.mode === 'demo'`** (valor por defecto de este proyecto): no hay
+  llamada de red. `generarPropuestaSimuladaIA` arma una propuesta con
+  plantillas simples a partir de la idea capturada, en el idioma activo, y se
+  imprime `[DEMO] AI SMART suggestion generated locally` en consola — nunca
+  se finge una conexión real.
+- **`APP_CONFIG.mode === 'api'`**: usa `EDDApi.ai.generateSmartObjective(...)`.
+  Sin una URL real de n8n detrás de `apiBaseUrl`, la llamada falla con un
+  error de conexión controlado (mismo comportamiento que el resto de
+  endpoints no-auth) y el modal muestra el mensaje de error sin bloquear el
+  resto de la evaluación.
+
+### J. Pruebas realizadas
+
+Batería jsdom con **eventos DOM reales** (`click`, `input`, `change` —no
+llamadas directas a funciones internas), **32/32 aserciones, 0 errores de
+ventana no capturados**:
+
+1. Idea demasiado corta (3 caracteres) → botón "Generar" deshabilitado.
+2. Idea válida ("mejorar la capacitación") → botón se habilita.
+3. Loading visible ("Generando propuesta...") mientras se espera.
+4. Modo demo confirma en consola que la propuesta es simulada.
+5. Propuesta recibida con los 5 criterios SMART explicados.
+6. Descartar propuesta → modal se cierra, **no** se guarda nada en el objetivo, se registra `AI_SMART_DISCARDED`.
+7. "Generar otra" → nuevo ciclo de loading y nueva propuesta.
+8. "Usar esta propuesta" → se llenan exactamente "Objetivo específico" y "Meta / indicador", se registra `AI_SMART_ACCEPTED`.
+9. La fecha de compromiso **no** se autocompletó (el mock devuelve un plazo relativo, "3 meses") — se muestra como sugerencia junto al campo.
+10. La validación SMART ya existente se ejecuta sobre el objetivo aceptado.
+11. El usuario edita el objetivo manualmente después de aceptarlo → se guarda y la validación SMART se mantiene activa.
+12. Modo EN: modal traducido, y la propuesta (mock) llega directamente en inglés, sin traducción posterior en frontend.
+13. Falla simulada de backend (dominio inexistente) en modo API → mensaje "No fue posible generar la propuesta..." sin `alert()`, el usuario puede cerrar y seguir redactando manualmente.
+14. Cambiar de rol (líder) y volver a colaborador no rompe el módulo.
+15. El líder **no** tiene el botón "Ayúdame con IA" en ningún punto de su flujo.
+
+### K. Riesgos y pendientes
+
+- El workflow de n8n de la sección G **no está implementado todavía** — esta
+  entrega deja el frontend listo para conectarlo, siguiendo la instrucción
+  explícita de no inventar la conexión sin credenciales reales.
+- El rate limit (10/día) y la sanitización de la idea están **documentados
+  para n8n**, pero no hay enforcement del lado del frontend más allá del
+  límite de 500 caracteres del `<textarea>` — es un límite de UX, no de
+  seguridad; la seguridad real debe vivir en n8n.
+- La auditoría (`AI_SMART_REQUEST/ACCEPTED/DISCARDED`) se registra en
+  consola en modo demo; en producción debe escribirse desde n8n (o desde un
+  endpoint dedicado) hacia Airtable/Bitácora, no confiar en el navegador.
+- El botón "Editar" de la vista previa actualmente enfoca el campo de
+  objetivo (que ya es editable directamente) en vez de alternar un modo de
+  edición separado — se documenta como decisión de diseño consciente, no
+  como pendiente, pero se menciona por transparencia.
+- No se implementó un histórico de propuestas generadas por sesión (cada
+  "Generar otra" reemplaza a la anterior sin guardar las descartadas) —
+  fuera del alcance pedido.

@@ -178,7 +178,36 @@
     // --- Retroalimentación -------------------------------------------------
     retroalimentacionPorId(id) { return apiRequest('/retroalimentacion/' + encodeURIComponent(id), { method: 'GET' }); },
     retroalimentacionGuardar(id, payload) { return apiRequest('/retroalimentacion/' + encodeURIComponent(id) + '/guardar', { method: 'POST', body: payload }); },
-    retroalimentacionCerrar(id, payload) { return apiRequest('/retroalimentacion/' + encodeURIComponent(id) + '/cerrar', { method: 'POST', body: payload }); }
+    retroalimentacionCerrar(id, payload) { return apiRequest('/retroalimentacion/' + encodeURIComponent(id) + '/cerrar', { method: 'POST', body: payload }); },
+
+    // --- Asistente de IA para objetivos SMART -------------------------------
+    // Ver README, sección "Asistente de IA para objetivos SMART". El frontend
+    // nunca llama directamente a un proveedor de IA: siempre pasa por este
+    // único método, que a su vez pasa por n8n (Webhook -> validar sesión ->
+    // rate limit -> prompt -> LLM -> validar JSON -> responder). No hay
+    // ninguna API key de proveedor de IA en este archivo ni en ningún otro
+    // archivo del frontend.
+    ai: {
+      /**
+       * @param {string} idea - Idea breve del usuario (5–500 caracteres; la
+       *   validación de longitud vive en app.js, antes de llamar aquí).
+       * @param {'es'|'en'} language - Idioma en el que n8n debe responder.
+       * @param {{position?: string, area?: string}} [employeeContext] -
+       *   Opcional. NUNCA debe incluir correo, evaluaciones, calificaciones,
+       *   comentarios privados ni información de otros empleados — ver
+       *   requerimiento de privacidad del brief.
+       * @returns {Promise<{success: boolean, data?: object, message?: string}>}
+       */
+      generateSmartObjective(idea, language, employeeContext) {
+        const body = { idea, language: language === 'en' ? 'en' : 'es' };
+        if (employeeContext && (employeeContext.position || employeeContext.area)) {
+          body.employeeContext = {};
+          if (employeeContext.position) body.employeeContext.position = employeeContext.position;
+          if (employeeContext.area) body.employeeContext.area = employeeContext.area;
+        }
+        return apiRequest('/ai/smart-objective', { method: 'POST', body });
+      }
+    }
   };
 
   global.EDDApi = EDDApi;

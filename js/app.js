@@ -407,6 +407,10 @@
     document.documentElement.lang = currentLang;
     document.title = currentLang === 'en' ? 'Inter-Con EDD — Administrative Performance Evaluation' : 'Plataforma EDD Inter-Con — Evaluación del Desempeño Administrativo';
     render();
+    // El modal de IA SMART vive fuera de #app-root (para sobrevivir los
+    // render() del wizard), así que no se retraduce solo con render(): hay
+    // que refrescarlo aparte si está abierto.
+    if (state.aiSmart.open) renderAiSmartModal();
   }
 
   function translateDOM(root) {
@@ -541,6 +545,7 @@
       S.addAudit(state.user.nombre, 'Cierre de sesión', 'usuarios', state.user.empleado, null, null);
       sessionStorage.removeItem(introKey());
     }
+    if (state.aiSmart.open) { state.aiSmart.open = false; renderAiSmartModal(); }
     await A.logout();
     state.user = null;
     resetLoginState('solicitar');
@@ -1101,7 +1106,200 @@
     </div>`;
   }
 
+  // =========================================================================
+  // ASISTENTE DE IA PARA OBJETIVOS SMART ("✨ Ayúdame con IA")
+  // ---------------------------------------------------------------------------
+  // La IA es solo un asistente de REDACCIÓN: nunca guarda, envía ni aprueba
+  // nada automáticamente. El usuario siempre decide: aceptar, editar o
+  // descartar. Después de aceptar, el objetivo pasa por evaluarSmartObjetivo()
+  // (la validación SMART que YA EXISTE) exactamente igual que si el usuario
+  // lo hubiera escrito a mano — este módulo no la reemplaza ni la duplica.
+  //
+  // Arquitectura: FRONTEND -> api.js (EDDApi.ai.generateSmartObjective) -> n8n
+  // -> proveedor de IA -> n8n -> FRONTEND. Nunca se llama a un proveedor de
+  // IA directamente ni se coloca una API key en el frontend. En modo demo no
+  // hay llamada de red: se genera una propuesta simulada localmente (ver
+  // generarPropuestaSimuladaIA), dejando explícito en consola que es un mock.
+  // =========================================================================
+  state.aiSmart = {
+    open: false,
+    evaluacionId: null,
+    index: null,
+    idea: '',
+    loading: false,
+    error: null,
+    proposal: null,       // { objective, indicator, suggestedDeadline, smart:{...} }
+    deadlineHints: {}      // { [evaluacionId+':'+index]: 'texto de plazo sugerido' } — ver requerimiento 9 del brief
+  };
+
+  const AI_IDEA_MIN = 5;
+  const AI_IDEA_MAX = 500;
+
+  Object.assign(EN, {
+    '✨ Ayúdame con IA': '✨ Help me with AI',
+    'Convierte tu idea en un objetivo SMART': 'Turn your idea into a SMART objective',
+    'Describe brevemente qué quieres lograr. La IA te ayudará a estructurarlo; podrás editar la propuesta antes de utilizarla.': 'Briefly describe what you want to achieve. AI will help you structure it; you can edit the suggestion before using it.',
+    '¿Qué quieres lograr?': 'What do you want to achieve?',
+    'Ej. mejorar la capacitación del equipo': 'E.g. improve team training',
+    '✨ Generar propuesta SMART': '✨ Generate SMART suggestion',
+    'Generando propuesta...': 'Generating suggestion...',
+    'PROPUESTA SMART': 'SMART SUGGESTION',
+    'Objetivo específico': 'Specific objective',
+    'Meta / indicador': 'Target / indicator',
+    'Plazo sugerido': 'Suggested deadline',
+    'Usar esta propuesta': 'Use this suggestion',
+    'Editar': 'Edit',
+    'Generar otra': 'Generate another',
+    'Cancelar': 'Cancel',
+    'Cerrar': 'Close',
+    'La propuesta generada es una ayuda de redacción. Revisa y valida la información antes de utilizarla.': 'AI-generated suggestions are writing assistance. Review and validate the information before using them.',
+    'No fue posible generar la propuesta en este momento. Puedes continuar redactando el objetivo manualmente.': "We couldn't generate a suggestion right now. You can continue writing your objective manually.",
+    'Escribe al menos 5 caracteres para describir tu idea.': 'Write at least 5 characters to describe your idea.',
+    'caracteres': 'characters',
+    'S — Específico': 'S — Specific', 'M — Medible': 'M — Measurable', 'A — Alcanzable': 'A — Achievable',
+    'R — Relevante': 'R — Relevant', 'T — Temporal': 'T — Time-bound',
+    'Describe qué quieres lograr antes de generar una propuesta.': 'Describe what you want to achieve before generating a suggestion.'
+  });
+
+  function claveHintPlazo(evaluacionId, index) { return evaluacionId + ':' + index; }
+
+  // Genera una propuesta SMART simulada (modo demo, sin backend). Determinista
+  // y basada en plantillas simples a partir de la idea capturada — nunca
+  // pretende ser una conexión real a un modelo de IA (ver requerimiento 19).
+  function generarPropuestaSimuladaIA(idea, language) {
+    const ideaLimpia = idea.trim().replace(/\.+$/, '');
+    if (language === 'en') {
+      return {
+        objective: `Improve the current level of "${ideaLimpia}" through a measurable action plan with follow-up over the next 3 months.`,
+        indicator: `Percentage of progress on "${ideaLimpia}" (baseline to be confirmed with your manager)`,
+        suggestedDeadline: '3 months',
+        smart: {
+          specific: `Focuses on improving "${ideaLimpia}" through concrete, trackable actions.`,
+          measurable: 'A percentage or indicator is suggested; confirm the exact baseline and target with your manager.',
+          achievable: 'A progressive improvement with follow-up actions is proposed — validate that it is realistic with your available resources.',
+          relevant: 'Contributes to the objectives of your role and area; confirm it aligns with current priorities.',
+          timeBound: 'Should be achieved within the next 3 months; select the exact commitment date manually.'
+        }
+      };
+    }
+    return {
+      objective: `Mejorar el nivel actual de "${ideaLimpia}" mediante un plan de acción medible con seguimiento durante los próximos 3 meses.`,
+      indicator: `Porcentaje de avance de "${ideaLimpia}" (línea base por confirmar con tu líder)`,
+      suggestedDeadline: '3 meses',
+      smart: {
+        specific: `Se enfoca en mejorar "${ideaLimpia}" mediante acciones concretas y medibles.`,
+        measurable: 'Se sugiere un porcentaje o indicador; confirma la línea base y la meta exacta con tu líder.',
+        achievable: 'Se plantea una mejora progresiva con acciones de seguimiento — valida que sea realista con tus recursos disponibles.',
+        relevant: 'Contribuye a los objetivos de tu puesto y área; confirma que esté alineado con las prioridades actuales.',
+        timeBound: 'Debe alcanzarse dentro de los próximos 3 meses; selecciona la fecha de compromiso exacta manualmente.'
+      }
+    };
+  }
+
+  // Orquesta demo/api sin que la vista sepa cuál corrió — ver requerimientos
+  // 19-21 del brief (modo demo simulado localmente, modo api vía EDDApi.ai,
+  // nunca fetch() dentro de app.js).
+  function generarPropuestaSmartIA(idea, language, employeeContext) {
+    if (global.APP_CONFIG.mode === 'demo') {
+      console.log('[DEMO] AI SMART suggestion generated locally');
+      return new Promise((resolve) => {
+        setTimeout(() => resolve(generarPropuestaSimuladaIA(idea, language)), 700); // simula latencia realista del panel de carga
+      });
+    }
+    return (async () => {
+      const resp = await global.EDDApi.ai.generateSmartObjective(idea, language, employeeContext);
+      if (!resp || resp.success !== true || !resp.data) {
+        throw new Error((resp && resp.message) || 'Respuesta inválida del asistente de IA.');
+      }
+      return resp.data;
+    })();
+  }
+
+  function renderAiSmartModal() {
+    let host = document.getElementById('aiSmartModalHost');
+    if (!state.aiSmart.open) { if (host) host.remove(); return; }
+    if (!host) {
+      host = document.createElement('div');
+      host.id = 'aiSmartModalHost';
+      document.body.appendChild(host);
+    }
+    const ai = state.aiSmart;
+    host.innerHTML = `
+    <div class="ai-smart-overlay" id="aiSmartOverlay" role="presentation">
+      <div class="ai-smart-modal" role="dialog" aria-modal="true" aria-label="${esc(t('Convierte tu idea en un objetivo SMART'))}">
+        <div class="ai-smart-modal-header">
+          <div class="ai-smart-modal-title"><span class="ai-smart-sparkle" aria-hidden="true">✨</span>Convierte tu idea en un objetivo SMART</div>
+          <button type="button" class="ai-smart-modal-close" onclick="App.cerrarAsistenteIA()" aria-label="${esc(t('Cerrar'))}">×</button>
+        </div>
+        <div class="ai-smart-modal-body">
+          ${ai.loading ? renderAiSmartLoading() : (ai.proposal ? renderAiSmartPreview(ai.proposal) : renderAiSmartForm(ai))}
+        </div>
+        <p class="ai-smart-disclaimer">La propuesta generada es una ayuda de redacción. Revisa y valida la información antes de utilizarla.</p>
+      </div>
+    </div>`;
+    translateDOM(host);
+    const overlay = document.getElementById('aiSmartOverlay');
+    if (overlay) overlay.addEventListener('mousedown', (ev) => { if (ev.target === overlay) Actions.cerrarAsistenteIA(); });
+    const textarea = document.getElementById('aiSmartIdeaInput');
+    if (textarea) { textarea.focus(); const v = textarea.value; textarea.setSelectionRange(v.length, v.length); }
+  }
+
+  function renderAiSmartForm(ai) {
+    const len = (ai.idea || '').length;
+    const puedeGenerar = len >= AI_IDEA_MIN && len <= AI_IDEA_MAX;
+    return `
+    <p class="ai-smart-intro">Describe brevemente qué quieres lograr. La IA te ayudará a estructurarlo; podrás editar la propuesta antes de utilizarla.</p>
+    <div class="ai-smart-field">
+      <label for="aiSmartIdeaInput">¿Qué quieres lograr?</label>
+      <textarea id="aiSmartIdeaInput" maxlength="${AI_IDEA_MAX}" placeholder="${esc(t('Ej. mejorar la capacitación del equipo'))}" oninput="App.actualizarIdeaIA(this.value)">${esc(ai.idea || '')}</textarea>
+      <div class="ai-smart-counter">${len}/${AI_IDEA_MAX} ${t('caracteres')}</div>
+      ${ai.error ? `<p class="ai-smart-error" role="alert" aria-live="polite">⚠ ${esc(ai.error)}</p>` : ''}
+    </div>
+    <div class="ai-smart-actions">
+      <button type="button" class="btn btn-outline" onclick="App.cerrarAsistenteIA()">Cancelar</button>
+      <button type="button" class="btn btn-primary ai-smart-generate" ${puedeGenerar ? '' : 'disabled'} onclick="App.generarPropuestaIA()">✨ Generar propuesta SMART</button>
+    </div>`;
+  }
+
+  function renderAiSmartLoading() {
+    return `<div class="ai-smart-loading" role="status" aria-live="polite">
+      <span class="ai-smart-spinner" aria-hidden="true"></span>
+      <p>Generando propuesta...</p>
+    </div>`;
+  }
+
+  function renderAiSmartPreview(p) {
+    const smartRow = (label, text) => `<div class="ai-smart-criterion"><b>${esc(label)}</b><span>${esc(text)}</span></div>`;
+    return `
+    <div class="ai-smart-preview">
+      <div class="ai-smart-preview-kicker">PROPUESTA SMART</div>
+      <div class="ai-smart-field">
+        <label for="aiSmartObjectiveInput">Objetivo específico</label>
+        <textarea id="aiSmartObjectiveInput">${esc(p.objective)}</textarea>
+      </div>
+      <div class="ai-smart-field">
+        <label for="aiSmartIndicatorInput">Meta / indicador</label>
+        <textarea id="aiSmartIndicatorInput">${esc(p.indicator)}</textarea>
+      </div>
+      ${p.suggestedDeadline ? `<div class="ai-smart-deadline"><b>Plazo sugerido</b><span>${esc(p.suggestedDeadline)}</span></div>` : ''}
+      <div class="ai-smart-criteria">
+        ${smartRow(t('S — Específico'), p.smart.specific)}
+        ${smartRow(t('M — Medible'), p.smart.measurable)}
+        ${smartRow(t('A — Alcanzable'), p.smart.achievable)}
+        ${smartRow(t('R — Relevante'), p.smart.relevant)}
+        ${smartRow(t('T — Temporal'), p.smart.timeBound)}
+      </div>
+    </div>
+    <div class="ai-smart-actions ai-smart-actions--preview">
+      <button type="button" class="btn btn-outline" onclick="App.cerrarAsistenteIA()">Cancelar</button>
+      <button type="button" class="btn btn-outline" onclick="App.editarPropuestaIA()">Editar</button>
+      <button type="button" class="btn btn-outline" onclick="App.regenerarPropuestaIA()">Generar otra</button>
+      <button type="button" class="btn btn-primary" onclick="App.usarPropuestaIA()">Usar esta propuesta</button>
+    </div>`;
+  }
+
   function renderObjetivosForm(ev, soloLecturaDescripcion) {
+
     const objetivos = S.getObjetivos(ev.id);
     const filas = [];
     for (let i = 0; i < Math.max(objetivos.length, 1); i++) filas.push(objetivos[i] || { index: i, descripcion: '', meta: '', fechaCompromiso: '', alcanzable: false, relevante: false, resultado: '', calificacion: '' });
@@ -1156,15 +1354,22 @@
   function renderObjetivoRow(evaluacionId, o, index, soloLecturaDescripcion) {
     const groupName = 'obj_' + evaluacionId + '_' + index;
     const onchangeJs = `App.editarObjetivo('${evaluacionId}',${index},'calificacion',this.value)`;
+    const claveHint = claveHintPlazo(evaluacionId, index);
+    const hintPlazo = !o.fechaCompromiso ? state.aiSmart.deadlineHints[claveHint] : null;
     return `
     <div class="objetivo-row smart-objective" data-idx="${index}">
       <div class="smart-objective-head">
         <div class="objetivo-num">#${index + 1}</div>
+        ${!soloLecturaDescripcion ? `<button type="button" class="ai-smart-trigger" onclick="App.abrirAsistenteIA('${evaluacionId}',${index})" aria-label="${esc(t('✨ Ayúdame con IA'))}">✨ Ayúdame con IA</button>` : ''}
         <button class="smart-remove-objective" type="button" onclick="App.quitarObjetivo('${evaluacionId}',${index})" aria-label="Quitar objetivo ${index + 1}" title="Quitar objetivo">× <span>Quitar</span></button>
       </div>
       <div class="objetivo-fields smart-objective-fields">
         <div class="smart-field smart-field-meta"><label>Meta / indicador</label><input type="text" placeholder="Ej. +10% / 25 contratos" value="${esc(o.meta || '')}" ${soloLecturaDescripcion ? 'disabled' : ''} oninput="App.editarObjetivoSmart('${evaluacionId}',${index},'meta',this.value)"></div>
-        <div class="smart-field smart-field-date"><label>Fecha compromiso</label><input type="date" value="${esc(o.fechaCompromiso || '')}" ${soloLecturaDescripcion ? 'disabled' : ''} onchange="App.editarObjetivoSmart('${evaluacionId}',${index},'fechaCompromiso',this.value)"></div>
+        <div class="smart-field smart-field-date">
+          <label>Fecha compromiso</label>
+          <input type="date" value="${esc(o.fechaCompromiso || '')}" ${soloLecturaDescripcion ? 'disabled' : ''} onchange="App.editarObjetivoSmart('${evaluacionId}',${index},'fechaCompromiso',this.value)">
+          ${hintPlazo ? `<small class="ai-smart-deadline-hint">${esc(t('Plazo sugerido'))}: ${esc(hintPlazo)}</small>` : ''}
+        </div>
         <div class="smart-field smart-field-objective"><label>Objetivo específico</label><textarea placeholder="Ej. Incrementar la cobertura..." ${soloLecturaDescripcion ? 'disabled' : ''} oninput="App.editarObjetivoSmart('${evaluacionId}',${index},'descripcion',this.value)">${esc(o.descripcion)}</textarea></div>
         ${smartChecklistHTML(o, evaluacionId, index, soloLecturaDescripcion)}
         <div class="smart-field"><label>Resultado obtenido</label><textarea placeholder="Resultado obtenido" ${soloLecturaDescripcion ? 'disabled' : ''} onchange="App.editarObjetivo('${evaluacionId}',${index},'resultado',this.value)">${esc(o.resultado)}</textarea></div>
@@ -2157,6 +2362,90 @@
       }
     },
     quitarObjetivo(evaluacionId, index) { S.removeObjetivo(evaluacionId, index); render(); },
+
+    // --- Asistente de IA para objetivos SMART -----------------------------
+    abrirAsistenteIA(evaluacionId, index) {
+      state.aiSmart.open = true;
+      state.aiSmart.evaluacionId = evaluacionId;
+      state.aiSmart.index = Number(index);
+      state.aiSmart.idea = '';
+      state.aiSmart.loading = false;
+      state.aiSmart.error = null;
+      state.aiSmart.proposal = null;
+      renderAiSmartModal();
+    },
+    cerrarAsistenteIA() {
+      if (state.aiSmart.loading) return; // evita cerrar a medio de una solicitud en curso
+      if (state.aiSmart.proposal) {
+        console.log('[AUDIT] AI_SMART_DISCARDED', { employeeId: state.user.empleado, evaluationId: state.aiSmart.evaluacionId, objectiveIndex: state.aiSmart.index, timestamp: new Date().toISOString() });
+      }
+      state.aiSmart.open = false;
+      renderAiSmartModal();
+    },
+    actualizarIdeaIA(valor) {
+      state.aiSmart.idea = String(valor || '').slice(0, AI_IDEA_MAX);
+      state.aiSmart.error = null;
+      renderAiSmartModal();
+    },
+    async generarPropuestaIA() {
+      const ai = state.aiSmart;
+      const idea = (ai.idea || '').trim();
+      if (idea.length < AI_IDEA_MIN) { ai.error = t('Escribe al menos 5 caracteres para describir tu idea.'); renderAiSmartModal(); return; }
+      ai.loading = true; ai.error = null;
+      renderAiSmartModal();
+      // AI_SMART_REQUEST — auditoría del lado del backend en producción (ver
+      // README); en demo se registra en consola para poder verificar el flujo.
+      console.log('[AUDIT] AI_SMART_REQUEST', { employeeId: state.user.empleado, evaluationId: ai.evaluacionId, objectiveIndex: ai.index, timestamp: new Date().toISOString() });
+      try {
+        const col = S.getColaborador(state.wizard.colaboradorId);
+        const employeeContext = col ? { position: col.puesto, area: col.area } : undefined;
+        const propuesta = await generarPropuestaSmartIA(idea, currentLang, employeeContext);
+        state.aiSmart.proposal = propuesta;
+        state.aiSmart.loading = false;
+        renderAiSmartModal();
+      } catch (err) {
+        console.error('Asistente de IA SMART: error al generar propuesta', err);
+        state.aiSmart.loading = false;
+        state.aiSmart.error = t('No fue posible generar la propuesta en este momento. Puedes continuar redactando el objetivo manualmente.');
+        renderAiSmartModal();
+      }
+    },
+    regenerarPropuestaIA() {
+      state.aiSmart.proposal = null;
+      renderAiSmartModal();
+      Actions.generarPropuestaIA();
+    },
+    // Botón "Editar": lleva el foco al campo de objetivo dentro de la propia
+    // vista previa — los campos de la propuesta ya son editables directamente
+    // (ver renderAiSmartPreview), así que aquí solo reforzamos visualmente
+    // cuál es el campo a ajustar (comportamiento discreto, sin bloquear nada).
+    editarPropuestaIA() {
+      const el = document.getElementById('aiSmartObjectiveInput');
+      if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+    },
+    usarPropuestaIA() {
+      const ai = state.aiSmart;
+      const objectiveEl = document.getElementById('aiSmartObjectiveInput');
+      const indicatorEl = document.getElementById('aiSmartIndicatorInput');
+      const objetivo = objectiveEl ? objectiveEl.value.trim() : (ai.proposal ? ai.proposal.objective : '');
+      const meta = indicatorEl ? indicatorEl.value.trim() : (ai.proposal ? ai.proposal.indicator : '');
+      Actions.editarObjetivoSmart(ai.evaluacionId, ai.index, 'descripcion', objetivo);
+      Actions.editarObjetivoSmart(ai.evaluacionId, ai.index, 'meta', meta);
+      // Solo se prellena la fecha de compromiso si la IA devolvió una fecha
+      // EXACTA (formato AAAA-MM-DD); si devolvió un plazo relativo ("3 meses")
+      // nunca se inventa una fecha absoluta — se muestra como sugerencia junto
+      // al campo y el usuario elige la fecha manualmente (ver requerimiento 9).
+      const plazo = ai.proposal ? ai.proposal.suggestedDeadline : null;
+      if (plazo && /^\d{4}-\d{2}-\d{2}$/.test(plazo)) {
+        Actions.editarObjetivoSmart(ai.evaluacionId, ai.index, 'fechaCompromiso', plazo);
+      } else if (plazo) {
+        state.aiSmart.deadlineHints[claveHintPlazo(ai.evaluacionId, ai.index)] = plazo;
+      }
+      console.log('[AUDIT] AI_SMART_ACCEPTED', { employeeId: state.user.empleado, evaluationId: ai.evaluacionId, objectiveIndex: ai.index, timestamp: new Date().toISOString() });
+      state.aiSmart.open = false;
+      renderAiSmartModal();
+      render();
+    },
     enviarAutoevaluacion() {
       if (!$('#confirmEnvioAuto').checked) { alert(t('Confirma que la información es correcta antes de enviar.')); return; }
       const evaluacionId = state.wizard.evaluacionId;
@@ -2342,4 +2631,6 @@
   // usuario haga clic en algo): si la sesión ya venció, se refleja en la UI
   // sin esperar a la siguiente navegación.
   setInterval(() => { if (state.user && !A.getSession()) render(); }, 15000);
+  // ESC cierra el asistente de IA SMART (accesibilidad, requerimiento 23 del brief).
+  global.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && state.aiSmart.open) Actions.cerrarAsistenteIA(); });
 })(window);

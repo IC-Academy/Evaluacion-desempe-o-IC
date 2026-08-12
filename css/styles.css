@@ -759,3 +759,178 @@ body{background:linear-gradient(180deg,#f8fbff 0,#f2f7fc 100%);color:var(--premi
   .welcome-scale{grid-template-columns:1fr;}
   .welcome-scale-title{grid-column:1;}
 }
+
+/* ==========================================================================
+   Asistente de IA para objetivos SMART ("✨ Ayúdame con IA")
+   Respeta la paleta y el lenguaje visual "premium" ya existente (gradientes
+   azul marino, radios 12-16px, sombras suaves) — ver bloque .smart-* arriba.
+   ========================================================================== */
+
+.ai-smart-trigger{
+  appearance:none;flex:0 0 auto;border:1px solid #cfe2f7;background:linear-gradient(135deg,#eef7ff,#fff);
+  color:#12539c;border-radius:999px;padding:6px 12px;font-size:.7rem;font-weight:800;cursor:pointer;
+  display:inline-flex;align-items:center;gap:5px;transition:box-shadow .15s ease,transform .15s ease;
+}
+.ai-smart-trigger:hover{box-shadow:0 4px 14px rgba(18,83,156,.18);transform:translateY(-1px)}
+.ai-smart-trigger:focus-visible{outline:2px solid #1876e8;outline-offset:2px}
+
+.ai-smart-overlay{
+  position:fixed;inset:0;background:rgba(11,37,69,.5);backdrop-filter:blur(2px);
+  display:flex;align-items:center;justify-content:center;padding:20px;z-index:1000;
+}
+.ai-smart-modal{
+  width:100%;max-width:560px;max-height:88vh;overflow-y:auto;background:#fff;border-radius:18px;
+  box-shadow:0 24px 60px rgba(6,22,45,.35);display:flex;flex-direction:column;
+}
+.ai-smart-modal-header{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:18px 20px;background:linear-gradient(135deg,#0a2e59,#1265c5);border-radius:18px 18px 0 0;color:#fff;
+  position:sticky;top:0;z-index:1;
+}
+.ai-smart-modal-title{font-size:.95rem;font-weight:800;display:flex;align-items:center;gap:8px;letter-spacing:-.01em}
+.ai-smart-sparkle{font-size:1.05rem}
+.ai-smart-modal-close{
+  appearance:none;border:none;background:rgba(255,255,255,.14);color:#fff;width:30px;height:30px;border-radius:50%;
+  font-size:1.15rem;line-height:1;cursor:pointer;flex:0 0 auto;
+}
+.ai-smart-modal-close:hover{background:rgba(255,255,255,.26)}
+.ai-smart-modal-body{padding:18px 20px 6px}
+.ai-smart-intro{font-size:.78rem;color:#5d7187;line-height:1.55;margin:0 0 14px}
+
+.ai-smart-field{display:flex;flex-direction:column;gap:6px;margin-bottom:6px}
+.ai-smart-field label{font-size:.7rem;font-weight:800;color:#244667}
+.ai-smart-field textarea, .ai-smart-field input{
+  width:100%;border:1px solid #d7e3ef;border-radius:10px;padding:10px 12px;background:#fbfdff;
+  color:#17324d;font-family:inherit;font-size:.82rem;resize:vertical;
+}
+#aiSmartIdeaInput{min-height:76px}
+#aiSmartObjectiveInput{min-height:70px}
+#aiSmartIndicatorInput{min-height:44px}
+.ai-smart-counter{font-size:.64rem;color:#93a4b5;text-align:right}
+.ai-smart-error{color:#b42318;font-size:.74rem;font-weight:600;margin:2px 0 0}
+
+.ai-smart-actions{display:flex;justify-content:flex-end;gap:10px;padding:14px 0 18px;flex-wrap:wrap}
+.ai-smart-actions--preview{justify-content:space-between}
+.ai-smart-actions .btn{white-space:nowrap}
+
+.ai-smart-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:34px 10px 40px;color:#5d7187}
+.ai-smart-spinner{
+  width:34px;height:34px;border-radius:50%;border:3px solid #dbe8f5;border-top-color:#1265c5;
+  animation:ai-smart-spin .8s linear infinite;
+}
+@keyframes ai-smart-spin{to{transform:rotate(360deg)}}
+
+.ai-smart-preview{background:#f8fbfe;border:1px solid #dce7f2;border-radius:14px;padding:16px;margin-bottom:14px}
+.ai-smart-preview-kicker{font-size:.6rem;font-weight:900;letter-spacing:.12em;color:#2d78cc;margin-bottom:10px}
+.ai-smart-deadline{display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid #e0e7ef;border-radius:9px;padding:9px 12px;font-size:.75rem;color:#3d5266;margin:4px 0 12px}
+.ai-smart-deadline b{color:#173a60;font-weight:800}
+.ai-smart-deadline-hint{color:#8a6534;font-size:.66rem;margin-top:4px}
+
+.ai-smart-criteria{display:grid;gap:8px}
+.ai-smart-criterion{display:grid;grid-template-columns:120px 1fr;gap:10px;background:#fff;border:1px solid #e0e7ef;border-radius:9px;padding:9px 11px}
+.ai-smart-criterion b{font-size:.66rem;font-weight:900;color:#12539c}
+.ai-smart-criterion span{font-size:.74rem;color:#455b71;line-height:1.45}
+
+.ai-smart-disclaimer{font-size:.66rem;color:#93a4b5;text-align:center;padding:0 20px 16px;margin:0}
+
+@media(max-width:640px){
+  .ai-smart-overlay{padding:0;align-items:flex-end}
+  .ai-smart-modal{max-width:100%;max-height:92vh;border-radius:18px 18px 0 0}
+  .ai-smart-modal-header{border-radius:18px 18px 0 0}
+  .ai-smart-criterion{grid-template-columns:1fr}
+  .ai-smart-actions{justify-content:stretch}
+  .ai-smart-actions .btn{flex:1 1 auto}
+  .ai-smart-actions--preview{flex-direction:column}
+}
+
+/* =========================================================
+   MKT artwork integration · 2026-08-12
+   Imagen 1: login vertical 1200x1500
+   Imagen 2: welcome hero 1000x700
+   ========================================================= */
+
+/* Login: use Marketing artwork as the actual visual background. */
+.premium-login-brand-panel{
+  background:
+    linear-gradient(180deg,rgba(2,25,58,.08),rgba(2,25,58,.18)),
+    url('../assets/login-mkt.jpg') center center / cover no-repeat;
+  padding:46px 48px;
+}
+.premium-login-brand-panel:before,
+.premium-login-brand-panel:after,
+.premium-login-overlay{display:none!important;}
+.premium-login-logo{
+  width:250px;
+  margin-bottom:54px;
+  background:rgba(255,255,255,.96);
+  border-radius:10px;
+  padding:8px 12px;
+  box-shadow:0 8px 24px rgba(0,0,0,.10);
+}
+.premium-login-brand-content h1{
+  max-width:470px;
+  margin-top:0;
+  text-shadow:0 2px 12px rgba(0,25,55,.25);
+}
+.premium-login-brand-content p{
+  max-width:440px;
+  text-shadow:0 2px 10px rgba(0,25,55,.22);
+}
+.premium-login-trust>div{
+  background:rgba(5,40,82,.52);
+  border-color:rgba(255,255,255,.20);
+  backdrop-filter:blur(8px);
+}
+
+/* Welcome: Marketing graph artwork replaces the synthetic building. */
+.welcome-hero-art{
+  min-height:340px;
+  background:
+    linear-gradient(90deg,rgba(4,31,68,.05),rgba(4,31,68,.12)),
+    url('../assets/welcome-mkt.jpg') center center / cover no-repeat;
+}
+.welcome-hero-art:before{display:none;}
+.welcome-building{display:none!important;}
+.welcome-quote{
+  right:34px;
+  top:auto;
+  bottom:36px;
+  width:220px;
+  padding:15px 16px 14px;
+  border-radius:12px;
+  background:rgba(3,34,74,.54);
+  backdrop-filter:blur(4px);
+  box-shadow:0 8px 24px rgba(2,26,58,.16);
+}
+.welcome-quote-mark{display:none;}
+.welcome-quote p{
+  margin:0 0 15px;
+  font-size:17px;
+  line-height:1.45;
+  text-shadow:0 2px 8px rgba(0,20,45,.34);
+}
+.welcome-quote i{width:48px;}
+
+/* Responsive artwork behavior */
+@media(max-width:900px){
+  .premium-login-brand-panel{
+    background-position:center 42%;
+    min-height:560px;
+  }
+  .premium-login-brand-content h1{font-size:2rem;max-width:390px;}
+  .premium-login-brand-content p{max-width:380px;}
+  .welcome-hero-art{background-position:center center;min-height:300px;}
+  .welcome-quote{right:24px;bottom:24px;width:205px;}
+}
+@media(max-width:760px){
+  .premium-login-brand-panel{display:none;}
+  .premium-login-shell{grid-template-columns:1fr;min-height:auto;}
+  .premium-login-mobile-logo{display:block;}
+  .welcome-hero-art{min-height:260px;background-size:cover;background-position:center center;}
+  .welcome-quote{right:18px;left:18px;bottom:18px;width:auto;padding:13px 14px;}
+  .welcome-quote p{font-size:15px;}
+}
+@media(max-width:480px){
+  .welcome-hero-art{min-height:235px;}
+  .welcome-quote{bottom:12px;right:12px;left:12px;}
+}
