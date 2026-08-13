@@ -42,7 +42,7 @@
    */
   function dimensionesPorDefecto() {
     const D = global.EDDData;
-    const orden = ['actitud', 'habilidades', 'conocimientos', 'objetivos'];
+    const orden = ['actitud', 'habilidades', 'objetivos'];
     return orden.map((key) => ({ key, label: D.SECCIONES_META[key].titulo.replace(/^[A-D]\.\s*/, '') }));
   }
 
@@ -51,7 +51,7 @@
    *
    * - autoevaluacion / evaluacionLider: objetos "promedios" tal como los
    *   entrega calculations.js -> calcularResultado().promedios, es decir
-   *   { actitud, habilidades, conocimientos, objetivos } en escala 1-5 (o
+   *   { actitud, habilidades, objetivos } en escala 1-5 (o
    *   null si la sección no tiene calificaciones válidas). Puede pasarse
    *   null si esa evaluación aún no existe.
    * - calibracion: opcional. Si existe, debe traer { resultadoLider,
@@ -61,8 +61,8 @@
    *   líder (se escala cada sección por el mismo factor = calibrado/líder),
    *   nunca respuestas inventadas por sección. Ver decisión documentada en
    *   el README (sección "Radar y resultado calibrado").
-   * - dimensiones: opcional, arreglo [{key,label}]; por defecto las 4
-   *   secciones actuales.
+   * - dimensiones: opcional, arreglo [{key,label}]; por defecto las 3
+   *   secciones oficiales Rev.4.
    */
   function renderRadarChart(opts) {
     opts = opts || {};
@@ -223,8 +223,8 @@
   function leyendaEjes() {
     const c = C();
     return `<div class="ninebox-legend">
-      <p><strong>${esc(c.CONFIG_9BOX.ejeHorizontal)}</strong> (eje horizontal): Habilidades + Conocimientos + Cumplimiento de Objetivos, convertido a base 100 dentro del bloque técnico-funcional y objetivos (50% del total).</p>
-      <p><strong>${esc(c.CONFIG_9BOX.ejeVertical)}</strong> (eje vertical): se obtiene de la sección "Valores y Actitud" y se convierte a base 100 conforme al acuerdo de ponderación 50/50 de la demo del 11-08-2026.</p>
+      <p><strong>${esc(c.CONFIG_9BOX.ejeHorizontal)}</strong> (eje horizontal): Conocimientos y Habilidades Técnicas (30%) + Cumplimiento de Objetivos (30%), convertido a base 100 sobre el bloque Técnica Funcional (60%).</p>
+      <p><strong>${esc(c.CONFIG_9BOX.ejeVertical)}</strong> (eje vertical): se obtiene de la sección "Valores y Actitud" (40%) y se convierte a base 100 multiplicando el promedio por 20.</p>
       <p class="muted">Niveles por eje: ${c.CONFIG_9BOX.etiquetasNivel.join(' · ')} · Bajo &lt;60 · Medio 60–79 · Alto 80–100.</p>
     </div>`;
   }
@@ -289,7 +289,7 @@
       <div class="axis-x">${esc(c.CONFIG_9BOX.ejeHorizontal)} ►</div>
       <div class="ninebox-individual-scores">
         <span class="mini-kpi"><strong>${fmt(resultado.desempenoProm)}</strong><span>Desempeño (esc. 1-5)</span></span>
-        <span class="mini-kpi"><strong>${fmt(resultado.actitudProm)}</strong><span>Potencial preliminar (esc. 1-5)</span></span>
+        <span class="mini-kpi"><strong>${fmt(resultado.actitudProm)}</strong><span>Actitud (esc. 1-5)</span></span>
       </div>
       ${resumen}
     </div>`;

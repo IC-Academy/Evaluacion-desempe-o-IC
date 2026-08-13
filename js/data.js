@@ -2,7 +2,7 @@
  * data.js
  * ---------------------------------------------------------------------------
  * Catálogo maestro de la Evaluación del Desempeño Administrativo (EDD)
- * Fuente: EDD_Inter-Con_alineada.docx (FOR-CAP-003 Rev. 3)
+ * Fuente: EDD_Inter-Con_Rev4_ponderacion_40_60.docx (FOR-CAP-003 Rev. 4)
  *
  * Contiene: escala de evaluación, competencias y conductas observables por
  * sección, ponderaciones, datos de usuarios de demostración y un generador
@@ -28,28 +28,28 @@
 
   // ===========================================================================
   // SECCIONES Y COMPETENCIAS
-  // Ponderación acordada en demo 11-08-2026: 50% Valores/Actitud + 50% bloque técnico-funcional/objetivos.
+  // Ponderación oficial Rev. 4: 40% Valores/Actitud + 30% Técnica Funcional + 30% Objetivos.
   // ===========================================================================
   const SECCIONES_META = {
-    actitud: { titulo: 'A. Valores y Actitud', peso: 50, eje: 'ACTITUD', descripcion: 'Evalúa la vivencia diaria de los valores ESPÍRITU de Inter-Con. Esta sección determina la posición del colaborador en el eje vertical (Actitud) de la matriz 9-box.' },
-    habilidades: { titulo: 'B. Habilidades', peso: 16.7, eje: 'DESEMPEÑO', descripcion: 'Evalúa las capacidades funcionales para ejecutar el puesto con eficiencia.' },
-    conocimientos: { titulo: 'C. Conocimientos', peso: 8.3, eje: 'DESEMPEÑO', descripcion: 'Evalúa el dominio técnico del puesto y de los procesos/herramientas del área.' },
-    objetivos: { titulo: 'D. Cumplimiento de Objetivos', peso: 25, eje: 'DESEMPEÑO', descripcion: 'Se evalúa de forma independiente al bloque de competencias. Registra hasta cinco objetivos acordados al inicio del periodo, su meta o indicador, resultado alcanzado y calificación.' }
+    actitud: { titulo: 'A. Valores y Actitud', peso: 40, eje: 'ACTITUD', descripcion: 'Evalúa la vivencia diaria de los valores ESPÍRITU de Inter-Con y la forma en que el colaborador se conduce con las personas. Esta sección determina el eje ACTITUD del 9-box.' },
+    habilidades: { titulo: 'B. Conocimientos y Habilidades Técnicas del Puesto', peso: 30, eje: 'DESEMPEÑO', descripcion: 'Evalúa el dominio técnico del puesto, el uso de procesos y herramientas del área y la forma en que el colaborador organiza y controla su trabajo.' },
+    conocimientos: { titulo: 'Sección interna no utilizada', peso: 0, eje: 'DESEMPEÑO', descripcion: '' },
+    objetivos: { titulo: 'C. Cumplimiento de Objetivos', peso: 30, eje: 'DESEMPEÑO', descripcion: 'Registra hasta cinco objetivos acordados al inicio del periodo, con su meta o indicador, resultado alcanzado, porcentaje de cumplimiento y calificación.' }
   };
-
 
   const COMPETENCIAS = {
     actitud: [
       {
-        id: 'A1', nombre: 'Compromiso Organizacional (Integridad y Excelencia)', peso: 10,
+        id: 'A1', nombre: 'Compromiso Organizacional (Integridad y Excelencia)', peso: 8,
         conductas: [
           'Actúa conforme a los valores ESPÍRITU de Inter-Con.',
           'Muestra responsabilidad y ética profesional.',
-          'Se involucra activamente en los objetivos de la empresa.'
+          'Se involucra activamente en los objetivos de la empresa.',
+          'Es puntual, constante y cumple los compromisos que asume.'
         ]
       },
       {
-        id: 'A2', nombre: 'Actitud de Servicio (Pasión y Respeto)', peso: 10,
+        id: 'A2', nombre: 'Actitud de Servicio (Pasión y Respeto)', peso: 8,
         conductas: [
           'Atiende oportunamente las solicitudes de clientes internos y externos.',
           'Demuestra disposición y pasión para apoyar a otros.',
@@ -57,24 +57,28 @@
         ]
       },
       {
-        id: 'A3', nombre: 'Trabajo en Equipo y Unión', peso: 10,
+        id: 'A3', nombre: 'Trabajo en Equipo, Unión y Desarrollo de Otros', peso: 8,
         conductas: [
           'Colabora con otras áreas para lograr objetivos comunes.',
-          'Mantiene relaciones laborales basadas en el respeto.',
-          'Contribuye a resolver diferencias de manera constructiva.'
+          'Mantiene relaciones laborales basadas en el respeto y contribuye a resolver diferencias de manera constructiva.',
+          'Comparte conocimientos y brinda apoyo cuando otros lo requieren.',
+          'Favorece un ambiente de aprendizaje y colaboración.'
         ]
       },
       {
-        id: 'A4', nombre: 'Innovación y Creatividad (Capacidad de Cambio y Flexibilidad)', peso: 10,
+        id: 'A4', nombre: 'Comunicación Efectiva y Apertura', peso: 8,
+        conductas: [
+          'Se comunica de forma clara, respetuosa y oportuna.',
+          'Escucha activamente y considera diferentes puntos de vista.',
+          'Comparte información relevante para facilitar el trabajo de los demás.',
+          'Recibe la retroalimentación con disposición para mejorar.'
+        ]
+      },
+      {
+        id: 'A5', nombre: 'Adaptabilidad, Iniciativa y Compromiso con la Sustentabilidad', peso: 8,
         conductas: [
           'Se adapta positivamente a cambios y nuevas prioridades.',
-          'Propone ideas para mejorar procesos.',
-          'Implementa soluciones innovadoras cuando es necesario.'
-        ]
-      },
-      {
-        id: 'A5', nombre: 'Compromiso con la Sustentabilidad', peso: 10,
-        conductas: [
+          'Propone ideas para mejorar procesos y toma la iniciativa cuando es necesario.',
           'Hace uso responsable de los recursos materiales y energéticos a su cargo.',
           'Promueve prácticas de cuidado ambiental y ahorro de recursos en su área de trabajo.'
         ]
@@ -82,15 +86,31 @@
     ],
     habilidades: [
       {
-        id: 'B1', nombre: 'Orientación a Resultados', peso: 3.3,
+        id: 'B1', nombre: 'Dominio del Puesto', peso: 6,
         conductas: [
-          'Cumple consistentemente los objetivos establecidos.',
-          'Mantiene altos estándares de calidad en su trabajo.',
-          'Propone acciones para mejorar la productividad y eficiencia.'
+          'Aplica correctamente los conocimientos técnicos y normativos de su puesto.',
+          'Resuelve problemas relacionados con sus funciones.',
+          'Mantiene actualizados sus conocimientos técnicos y las herramientas propias de su puesto.'
         ]
       },
       {
-        id: 'B2', nombre: 'Planeación y Organización', peso: 3.3,
+        id: 'B2', nombre: 'Procesos y Herramientas de Trabajo', peso: 6,
+        conductas: [
+          'Conoce y aplica correctamente los procesos, políticas y procedimientos de su área.',
+          'Utiliza con eficiencia las herramientas y sistemas de uso general en Inter-Con: Excel, Office, Outlook, Teams, Concur y las plataformas internas que apliquen a su puesto.',
+          'Considera el cuadro de apoyo de herramientas para determinar el nivel de dominio aplicable al puesto.'
+        ]
+      },
+      {
+        id: 'B3', nombre: 'Orientación a Resultados y Calidad', peso: 6,
+        conductas: [
+          'Cumple consistentemente los objetivos y estándares establecidos.',
+          'Mantiene altos estándares de calidad y precisión en su trabajo.',
+          'Propone acciones para mejorar la productividad y la eficiencia.'
+        ]
+      },
+      {
+        id: 'B4', nombre: 'Planeación y Organización', peso: 6,
         conductas: [
           'Organiza adecuadamente sus actividades y prioridades.',
           'Cumple los plazos establecidos.',
@@ -98,48 +118,17 @@
         ]
       },
       {
-        id: 'B3', nombre: 'Comunicación Efectiva', peso: 3.3,
+        id: 'B5', nombre: 'Seguimiento, Control y Uso de Recursos', peso: 6,
         conductas: [
-          'Se comunica de forma clara, respetuosa y oportuna.',
-          'Escucha activamente y considera diferentes puntos de vista.',
-          'Comparte información relevante para facilitar el trabajo.'
-        ]
-      },
-      {
-        id: 'B4', nombre: 'Seguimiento y Control', peso: 3.3,
-        conductas: [
-          'Da seguimiento oportuno a sus actividades.',
-          'Cumple políticas y procedimientos internos.',
+          'Da seguimiento oportuno a sus actividades y compromisos.',
+          'Cumple políticas y procedimientos internos, así como los requisitos de la documentación a su cargo.',
           'Administra adecuadamente los recursos asignados.'
-        ]
-      },
-      {
-        id: 'B5', nombre: 'Desarrollo de Personas (Liderazgo)', peso: 3.3,
-        conductas: [
-          'Comparte conocimientos con sus compañeros.',
-          'Brinda apoyo cuando otros lo requieren.',
-          'Favorece un ambiente de aprendizaje y colaboración.'
         ]
       }
     ],
-    conocimientos: [
-      {
-        id: 'C1', nombre: 'Dominio del Puesto', peso: 4.2,
-        conductas: [
-          'Aplica correctamente los conocimientos de su puesto.',
-          'Resuelve problemas relacionados con sus funciones.',
-          'Mantiene actualizados sus conocimientos.'
-        ]
-      },
-      {
-        id: 'C2', nombre: 'Procesos y Herramientas de Trabajo', peso: 4.2,
-        conductas: [
-          'Conoce y aplica correctamente los procesos, políticas y procedimientos de su área.',
-          'Utiliza adecuadamente las herramientas y sistemas de automatización disponibles para su puesto.'
-        ]
-      }
-    ]
+    conocimientos: []
   };
+
 
   // ===========================================================================
   // NIVELES DE DESEMPEÑO (referencia visual, la fuente de verdad numérica

@@ -17,3 +17,6 @@ Cuando estén disponibles los webhooks de n8n:
 - no colocar tokens de Airtable, secretos de n8n ni credenciales dentro del frontend.
 
 La autorización, OTP, roles y acceso a datos sensibles deberán validarse nuevamente del lado de n8n/backend.
+
+## Rev.4 40/30/30
+Esta entrega ya está alineada al FOR-CAP-003 Rev.4. Antes de publicar en producción, limpiar cualquier localStorage de versiones previas durante pruebas y validar el flujo completo colaborador/líder/admin.

@@ -86,7 +86,7 @@
     'Guardar':'Save','Cancelar':'Cancel','Aceptar':'Accept','Cerrar':'Close','Sí':'Yes','No':'No'
   };
 
-  Object.assign(EN, {"Inicia sesión": "Sign in", "Ingresa tu código de acceso": "Enter your access code", "Una experiencia simple, segura y confidencial para impulsar tu desarrollo dentro de Inter-Con.": "A simple, secure and confidential experience designed to support your growth at Inter-Con.", "Seguro": "Secure", "Tus datos están protegidos": "Your data is protected", "Confidencial": "Confidential", "Información de uso interno": "Internal-use information", "Desarrollo": "Growth", "Impulsamos tu crecimiento": "We support your growth", "Te enviaremos un código de verificación a tu correo corporativo.": "We will send a verification code to your corporate email.", "Accesos de demostración": "Demo access", "Colaborador": "Employee", "Líder": "Manager", "Administrador": "Administrator", "Tu sesión anterior expiró por inactividad. Inicia sesión de nuevo.": "Your previous session expired due to inactivity. Please sign in again.", "Demo funcional EDD Inter-Con — FOR-CAP-003 Rev. 3 · Datos simulados almacenados localmente en este navegador.": "Functional EDD Inter-Con demo — FOR-CAP-003 Rev. 3 · Simulated data stored locally in this browser.", "¡Bienvenida, Laura!": "Welcome, Laura!", "¡Bienvenido, Laura!": "Welcome, Laura!", "Esta evaluación nos ayuda a conocer tu desempeño, reconocer tus fortalezas e identificar oportunidades de desarrollo que impulsen tu crecimiento dentro de Inter-Con.": "This evaluation helps us understand your performance, recognize your strengths, and identify development opportunities that support your growth at Inter-Con.", "15 a 20 minutos": "15 to 20 minutes", "Procura realizar la evaluación en un solo momento y sin interrupciones.": "Try to complete the evaluation in one sitting and without interruptions.", "Responde con honestidad y objetividad.": "Answer honestly and objectively.", "Considera tu desempeño durante el periodo evaluado.": "Consider your performance throughout the evaluation period.", "Lee cuidadosamente cada pregunta.": "Read each question carefully.", "Tus respuestas serán tratadas de forma confidencial y se utilizarán exclusivamente para apoyar tu desarrollo y fortalecer nuestro proceso de gestión del desempeño.": "Your responses will be treated confidentially and used exclusively to support your development and strengthen our performance management process.", "Competencias 50% + Técnico-funcional y Objetivos 50%": "Values and Attitude 50% + Technical-functional Skills and Objectives 50%", "Tu opinión y compromiso contribuyen a construir un mejor Inter-Con.": "Your feedback and commitment help build a better Inter-Con.", "Tu evaluación ya fue enviada": "Your evaluation has already been submitted", "Gracias por tu participación, Laura.": "Thank you for your participation, Laura.", "Tu autoevaluación ha sido registrada correctamente.": "Your self-assessment has been recorded successfully.", "Tu líder recibirá la notificación correspondiente para continuar con el proceso.": "Your manager will receive the appropriate notification to continue the process.", "Tu compromiso impulsa tu desarrollo y el éxito de Inter-Con.": "Your commitment supports your growth and Inter-Con’s success.", "Personal a evaluar": "Employees to evaluate", "Universo del periodo": "Employees in this cycle", "Autoevaluaciones": "Self-assessments", "completadas": "completed", "Evaluaciones líder": "Manager evaluations", "Por calibrar": "Pending calibration", "Requieren revisión RH": "Require HR review", "Calibradas": "Calibrated", "Con resultado RH": "With HR result", "Promedio general": "Overall average", "Resultado disponible": "Result available", "Avance del ciclo": "Cycle progress", "evaluaciones cerradas": "evaluations closed", "PANEL RH": "HR PANEL", "Seguimiento nacional, calibración, cierre y distribución de talento en un solo lugar.": "National tracking, calibration, closure, and talent distribution in one place.", "COBERTURA": "COVERAGE", "Avance por área": "Progress by area", "Cierre del proceso": "Process close", "RESULTADOS": "RESULTS", "Niveles de desempeño": "Performance levels", "TALENTO": "TALENT", "Distribución 9-Box": "9-Box distribution", "Abrir matriz": "Open matrix", "OPERACIÓN RH": "HR OPERATIONS", "Seguimiento de evaluaciones": "Evaluation tracking", "Todas las áreas": "All areas", "Todos los estados": "All statuses", "Todos los cuadrantes": "All quadrants", "Limpiar": "Clear", "COLABORADOR": "EMPLOYEE", "AREA": "AREA", "LÍDER": "MANAGER", "STATUS": "STATUS", "PUNTAJE": "SCORE", "9-BOX": "9-BOX", "Recursos Humanos": "Human Resources", "Finanzas": "Finance", "Operaciones": "Operations", "Tecnología": "Technology", "Comercial": "Commercial", "Analista de Recursos Humanos": "Human Resources Analyst", "Gerente de Recursos Humanos": "Human Resources Manager", "Coordinador de Nómina": "Payroll Coordinator", "Pendiente líder": "Pending manager", "Pendiente manager": "Pending manager", "Cerrada": "Closed", "Cuadrante": "Quadrant", "A. Valores y Actitud": "A. Values and Attitude", "B. Habilidades": "B. Skills", "C. Conocimientos": "C. Knowledge", "D. Cumplimiento de Objetivos": "D. Goal Achievement", "ACTITUD": "ATTITUDE", "DESEMPEÑO": "PERFORMANCE", "Evalúa la vivencia diaria de los valores ESPÍRITU de Inter-Con. Esta sección determina la posición del colaborador en el eje vertical (Actitud) de la matriz 9-box.": "Evaluates how consistently Inter-Con’s ESPÍRITU values are demonstrated in daily work. This section determines the employee’s position on the vertical Attitude axis of the 9-box matrix.", "Evalúa las capacidades funcionales para ejecutar el puesto con eficiencia.": "Evaluates the functional capabilities required to perform the role efficiently.", "Evalúa el dominio técnico del puesto y de los procesos/herramientas del área.": "Evaluates technical mastery of the role and the area’s processes and tools.", "Se evalúa de forma independiente al bloque de competencias. Registra hasta cinco objetivos acordados al inicio del periodo, su meta o indicador, resultado alcanzado y calificación.": "Evaluated independently from the competency block. Enter up to five objectives agreed at the start of the period, including target or indicator, achieved result, and rating.", "Compromiso Organizacional (Integridad y Excelencia)": "Organizational Commitment (Integrity and Excellence)", "Actitud de Servicio (Pasión y Respeto)": "Service Mindset (Passion and Respect)", "Trabajo en Equipo y Unión": "Teamwork and Unity", "Innovación y Creatividad (Capacidad de Cambio y Flexibilidad)": "Innovation and Creativity (Change Agility and Flexibility)", "Compromiso con la Sustentabilidad": "Commitment to Sustainability", "Orientación a Resultados": "Results Orientation", "Planeación y Organización": "Planning and Organization", "Comunicación Efectiva": "Effective Communication", "Seguimiento y Control": "Follow-up and Control", "Desarrollo de Personas (Liderazgo)": "People Development (Leadership)", "Dominio del Puesto": "Role Mastery", "Procesos y Herramientas de Trabajo": "Work Processes and Tools", "Actúa conforme a los valores ESPÍRITU de Inter-Con.": "Acts in accordance with Inter-Con’s ESPÍRITU values.", "Muestra responsabilidad y ética profesional.": "Demonstrates responsibility and professional ethics.", "Se involucra activamente en los objetivos de la empresa.": "Actively contributes to company objectives.", "Atiende oportunamente las solicitudes de clientes internos y externos.": "Responds promptly to internal and external customer requests.", "Demuestra disposición y pasión para apoyar a otros.": "Shows willingness and passion for supporting others.", "Actúa con profesionalismo, respeto y empatía.": "Acts with professionalism, respect, and empathy.", "Colabora con otras áreas para lograr objetivos comunes.": "Collaborates across areas to achieve shared objectives.", "Mantiene relaciones laborales basadas en el respeto.": "Maintains respectful working relationships.", "Contribuye a resolver diferencias de manera constructiva.": "Helps resolve differences constructively.", "Se adapta positivamente a cambios y nuevas prioridades.": "Adapts positively to change and new priorities.", "Propone ideas para mejorar procesos.": "Proposes ideas to improve processes.", "Implementa soluciones innovadoras cuando es necesario.": "Implements innovative solutions when needed.", "Hace uso responsable de los recursos materiales y energéticos a su cargo.": "Uses assigned material and energy resources responsibly.", "Promueve prácticas de cuidado ambiental y ahorro de recursos en su área de trabajo.": "Promotes environmental care and resource-saving practices in the workplace.", "Cumple consistentemente los objetivos establecidos.": "Consistently meets established objectives.", "Mantiene altos estándares de calidad en su trabajo.": "Maintains high quality standards in their work.", "Propone acciones para mejorar la productividad y eficiencia.": "Proposes actions to improve productivity and efficiency.", "Organiza adecuadamente sus actividades y prioridades.": "Organizes activities and priorities effectively.", "Cumple los plazos establecidos.": "Meets established deadlines.", "Anticipa riesgos y establece acciones preventivas.": "Anticipates risks and establishes preventive actions.", "Se comunica de forma clara, respetuosa y oportuna.": "Communicates clearly, respectfully, and promptly.", "Escucha activamente y considera diferentes puntos de vista.": "Listens actively and considers different points of view.", "Comparte información relevante para facilitar el trabajo.": "Shares relevant information to facilitate work.", "Da seguimiento oportuno a sus actividades.": "Follows up on activities in a timely manner.", "Cumple políticas y procedimientos internos.": "Complies with internal policies and procedures.", "Administra adecuadamente los recursos asignados.": "Manages assigned resources appropriately.", "Comparte conocimientos con sus compañeros.": "Shares knowledge with colleagues.", "Brinda apoyo cuando otros lo requieren.": "Provides support when others need it.", "Favorece un ambiente de aprendizaje y colaboración.": "Fosters a learning and collaborative environment.", "Aplica correctamente los conocimientos de su puesto.": "Correctly applies role-specific knowledge.", "Resuelve problemas relacionados con sus funciones.": "Solves problems related to their responsibilities.", "Mantiene actualizados sus conocimientos.": "Keeps their knowledge up to date.", "Conoce y aplica correctamente los procesos, políticas y procedimientos de su área.": "Understands and correctly applies the area’s processes, policies, and procedures.", "Utiliza adecuadamente las herramientas y sistemas de automatización disponibles para su puesto.": "Uses the tools and automation systems available for the role appropriately.", "Actas administrativas": "Administrative actions", "Indicador / referencia NOM-035": "NOM-035 indicator / reference", "Sin dato": "No data", "Estos datos son contextuales. En esta demo no generan un descuento automático sobre la calificación.": "These data are contextual. In this demo they do not automatically reduce the score.", "Observaciones de RH": "HR observations", "Registra hechos, contexto o acuerdos relevantes...": "Record relevant facts, context, or agreements...", "DECISIÓN": "DECISION", "Ajuste de calibración": "Calibration adjustment", "Ajuste en puntos": "Point adjustment", "Justificación obligatoria cuando exista ajuste": "Justification required when an adjustment exists", "Explica la razón del ajuste y la evidencia utilizada...": "Explain the reason for the adjustment and the evidence used...", "Trazabilidad de cambios": "Change history", "movimientos": "changes", "Campo": "Field", "Anterior": "Previous", "Nuevo": "New", "Motivo": "Reason", "Usuario": "User", "Fecha": "Date", "Hora": "Time", "Sin cambios registrados.": "No changes recorded."});
+  Object.assign(EN, {"Inicia sesión": "Sign in", "Ingresa tu código de acceso": "Enter your access code", "Una experiencia simple, segura y confidencial para impulsar tu desarrollo dentro de Inter-Con.": "A simple, secure and confidential experience designed to support your growth at Inter-Con.", "Seguro": "Secure", "Tus datos están protegidos": "Your data is protected", "Confidencial": "Confidential", "Información de uso interno": "Internal-use information", "Desarrollo": "Growth", "Impulsamos tu crecimiento": "We support your growth", "Te enviaremos un código de verificación a tu correo corporativo.": "We will send a verification code to your corporate email.", "Accesos de demostración": "Demo access", "Colaborador": "Employee", "Líder": "Manager", "Administrador": "Administrator", "Tu sesión anterior expiró por inactividad. Inicia sesión de nuevo.": "Your previous session expired due to inactivity. Please sign in again.", "Demo funcional EDD Inter-Con — FOR-CAP-003 Rev. 4 · Datos simulados almacenados localmente en este navegador.": "Functional EDD Inter-Con demo — FOR-CAP-003 Rev. 4 · Simulated data stored locally in this browser.", "¡Bienvenida, Laura!": "Welcome, Laura!", "¡Bienvenido, Laura!": "Welcome, Laura!", "Esta evaluación nos ayuda a conocer tu desempeño, reconocer tus fortalezas e identificar oportunidades de desarrollo que impulsen tu crecimiento dentro de Inter-Con.": "This evaluation helps us understand your performance, recognize your strengths, and identify development opportunities that support your growth at Inter-Con.", "15 a 20 minutos": "15 to 20 minutes", "Procura realizar la evaluación en un solo momento y sin interrupciones.": "Try to complete the evaluation in one sitting and without interruptions.", "Responde con honestidad y objetividad.": "Answer honestly and objectively.", "Considera tu desempeño durante el periodo evaluado.": "Consider your performance throughout the evaluation period.", "Lee cuidadosamente cada pregunta.": "Read each question carefully.", "Tus respuestas serán tratadas de forma confidencial y se utilizarán exclusivamente para apoyar tu desarrollo y fortalecer nuestro proceso de gestión del desempeño.": "Your responses will be treated confidentially and used exclusively to support your development and strengthen our performance management process.", "Valores y Actitud 40% + Técnica Funcional 60%": "Values and Attitude 50% + Technical-functional Skills and Objectives 50%", "Tu opinión y compromiso contribuyen a construir un mejor Inter-Con.": "Your feedback and commitment help build a better Inter-Con.", "Tu evaluación ya fue enviada": "Your evaluation has already been submitted", "Gracias por tu participación, Laura.": "Thank you for your participation, Laura.", "Tu autoevaluación ha sido registrada correctamente.": "Your self-assessment has been recorded successfully.", "Tu líder recibirá la notificación correspondiente para continuar con el proceso.": "Your manager will receive the appropriate notification to continue the process.", "Tu compromiso impulsa tu desarrollo y el éxito de Inter-Con.": "Your commitment supports your growth and Inter-Con’s success.", "Personal a evaluar": "Employees to evaluate", "Universo del periodo": "Employees in this cycle", "Autoevaluaciones": "Self-assessments", "completadas": "completed", "Evaluaciones líder": "Manager evaluations", "Por calibrar": "Pending calibration", "Requieren revisión RH": "Require HR review", "Calibradas": "Calibrated", "Con resultado RH": "With HR result", "Promedio general": "Overall average", "Resultado disponible": "Result available", "Avance del ciclo": "Cycle progress", "evaluaciones cerradas": "evaluations closed", "PANEL RH": "HR PANEL", "Seguimiento nacional, calibración, cierre y distribución de talento en un solo lugar.": "National tracking, calibration, closure, and talent distribution in one place.", "COBERTURA": "COVERAGE", "Avance por área": "Progress by area", "Cierre del proceso": "Process close", "RESULTADOS": "RESULTS", "Niveles de desempeño": "Performance levels", "TALENTO": "TALENT", "Distribución 9-Box": "9-Box distribution", "Abrir matriz": "Open matrix", "OPERACIÓN RH": "HR OPERATIONS", "Seguimiento de evaluaciones": "Evaluation tracking", "Todas las áreas": "All areas", "Todos los estados": "All statuses", "Todos los cuadrantes": "All quadrants", "Limpiar": "Clear", "COLABORADOR": "EMPLOYEE", "AREA": "AREA", "LÍDER": "MANAGER", "STATUS": "STATUS", "PUNTAJE": "SCORE", "9-BOX": "9-BOX", "Recursos Humanos": "Human Resources", "Finanzas": "Finance", "Operaciones": "Operations", "Tecnología": "Technology", "Comercial": "Commercial", "Analista de Recursos Humanos": "Human Resources Analyst", "Gerente de Recursos Humanos": "Human Resources Manager", "Coordinador de Nómina": "Payroll Coordinator", "Pendiente líder": "Pending manager", "Pendiente manager": "Pending manager", "Cerrada": "Closed", "Cuadrante": "Quadrant", "A. Valores y Actitud": "A. Values and Attitude", "B. Habilidades": "B. Skills", "C. Conocimientos": "C. Knowledge", "D. Cumplimiento de Objetivos": "D. Goal Achievement", "ACTITUD": "ATTITUDE", "DESEMPEÑO": "PERFORMANCE", "Evalúa la vivencia diaria de los valores ESPÍRITU de Inter-Con. Esta sección determina la posición del colaborador en el eje vertical (Actitud) de la matriz 9-box.": "Evaluates how consistently Inter-Con’s ESPÍRITU values are demonstrated in daily work. This section determines the employee’s position on the vertical Attitude axis of the 9-box matrix.", "Evalúa las capacidades funcionales para ejecutar el puesto con eficiencia.": "Evaluates the functional capabilities required to perform the role efficiently.", "Evalúa el dominio técnico del puesto y de los procesos/herramientas del área.": "Evaluates technical mastery of the role and the area’s processes and tools.", "Se evalúa de forma independiente al bloque de competencias. Registra hasta cinco objetivos acordados al inicio del periodo, su meta o indicador, resultado alcanzado y calificación.": "Evaluated independently from the competency block. Enter up to five objectives agreed at the start of the period, including target or indicator, achieved result, and rating.", "Compromiso Organizacional (Integridad y Excelencia)": "Organizational Commitment (Integrity and Excellence)", "Actitud de Servicio (Pasión y Respeto)": "Service Mindset (Passion and Respect)", "Trabajo en Equipo y Unión": "Teamwork and Unity", "Innovación y Creatividad (Capacidad de Cambio y Flexibilidad)": "Innovation and Creativity (Change Agility and Flexibility)", "Compromiso con la Sustentabilidad": "Commitment to Sustainability", "Orientación a Resultados": "Results Orientation", "Planeación y Organización": "Planning and Organization", "Comunicación Efectiva": "Effective Communication", "Seguimiento y Control": "Follow-up and Control", "Desarrollo de Personas (Liderazgo)": "People Development (Leadership)", "Dominio del Puesto": "Role Mastery", "Procesos y Herramientas de Trabajo": "Work Processes and Tools", "Actúa conforme a los valores ESPÍRITU de Inter-Con.": "Acts in accordance with Inter-Con’s ESPÍRITU values.", "Muestra responsabilidad y ética profesional.": "Demonstrates responsibility and professional ethics.", "Se involucra activamente en los objetivos de la empresa.": "Actively contributes to company objectives.", "Atiende oportunamente las solicitudes de clientes internos y externos.": "Responds promptly to internal and external customer requests.", "Demuestra disposición y pasión para apoyar a otros.": "Shows willingness and passion for supporting others.", "Actúa con profesionalismo, respeto y empatía.": "Acts with professionalism, respect, and empathy.", "Colabora con otras áreas para lograr objetivos comunes.": "Collaborates across areas to achieve shared objectives.", "Mantiene relaciones laborales basadas en el respeto.": "Maintains respectful working relationships.", "Contribuye a resolver diferencias de manera constructiva.": "Helps resolve differences constructively.", "Se adapta positivamente a cambios y nuevas prioridades.": "Adapts positively to change and new priorities.", "Propone ideas para mejorar procesos.": "Proposes ideas to improve processes.", "Implementa soluciones innovadoras cuando es necesario.": "Implements innovative solutions when needed.", "Hace uso responsable de los recursos materiales y energéticos a su cargo.": "Uses assigned material and energy resources responsibly.", "Promueve prácticas de cuidado ambiental y ahorro de recursos en su área de trabajo.": "Promotes environmental care and resource-saving practices in the workplace.", "Cumple consistentemente los objetivos establecidos.": "Consistently meets established objectives.", "Mantiene altos estándares de calidad en su trabajo.": "Maintains high quality standards in their work.", "Propone acciones para mejorar la productividad y eficiencia.": "Proposes actions to improve productivity and efficiency.", "Organiza adecuadamente sus actividades y prioridades.": "Organizes activities and priorities effectively.", "Cumple los plazos establecidos.": "Meets established deadlines.", "Anticipa riesgos y establece acciones preventivas.": "Anticipates risks and establishes preventive actions.", "Se comunica de forma clara, respetuosa y oportuna.": "Communicates clearly, respectfully, and promptly.", "Escucha activamente y considera diferentes puntos de vista.": "Listens actively and considers different points of view.", "Comparte información relevante para facilitar el trabajo.": "Shares relevant information to facilitate work.", "Da seguimiento oportuno a sus actividades.": "Follows up on activities in a timely manner.", "Cumple políticas y procedimientos internos.": "Complies with internal policies and procedures.", "Administra adecuadamente los recursos asignados.": "Manages assigned resources appropriately.", "Comparte conocimientos con sus compañeros.": "Shares knowledge with colleagues.", "Brinda apoyo cuando otros lo requieren.": "Provides support when others need it.", "Favorece un ambiente de aprendizaje y colaboración.": "Fosters a learning and collaborative environment.", "Aplica correctamente los conocimientos de su puesto.": "Correctly applies role-specific knowledge.", "Resuelve problemas relacionados con sus funciones.": "Solves problems related to their responsibilities.", "Mantiene actualizados sus conocimientos.": "Keeps their knowledge up to date.", "Conoce y aplica correctamente los procesos, políticas y procedimientos de su área.": "Understands and correctly applies the area’s processes, policies, and procedures.", "Utiliza adecuadamente las herramientas y sistemas de automatización disponibles para su puesto.": "Uses the tools and automation systems available for the role appropriately.", "Actas administrativas": "Administrative actions", "Indicador / referencia NOM-035": "NOM-035 indicator / reference", "Sin dato": "No data", "Estos datos son contextuales. En esta demo no generan un descuento automático sobre la calificación.": "These data are contextual. In this demo they do not automatically reduce the score.", "Observaciones de RH": "HR observations", "Registra hechos, contexto o acuerdos relevantes...": "Record relevant facts, context, or agreements...", "DECISIÓN": "DECISION", "Ajuste de calibración": "Calibration adjustment", "Ajuste en puntos": "Point adjustment", "Justificación obligatoria cuando exista ajuste": "Justification required when an adjustment exists", "Explica la razón del ajuste y la evidencia utilizada...": "Explain the reason for the adjustment and the evidence used...", "Trazabilidad de cambios": "Change history", "movimientos": "changes", "Campo": "Field", "Anterior": "Previous", "Nuevo": "New", "Motivo": "Reason", "Usuario": "User", "Fecha": "Date", "Hora": "Time", "Sin cambios registrados.": "No changes recorded."});
 
   Object.assign(EN, {
     'Sección':'Section','Evaluación del líder':'Manager evaluation','Líder':'Manager','Calibrado':'Calibrated','Calibrado*':'Calibrated*',
@@ -644,7 +644,7 @@
   function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
   function renderFooter() {
-    return `<footer class="app-footer">Demo funcional EDD Inter-Con — FOR-CAP-003 Rev. 3 · Datos simulados almacenados localmente en este navegador.</footer>`;
+    return `<footer class="app-footer">Demo funcional EDD Inter-Con — FOR-CAP-003 Rev. 4 · Datos simulados almacenados localmente en este navegador.</footer>`;
   }
 
   function bindGlobal() {
@@ -869,12 +869,12 @@
         <article class="welcome-card welcome-card-integracion">
           <div class="welcome-card-icon icon-blue">◔</div>
           <h3>¿Cómo se integra?</h3>
-          <p class="welcome-integracion-title"><strong>Valores y Actitud 50%</strong> +<br><strong>Técnico-funcional y Objetivos 50%</strong></p>
+          <p class="welcome-integracion-title"><strong>Valores y Actitud 40%</strong> +<br><strong>Técnica Funcional 60%</strong></p>
           <div class="welcome-weight-list">
-            <span><i class="dot-blue"></i>Valores y Actitud <b>50%</b></span>
-            <span><i class="dot-purple"></i>Habilidades <b>16.7%</b></span>
-            <span><i class="dot-green"></i>Conocimientos <b>8.3%</b></span>
-            <span><i class="dot-yellow"></i>Objetivos <b>25%</b></span>
+            <span><i class="dot-blue"></i>Valores y Actitud <b>40%</b></span>
+            <span><i class="dot-purple"></i>Conocimientos y Habilidades Técnicas <b>30%</b></span>
+            <span><i class="dot-green"></i>Cumplimiento de Objetivos <b>30%</b></span>
+            <span><i class="dot-yellow"></i></span>
           </div>
         </article>
       </div>
@@ -916,7 +916,7 @@
     const autoEval = S.getEvaluacion(col.empleado, periodoId, 'autoevaluacion');
     let avance = 0;
     if (autoEval) {
-      const total = D.COMPETENCIAS.actitud.length + D.COMPETENCIAS.habilidades.length + D.COMPETENCIAS.conocimientos.length + 1;
+      const total = D.COMPETENCIAS.actitud.length + D.COMPETENCIAS.habilidades.length + 1;
       const respondidas = S.getRespuestas(autoEval.id).length;
       const objetivosOk = S.getObjetivos(autoEval.id).some((o) => o.descripcion && o.descripcion.trim());
       avance = pct(((respondidas + (objetivosOk ? 1 : 0)) / total) * 100);
@@ -954,7 +954,7 @@
     return ev;
   }
 
-  const SECCIONES_WIZARD = ['actitud', 'habilidades', 'conocimientos', 'objetivos', 'resumen'];
+  const SECCIONES_WIZARD = ['actitud', 'habilidades', 'objetivos', 'resumen'];
 
   function viewAutoevaluacion(col, periodoId, estado) {
     const ev = ensureWizard(col, periodoId);
@@ -968,17 +968,16 @@
     const counts = {
       actitud: (respuestasPorSeccion.actitud || []).filter(r => r.valor !== '' && r.valor !== null && r.valor !== undefined).length,
       habilidades: (respuestasPorSeccion.habilidades || []).filter(r => r.valor !== '' && r.valor !== null && r.valor !== undefined).length,
-      conocimientos: (respuestasPorSeccion.conocimientos || []).filter(r => r.valor !== '' && r.valor !== null && r.valor !== undefined).length,
       objetivos: S.getObjetivos(ev.id).filter(o => (o.descripcion || '').trim() && o.calificacion).length
     };
-    const total = { actitud:D.COMPETENCIAS.actitud.length, habilidades:D.COMPETENCIAS.habilidades.length, conocimientos:D.COMPETENCIAS.conocimientos.length, objetivos:5 };
+    const total = { actitud:D.COMPETENCIAS.actitud.length, habilidades:D.COMPETENCIAS.habilidades.length, objetivos:5 };
 
     let contenido = '';
     if (seccion === 'objetivos') contenido = renderObjetivosForm(ev, false);
     else if (seccion === 'resumen') contenido = renderResumenAuto(ev);
     else contenido = renderSeccionForm(ev, seccion, false);
 
-    const sideSections = ['actitud','habilidades','conocimientos','objetivos'].map((s,i) => `
+    const sideSections = ['actitud','habilidades','objetivos'].map((s,i) => `
       <button class="premium-section-step ${seccion === s ? 'active' : ''} ${i < idx ? 'done' : ''}" onclick="App.irSeccionWizard(${i})">
         <span><strong>${labelSeccion(s)}</strong><small>${s === 'actitud' ? 'Eje ACTITUD' : 'Eje DESEMPEÑO'}</small></span>
         <b>${counts[s]}/${total[s]}</b>
@@ -993,13 +992,13 @@
           <div class="premium-reminder-card"><strong>Recordatorio</strong><p>Puedes guardar tu progreso en cualquier momento. Tu evaluación es confidencial.</p></div>
         </aside>
         <div class="premium-evaluation-main">
-          <div class="premium-evaluation-title">${seccion !== 'resumen' && D.SECCIONES_META[seccion] ? `<div class="premium-section-weight">Peso de la sección: <strong>${D.SECCIONES_META[seccion].peso}%</strong></div>` : ''}<span class="premium-section-kicker">${seccion === 'resumen' ? 'Revisión final' : 'Sección ' + (idx + 1) + ' de 4'}</span><h1>${labelSeccion(seccion)}</h1></div>
+          <div class="premium-evaluation-title">${seccion !== 'resumen' && D.SECCIONES_META[seccion] ? `<div class="premium-section-weight">Peso de la sección: <strong>${D.SECCIONES_META[seccion].peso}%</strong></div>` : ''}<span class="premium-section-kicker">${seccion === 'resumen' ? 'Revisión final' : 'Sección ' + (idx + 1) + ' de 3'}</span><h1>${labelSeccion(seccion)}</h1></div>
           ${contenido}
           <div class="wizard-nav premium-wizard-nav">
             <button class="btn btn-outline" ${idx === 0 ? 'disabled' : ''} onclick="App.wizardPrev()">← Anterior</button>
             <button class="btn btn-outline premium-save-btn" onclick="App.guardarProgresoVisual()">Guardar progreso</button>
             ${seccion === 'resumen'
-              ? `<label class="confirm-check premium-confirm"><input type="checkbox" id="confirmEnvioAuto"/> Confirmo que la información capturada es correcta.</label><button class="btn btn-primary premium-next-btn" onclick="App.enviarAutoevaluacion()">Finalizar y enviar ✓</button>`
+              ? `<label class="confirm-check premium-confirm premium-confirm-large"><input type="checkbox" id="confirmEnvioAuto"/> Confirmo que la información capturada es correcta.</label><button class="btn btn-primary premium-next-btn" onclick="App.enviarAutoevaluacion()">Finalizar y enviar ✓</button>`
               : `<button class="btn btn-primary premium-next-btn" onclick="App.wizardNext('${seccion}')">Siguiente →</button>`}
           </div>
         </div>
@@ -1008,7 +1007,7 @@
   }
 
   function labelSeccion(s) {
-    return { actitud: 'A. Valores y Actitud', habilidades: 'B. Habilidades', conocimientos: 'C. Conocimientos', objetivos: 'D. Cumplimiento de Objetivos', resumen: 'Resumen y envío' }[s];
+    return { actitud: 'A. Valores y Actitud', habilidades: 'B. Conocimientos y Habilidades Técnicas', conocimientos: 'Sección interna', objetivos: 'C. Cumplimiento de Objetivos', resumen: 'Resumen y envío' }[s];
   }
 
   function renderSeccionForm(ev, seccion, soloLectura) {
@@ -1071,6 +1070,7 @@
           ${ratingWidget(groupName, valor, onchangeJs, soloLectura, false)}
         </div>
       </div>
+      ${c.id === 'B2' ? `<details class="tools-reference"><summary>Cuadro de apoyo — herramientas y sistemas de uso general</summary><div class="tools-reference-grid"><span>Excel</span><span>Word y PowerPoint</span><span>Outlook</span><span>Teams / SharePoint / OneDrive</span><span>Concur</span><span>Sistemas internos de Inter-Con</span><span>Portales de clientes / CFDI</span><span>Power BI u otra herramienta autorizada</span></div><small>Evalúa únicamente las herramientas que apliquen al puesto; usa N/A en las demás.</small></details>` : ''}
       ${!soloLectura ? `<div class="validation-message" aria-live="polite">Selecciona una calificación para continuar.</div><textarea class="comentario-box" placeholder="Comentario (opcional)" onchange="App.comentar('${evaluacionId}','${seccion}','${c.id}',this.value)">${esc(comentario)}</textarea>` : (comentario ? `<div class="comentario-lectura">${esc(comentario)}</div>` : '')}
     </div>`;
   }
@@ -1299,88 +1299,63 @@
   }
 
   function renderObjetivosForm(ev, soloLecturaDescripcion) {
-
     const objetivos = S.getObjetivos(ev.id);
     const filas = [];
-    for (let i = 0; i < Math.max(objetivos.length, 1); i++) filas.push(objetivos[i] || { index: i, descripcion: '', meta: '', fechaCompromiso: '', alcanzable: false, relevante: false, resultado: '', calificacion: '' });
+    for (let i = 0; i < Math.max(objetivos.length, 1); i++) {
+      filas.push(objetivos[i] || { index: i, descripcion: '', meta: '', resultado: '', cumplimiento: '', noCuantificable: false, calificacion: '' });
+    }
     return `
-    <div class="smart-workspace">
-      <aside class="smart-guide-panel" aria-label="Guía para redactar objetivos SMART">
-        <div class="smart-guide-badge">GUÍA SMART</div>
-        <h3>¿Qué es un objetivo SMART?</h3>
-        <p class="smart-guide-definition">Un objetivo SMART es <strong>específico, medible, alcanzable, relevante y con un plazo definido</strong> para garantizar claridad y efectividad.</p>
-
-        <div class="smart-guide-criteria">
-          <div><b>S</b><span><strong>Específico</strong><small>Define claramente qué quieres lograr.</small></span></div>
-          <div><b>M</b><span><strong>Medible</strong><small>Incluye una meta, porcentaje o indicador.</small></span></div>
-          <div><b>A</b><span><strong>Alcanzable</strong><small>Debe ser realista con los recursos disponibles.</small></span></div>
-          <div><b>R</b><span><strong>Relevante</strong><small>Debe aportar al puesto, área u objetivos de Inter-Con.</small></span></div>
-          <div><b>T</b><span><strong>Temporal</strong><small>Establece un plazo o fecha de cumplimiento.</small></span></div>
+    <div class="kpi-workspace">
+      <aside class="kpi-guide-panel" aria-label="Guía de objetivos del periodo">
+        <div class="smart-guide-badge">OBJETIVOS DEL PERIODO</div>
+        <h3>¿Qué debes registrar?</h3>
+        <p>Captura los objetivos que acordaste al inicio del periodo. Usa la meta o indicador conocido y registra el resultado realmente alcanzado.</p>
+        <div class="kpi-equivalence-card">
+          <strong>Equivalencia oficial Rev. 4</strong>
+          <div><span>110% o más</span><b>5 ★</b></div>
+          <div><span>100% a 109%</span><b>4 ★</b></div>
+          <div><span>90% a 99%</span><b>3 ★</b></div>
+          <div><span>75% a 89%</span><b>2 ★</b></div>
+          <div><span>Menor a 75%</span><b>1 ★</b></div>
         </div>
-
-        <div class="smart-guide-example">
-          <div class="smart-example-label">EJEMPLO</div>
-          <p><strong>Objetivo general:</strong><br>“Quiero mejorar la capacitación de los colaboradores.”</p>
-          <p><strong>Objetivo SMART:</strong><br>“Incrementar del <b>75% al 90%</b> el porcentaje de colaboradores que concluyen satisfactoriamente la capacitación de inducción, durante los <b>próximos 3 meses</b>, mediante seguimiento semanal, recordatorios y evaluación de conocimientos al finalizar el curso.”</p>
-          <div class="smart-why-title">¿Por qué es SMART?</div>
-          <ul>
-            <li><b>S – Específico:</b> Mejorar la conclusión satisfactoria de la capacitación.</li>
-            <li><b>M – Medible:</b> Pasar del 75% al 90%.</li>
-            <li><b>A – Alcanzable:</b> Se establecen acciones concretas de seguimiento.</li>
-            <li><b>R – Relevante:</b> Fortalece la preparación de los colaboradores.</li>
-            <li><b>T – Temporal:</b> Se debe lograr en 3 meses.</li>
-          </ul>
-        </div>
-        <div class="smart-guide-tip"><span>💡</span><p>Usa esta guía como referencia. La plataforma revisará cada objetivo antes de dejarte continuar.</p></div>
+        <div class="smart-guide-tip"><span>💡</span><p>Si un objetivo no es cuantificable, la calificación puede asignarse con base en evidencia documentada.</p></div>
       </aside>
-
       <section class="smart-capture-panel">
         <div class="smart-capture-head">
-          <div>
-            <span class="smart-capture-kicker">CUMPLIMIENTO DE OBJETIVOS</span>
-            <h3>Captura tus objetivos del periodo</h3>
-            <p>Registra hasta cinco objetivos. Completa la meta, fecha y criterios SMART; solo se promedian los objetivos con descripción y calificación válida.</p>
-          </div>
-          <div class="smart-capture-chip">SMART 5/5</div>
+          <div><span class="smart-capture-kicker">CUMPLIMIENTO DE OBJETIVOS · 30%</span><h3>Captura hasta cinco objetivos</h3><p>Objetivo, meta o indicador, resultado obtenido, porcentaje de cumplimiento y calificación.</p></div>
+          <div class="smart-capture-chip">REV. 4</div>
         </div>
-        ${escalaHelpInline()}
-        <div id="objetivosWrap">${filas.map((o, i) => renderObjetivoRow(ev.id, o, i, soloLecturaDescripcion)).join('')}</div>
+        <div id="objetivosWrap">${filas.map((o, i) => renderObjetivoRow(ev.id, o, Number(o.index ?? i), soloLecturaDescripcion)).join('')}</div>
         ${filas.length < 5 ? `<button class="btn btn-outline btn-sm smart-add-objective" onclick="App.agregarObjetivo('${ev.id}')">+ Agregar objetivo</button>` : ''}
       </section>
-    </div>
-    `;
+    </div>`;
   }
 
   function renderObjetivoRow(evaluacionId, o, index, soloLecturaDescripcion) {
     const groupName = 'obj_' + evaluacionId + '_' + index;
-    const onchangeJs = `App.editarObjetivo('${evaluacionId}',${index},'calificacion',this.value)`;
-    const claveHint = claveHintPlazo(evaluacionId, index);
-    const hintPlazo = !o.fechaCompromiso ? state.aiSmart.deadlineHints[claveHint] : null;
+    const onchangeJs = `App.editarObjetivoKPI('${evaluacionId}',${index},'calificacion',this.value)`;
+    const cumplimiento = o.cumplimiento ?? '';
+    const autoScore = C.calificacionPorCumplimiento(cumplimiento);
     return `
-    <div class="objetivo-row smart-objective" data-idx="${index}">
+    <div class="objetivo-row smart-objective kpi-objective" data-idx="${index}">
       <div class="smart-objective-head">
         <div class="objetivo-num">#${index + 1}</div>
-        ${!soloLecturaDescripcion ? `<button type="button" class="ai-smart-trigger" onclick="App.abrirAsistenteIA('${evaluacionId}',${index})" aria-label="${esc(t('✨ Ayúdame con IA'))}">✨ Ayúdame con IA</button>` : ''}
         <button class="smart-remove-objective" type="button" onclick="App.quitarObjetivo('${evaluacionId}',${index})" aria-label="Quitar objetivo ${index + 1}" title="Quitar objetivo">× <span>Quitar</span></button>
       </div>
-      <div class="objetivo-fields smart-objective-fields">
-        <div class="smart-field smart-field-meta"><label>Meta / indicador</label><input type="text" placeholder="Ej. +10% / 25 contratos" value="${esc(o.meta || '')}" ${soloLecturaDescripcion ? 'disabled' : ''} oninput="App.editarObjetivoSmart('${evaluacionId}',${index},'meta',this.value)"></div>
-        <div class="smart-field smart-field-date">
-          <label>Fecha compromiso</label>
-          <input type="date" value="${esc(o.fechaCompromiso || '')}" ${soloLecturaDescripcion ? 'disabled' : ''} onchange="App.editarObjetivoSmart('${evaluacionId}',${index},'fechaCompromiso',this.value)">
-          ${hintPlazo ? `<small class="ai-smart-deadline-hint">${esc(t('Plazo sugerido'))}: ${esc(hintPlazo)}</small>` : ''}
-        </div>
-        <div class="smart-field smart-field-objective"><label>Objetivo específico</label><textarea placeholder="Ej. Incrementar la cobertura..." ${soloLecturaDescripcion ? 'disabled' : ''} oninput="App.editarObjetivoSmart('${evaluacionId}',${index},'descripcion',this.value)">${esc(o.descripcion)}</textarea></div>
-        ${smartChecklistHTML(o, evaluacionId, index, soloLecturaDescripcion)}
-        <div class="smart-field"><label>Resultado obtenido</label><textarea placeholder="Resultado obtenido" ${soloLecturaDescripcion ? 'disabled' : ''} onchange="App.editarObjetivo('${evaluacionId}',${index},'resultado',this.value)">${esc(o.resultado)}</textarea></div>
-        <div class="smart-field smart-rating-field"><label>Calificación</label>${ratingWidget(groupName, o.calificacion, onchangeJs, false, true)}<small class="objective-rating-help">1★ = 20% · 2★ = 40% · 3★ = 60% · 4★ = 80% · 5★ = 100%</small></div>
-        <div class="validation-message" aria-live="polite">Completa el objetivo y asegúrate de que cumpla los 5 criterios SMART.</div>
+      <div class="objetivo-fields kpi-objective-fields">
+        <div class="smart-field smart-field-objective"><label>Objetivo</label><textarea placeholder="Describe el objetivo acordado para el periodo" ${soloLecturaDescripcion ? 'disabled' : ''} oninput="App.editarObjetivoKPI('${evaluacionId}',${index},'descripcion',this.value)">${esc(o.descripcion || '')}</textarea></div>
+        <div class="smart-field smart-field-meta"><label>Meta o indicador</label><input type="text" placeholder="Ej. 95% de cumplimiento / 25 contratos / ≤ 24 h" value="${esc(o.meta || '')}" ${soloLecturaDescripcion ? 'disabled' : ''} oninput="App.editarObjetivoKPI('${evaluacionId}',${index},'meta',this.value)"></div>
+        <div class="smart-field"><label>Resultado obtenido</label><textarea placeholder="Describe el resultado realmente alcanzado" ${soloLecturaDescripcion ? 'disabled' : ''} oninput="App.editarObjetivoKPI('${evaluacionId}',${index},'resultado',this.value)">${esc(o.resultado || '')}</textarea></div>
+        <div class="smart-field kpi-percent-field"><label>% de cumplimiento</label><input type="number" min="0" step="0.1" placeholder="Ej. 103" value="${esc(cumplimiento)}" ${soloLecturaDescripcion || o.noCuantificable ? 'disabled' : ''} onchange="App.editarObjetivoKPI('${evaluacionId}',${index},'cumplimiento',this.value)"><small>${autoScore ? `Equivale a ${autoScore} ★` : 'La calificación se calculará automáticamente.'}</small></div>
+        <label class="kpi-nonquant"><input type="checkbox" ${o.noCuantificable ? 'checked' : ''} ${soloLecturaDescripcion ? 'disabled' : ''} onchange="App.editarObjetivoKPI('${evaluacionId}',${index},'noCuantificable',this.checked)"> Objetivo no cuantificable; calificar con evidencia documentada.</label>
+        <div class="smart-field smart-rating-field"><label>Calificación (1-5 / N/A)</label>${ratingWidget(groupName, o.calificacion, onchangeJs, false, true)}<small class="objective-rating-help">Si capturas un porcentaje, esta calificación se asigna automáticamente con la tabla Rev. 4.</small></div>
+        <div class="validation-message" aria-live="polite">Completa objetivo, meta/indicador, resultado y una calificación válida.</div>
       </div>
     </div>`;
   }
 
   function renderResumenAuto(ev) {
-    const secciones = ['actitud', 'habilidades', 'conocimientos'];
+    const secciones = ['actitud', 'habilidades'];
     const objetivos = S.getObjetivos(ev.id).filter((o) => o.descripcion && o.descripcion.trim());
     return `
     <p class="muted">Revisa tus respuestas antes de enviar. El resultado y la comparación con tu líder se mostrarán más adelante, en la fase de retroalimentación.</p>
@@ -1391,9 +1366,10 @@
         ${D.COMPETENCIAS[s].map((c) => `<tr><td>${esc(c.nombre)}</td><td class="text-right">${map[c.id] !== undefined ? esc(map[c.id]) : '<span class="muted">Sin responder</span>'}</td></tr>`).join('')}
       </tbody></table></div>`;
     }).join('')}
-    <div class="resumen-seccion"><h4>D. Cumplimiento de Objetivos</h4>
-      ${objetivos.length ? `<table class="table table-compact"><tbody>${objetivos.map((o) => `<tr><td>${esc(o.descripcion)}</td><td class="text-right">${esc(o.calificacion)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">No se registraron objetivos.</p>'}
-    </div>`;
+    <div class="resumen-seccion"><h4>C. Cumplimiento de Objetivos</h4>
+      ${objetivos.length ? `<table class="table table-compact"><thead><tr><th>Objetivo</th><th>Meta</th><th>Resultado</th><th>%</th><th>Calif.</th></tr></thead><tbody>${objetivos.map((o) => `<tr><td>${esc(o.descripcion)}</td><td>${esc(o.meta || '—')}</td><td>${esc(o.resultado || '—')}</td><td>${esc(o.cumplimiento === '' || o.cumplimiento == null ? '—' : o.cumplimiento + '%')}</td><td class="text-right">${esc(o.calificacion)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">No se registraron objetivos.</p>'}
+    </div>
+    <div class="form-group resumen-comments"><label>Comentarios u observaciones del colaborador</label><textarea placeholder="Agrega contexto adicional si lo consideras necesario. Si más de la mitad de una sección quedó en N/A, justifica aquí." onchange="App.setComentarios('${ev.id}',this.value)">${esc(ev.comentarios || '')}</textarea></div>`;
   }
 
   function inicialesAvatar(nombre) { return String(nombre || '?').split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase(); }
@@ -1436,7 +1412,7 @@
       nombreColaborador: col.nombre
     });
 
-    const seccionesCards = ['actitud', 'habilidades', 'conocimientos', 'objetivos'].map((s) => {
+    const seccionesCards = ['actitud', 'habilidades', 'objetivos'].map((s) => {
       const meta = D.SECCIONES_META[s];
       const val = puntajes[s];
       const pctVal = (val !== undefined && val !== null && meta.peso) ? (val / meta.peso) * 100 : 0;
@@ -1637,13 +1613,13 @@
       <div class="premium-evaluation-layout">
         <aside class="premium-evaluation-sidebar">${sidebarLider}<div class="premium-reminder-card"><strong>Evaluación del líder</strong><p>Guarda tu avance y verifica cada sección antes de enviar. La autoevaluación se mostrará después del envío.</p></div></aside>
         <div class="premium-evaluation-main">
-          <div class="premium-evaluation-title"><span class="premium-section-kicker">${seccion === 'resumen' ? 'Revisión final' : 'Sección ' + (idx + 1) + ' de 4'}</span><h1>${labelSeccion(seccion)}${seccion !== 'resumen' && D.SECCIONES_META[seccion] ? ` <em>(${D.SECCIONES_META[seccion].peso}%)</em>` : ''}</h1></div>
+          <div class="premium-evaluation-title"><span class="premium-section-kicker">${seccion === 'resumen' ? 'Revisión final' : 'Sección ' + (idx + 1) + ' de 3'}</span><h1>${labelSeccion(seccion)}${seccion !== 'resumen' && D.SECCIONES_META[seccion] ? ` <em>(${D.SECCIONES_META[seccion].peso}%)</em>` : ''}</h1></div>
           ${contenido}
           <div class="wizard-nav premium-wizard-nav">
             <button class="btn btn-outline" ${idx === 0 ? 'disabled' : ''} onclick="App.wizardPrev()">← Anterior</button>
             <button class="btn btn-outline premium-save-btn" onclick="App.guardarProgresoVisual()">Guardar progreso</button>
             ${seccion === 'resumen'
-              ? `<label class="confirm-check premium-confirm"><input type="checkbox" id="confirmEnvioLider"/> Confirmo que la evaluación está completa.</label><button class="btn btn-primary premium-next-btn" onclick="App.enviarEvaluacionLider('${colaboradorId}')">Enviar evaluación ✓</button>`
+              ? `<label class="confirm-check premium-confirm premium-confirm-large"><input type="checkbox" id="confirmEnvioLider"/> Confirmo que la evaluación está completa.</label><button class="btn btn-primary premium-next-btn" onclick="App.enviarEvaluacionLider('${colaboradorId}')">Enviar evaluación ✓</button>`
               : `<button class="btn btn-primary premium-next-btn" onclick="App.wizardNext('${seccion}')">Siguiente →</button>`}
           </div>
         </div>
@@ -1657,7 +1633,7 @@
     const mapLider = {}; objetivosLider.forEach((o) => { mapLider[Number(o.index)] = o; });
     if (!objetivosAuto.length) return '<p class="muted">El colaborador no registró objetivos en este periodo.</p>';
     return `
-    <p class="muted">Califica el cumplimiento de cada objetivo declarado por el colaborador. Cada estrella equivale al 20% del cumplimiento del objetivo.</p>
+    <p class="muted">Revisa la evidencia y califica cada objetivo del colaborador. Cuando exista porcentaje de cumplimiento, utiliza la equivalencia oficial Rev. 4.</p>
     ${objetivosAuto.map((o, i) => {
       // Conservamos el índice REAL del objetivo de la autoevaluación. Si el colaborador
       // quitó un objetivo, los índices pueden no ser consecutivos (ej. 0, 2, 3).
@@ -1671,7 +1647,7 @@
         <div class="objetivo-num">#${i + 1}</div>
         <div class="objetivo-fields">
           <div class="objetivo-lectura"><strong>Objetivo:</strong> ${esc(o.descripcion)}</div>
-          <div class="objetivo-lectura"><strong>Resultado:</strong> ${esc(o.resultado)}</div>
+          <div class="objetivo-lectura"><strong>Meta / indicador:</strong> ${esc(o.meta || '—')}</div><div class="objetivo-lectura"><strong>Resultado:</strong> ${esc(o.resultado)}</div><div class="objetivo-lectura"><strong>% cumplimiento:</strong> ${esc(o.cumplimiento === '' || o.cumplimiento == null ? '—' : o.cumplimiento + '%')}</div>
           ${ratingWidget(groupName, calif, onchangeJs, false, true)}
           <div class="validation-message" aria-live="polite">Selecciona una calificación para continuar.</div>
         </div>
@@ -1721,7 +1697,7 @@
     const respAuto = S.getRespuestasPorSeccion(autoEval.id);
     const respLider = S.getRespuestasPorSeccion(liderEval.id);
     const filas = [];
-    ['actitud', 'habilidades', 'conocimientos'].forEach((sec) => {
+    ['actitud', 'habilidades'].forEach((sec) => {
       D.COMPETENCIAS[sec].forEach((c) => {
         const ra = respAuto[sec].find((r) => r.competenciaId === c.id);
         const rl = respLider[sec].find((r) => r.competenciaId === c.id);
@@ -2223,15 +2199,26 @@
       const filas = wizard.querySelectorAll('.objetivo-row');
       filas.forEach((fila, i) => {
         const o = objetivos.find((x) => Number(x.index) === i);
-        const tieneAlgo = o && ((o.descripcion || '').trim() || (o.meta || '').trim() || (o.fechaCompromiso || '').trim() || (o.resultado || '').trim() || o.calificacion || o.alcanzable || o.relevante);
-        if (tieneAlgo && (!(o.descripcion || '').trim() || !o.calificacion || !evaluarSmartObjetivo(o).completo)) faltantes.push(fila);
+        const tieneAlgo = o && ((o.descripcion || '').trim() || (o.meta || '').trim() || (o.resultado || '').trim() || o.calificacion || o.cumplimiento !== '' || o.noCuantificable);
+        const completo = o && (o.descripcion || '').trim() && (o.meta || '').trim() && (o.resultado || '').trim() && o.calificacion;
+        if (tieneAlgo && !completo) faltantes.push(fila);
       });
-      if (!objetivos.some((o) => (o.descripcion || '').trim() && o.calificacion && evaluarSmartObjetivo(o).completo)) {
+      if (!objetivos.some((o) => (o.descripcion || '').trim() && (o.meta || '').trim() && (o.resultado || '').trim() && o.calificacion)) {
         if (!faltantes.length && filas[0]) faltantes.push(filas[0]);
       }
     }
 
     return marcarErroresYEnfocar(faltantes);
+  }
+
+  function requiereJustificacionNA(evaluacionId) {
+    const por = S.getRespuestasPorSeccion(evaluacionId);
+    return ['actitud','habilidades'].some((sec) => {
+      const total = (D.COMPETENCIAS[sec] || []).length;
+      if (!total) return false;
+      const na = (por[sec] || []).filter((r) => String(r.valor) === 'N/A').length;
+      return na > total / 2;
+    });
   }
 
   const Actions = {
@@ -2335,31 +2322,33 @@
     agregarObjetivo(evaluacionId) {
       const objetivos = S.getObjetivos(evaluacionId);
       if (objetivos.length >= 5) return;
-      S.saveObjetivo(evaluacionId, objetivos.length, '', '', '', { meta:'', fechaCompromiso:'', alcanzable:false, relevante:false });
+      const usados = new Set(objetivos.map((o) => Number(o.index)));
+      let nextIndex = 0; while (usados.has(nextIndex)) nextIndex++;
+      S.saveObjetivo(evaluacionId, nextIndex, '', '', '', { meta:'', cumplimiento:'', noCuantificable:false });
       render();
     },
     editarObjetivo(evaluacionId, index, campo, valor) {
+      return Actions.editarObjetivoKPI(evaluacionId, index, campo, valor);
+    },
+    editarObjetivoKPI(evaluacionId, index, campo, valor) {
       const objetivos = S.getObjetivos(evaluacionId);
-      const o = objetivos.find((x) => x.index === index) || { descripcion: '', resultado: '', calificacion: '' };
+      const o = objetivos.find((x) => Number(x.index) === Number(index)) || { index:Number(index), descripcion:'', meta:'', resultado:'', cumplimiento:'', noCuantificable:false, calificacion:'' };
       o[campo] = valor;
-      S.saveObjetivo(evaluacionId, index, o.descripcion, o.resultado, o.calificacion);
-      const fila = document.querySelector(`.objetivo-row[data-idx="${index}"]`);
-      if (fila && (o.descripcion || '').trim() && o.calificacion) fila.classList.remove('validation-error');
+      if (campo === 'cumplimiento' && valor !== '') {
+        const score = C.calificacionPorCumplimiento(valor);
+        if (score !== null) o.calificacion = score;
+      }
+      if (campo === 'noCuantificable' && valor) o.cumplimiento = '';
+      S.saveObjetivo(evaluacionId, Number(index), o.descripcion || '', o.resultado || '', o.calificacion || '', {
+        meta: o.meta || '', cumplimiento: o.cumplimiento ?? '', noCuantificable: !!o.noCuantificable
+      });
+      const fila = document.querySelector(`.objetivo-row[data-idx="${Number(index)}"]`);
+      if (fila && (o.descripcion || '').trim() && (o.meta || '').trim() && (o.resultado || '').trim() && o.calificacion) fila.classList.remove('validation-error');
+      if (campo === 'cumplimiento' || campo === 'noCuantificable') render();
     },
     editarObjetivoSmart(evaluacionId, index, campo, valor) {
-      const objetivos = S.getObjetivos(evaluacionId);
-      const o = objetivos.find((x) => Number(x.index) === Number(index)) || { descripcion: '', meta: '', fechaCompromiso: '', alcanzable: false, relevante: false, resultado: '', calificacion: '' };
-      o[campo] = valor;
-      S.saveObjetivo(evaluacionId, Number(index), o.descripcion || '', o.resultado || '', o.calificacion || '', {
-        meta: o.meta || '', fechaCompromiso: o.fechaCompromiso || '', alcanzable: !!o.alcanzable, relevante: !!o.relevante
-      });
-      const fila = document.querySelector(`.objetivo-row[data-idx="${index}"]`);
-      if (fila) {
-        const validator = fila.querySelector('.smart-validator');
-        const nuevo = evaluarSmartObjetivo(o);
-        if (validator) validator.outerHTML = smartChecklistHTML(o, evaluacionId, Number(index), false);
-        if (nuevo.completo && (o.descripcion || '').trim() && o.calificacion) fila.classList.remove('validation-error');
-      }
+      // Compatibilidad temporal: SMART queda fuera del flujo Rev.4; redirige a captura KPI.
+      return Actions.editarObjetivoKPI(evaluacionId, index, campo, valor);
     },
     quitarObjetivo(evaluacionId, index) { S.removeObjetivo(evaluacionId, index); render(); },
 
@@ -2452,7 +2441,7 @@
       for (let i = 0; i < SECCIONES_WIZARD.length - 1; i++) {
         const sec = SECCIONES_WIZARD[i];
         const incompleta = sec === 'objetivos'
-          ? !S.getObjetivos(evaluacionId).some((o) => (o.descripcion || '').trim() && o.calificacion && evaluarSmartObjetivo(o).completo)
+          ? !S.getObjetivos(evaluacionId).some((o) => (o.descripcion || '').trim() && (o.meta || '').trim() && (o.resultado || '').trim() && o.calificacion)
           : (S.getRespuestasPorSeccion(evaluacionId)[sec] || []).filter((r) => r.valor !== '' && r.valor !== null && r.valor !== undefined).length < D.COMPETENCIAS[sec].length;
         if (incompleta) {
           state.wizard.seccionIdx = i; render();
@@ -2465,6 +2454,12 @@
       }
       const objetivos = S.getObjetivos(evaluacionId).filter((o) => o.descripcion && o.descripcion.trim());
       if (!objetivos.length) { alert(t('Registra al menos un objetivo antes de enviar.')); return; }
+      const evActual = S.load().evaluaciones.find((e) => e.id === evaluacionId);
+      if (requiereJustificacionNA(evaluacionId) && !(evActual && String(evActual.comentarios || '').trim())) {
+        state.wizard.seccionIdx = SECCIONES_WIZARD.length - 1; render();
+        setTimeout(() => alert('Más de la mitad de una sección está marcada como N/A. Agrega una justificación en Comentarios u observaciones antes de enviar.'), 0);
+        return;
+      }
       S.completarEvaluacion(evaluacionId, state.user.nombre);
       navigate('#/colaborador/enviado');
     },
@@ -2477,7 +2472,7 @@
       }
       // La descripción y el resultado siempre se toman del registro fuente del colaborador,
       // evitando pasarlos interpolados dentro de HTML/JS y manteniendo la relación por índice.
-      S.saveObjetivo(evaluacionId, Number(index), fuente.descripcion || '', fuente.resultado || '', calificacion);
+      S.saveObjetivo(evaluacionId, Number(index), fuente.descripcion || '', fuente.resultado || '', calificacion, { meta: fuente.meta || '', cumplimiento: fuente.cumplimiento ?? '', noCuantificable: !!fuente.noCuantificable });
       const fila = document.querySelector(`.objetivo-row[data-idx="${Number(index)}"]`);
       if (fila && calificacion) fila.classList.remove('validation-error');
     },
@@ -2527,6 +2522,12 @@
           }, 0);
           return;
         }
+      }
+      const evActual = S.load().evaluaciones.find((e) => e.id === evaluacionId);
+      if (requiereJustificacionNA(evaluacionId) && !(evActual && String(evActual.comentarios || '').trim())) {
+        state.wizard.seccionIdx = SECCIONES_WIZARD.length - 1; render();
+        setTimeout(() => alert('Más de la mitad de una sección está marcada como N/A. Justifica el uso de N/A en Comentarios generales antes de enviar.'), 0);
+        return;
       }
       S.completarEvaluacion(evaluacionId, state.user.nombre);
       navigate('#/lider/comparacion/' + colaboradorId);

@@ -3,7 +3,7 @@
  * ---------------------------------------------------------------------------
  * Motor de cálculo de la Evaluación del Desempeño Administrativo (EDD)
  * INTER-CON SERVICIOS DE SEGURIDAD PRIVADA, S.A. DE C.V.
- * Documento fuente: EDD_Inter-Con_alineada.docx (FOR-CAP-003 Rev. 3)
+ * Documento fuente: EDD_Inter-Con_Rev4_ponderacion_40_60.docx (FOR-CAP-003 Rev. 4)
  *
  * Todas las reglas numéricas de la evaluación viven en este archivo.
  * No se deben duplicar fórmulas ni umbrales en otros módulos.
@@ -27,12 +27,12 @@
   // vez reparte estos mismos totales entre las competencias de cada sección).
   // ===========================================================================
   const PESOS_SECCION = {
-    actitud: 50,                 // Bloque Valores y Actitud
-    habilidades: 16.6666666667,  // 1/3 del bloque técnico-funcional (50%)
-    conocimientos: 8.3333333333, // 1/6 del bloque técnico-funcional (50%)
-    objetivos: 25                 // 1/2 del bloque técnico-funcional (50%)
+    actitud: 40,       // Bloque 1 — Valores y Actitud
+    habilidades: 30,  // Bloque 2B — Conocimientos y Habilidades Técnicas
+    conocimientos: 0, // Compatibilidad interna: Rev.4 integra conocimientos + habilidades en B
+    objetivos: 30      // Bloque 2C — Cumplimiento de Objetivos
   };
-  // Suma de control: 50 + 16.6667 + 8.3333 + 25 = 100.
+  // Suma de control Rev.4: 40 + 30 + 30 = 100.
 
   // ===========================================================================
   // 2. CLASIFICACIÓN NUMÉRICA DEL RESULTADO FINAL (0-100)
@@ -203,12 +203,11 @@
 
     const total = secA.puntaje + secB.puntaje + secC.puntaje + secD.puntaje;
 
-    // Eje DESEMPEÑO = B + C + D, expresado en escala 1-5 (promedio ponderado de promedios)
+    // Eje DESEMPEÑO Rev.4 = Técnica Funcional (B) + Objetivos (C), expresado en escala 1-5.
     const pesosDesempeno = [
       { avg: avgB, peso: PESOS_SECCION.habilidades },
-      { avg: avgC, peso: PESOS_SECCION.conocimientos },
       { avg: avgD, peso: PESOS_SECCION.objetivos }
-    ].filter((x) => x.avg !== null);
+    ].filter((x) => x.avg !== null && x.peso > 0);
     const pesoTotalDesempeno = pesosDesempeno.reduce((acc, x) => acc + x.peso, 0);
     const desempenoProm = pesoTotalDesempeno > 0
       ? pesosDesempeno.reduce((acc, x) => acc + x.avg * x.peso, 0) / pesoTotalDesempeno
@@ -228,6 +227,18 @@
     };
   }
 
+  /** Equivalencia oficial Rev.4 de porcentaje de cumplimiento a calificación. */
+  function calificacionPorCumplimiento(porcentaje) {
+    if (porcentaje === 'N/A') return 'N/A';
+    if (porcentaje === null || porcentaje === undefined || porcentaje === '' || isNaN(Number(porcentaje))) return null;
+    const p = Number(porcentaje);
+    if (p >= 110) return 5;
+    if (p >= 100) return 4;
+    if (p >= 90) return 3;
+    if (p >= 75) return 2;
+    return 1;
+  }
+
   // ===========================================================================
   // 7. ASIGNACIÓN DE CUADRANTE 9-BOX
   // ===========================================================================
@@ -243,8 +254,7 @@
   /**
    * actitudProm: promedio 1-5 de la sección A (Valores y Actitud), convertido
    *   a base 100 para determinar el nivel del eje ACTITUD.
-   * desempenoProm: promedio ponderado 1-5 de B+C+D (Habilidades + Conocimientos
-   *   + Objetivos), usando los pesos actuales de PESOS_SECCION.
+   * desempenoProm: promedio ponderado 1-5 de B+C (Técnica Funcional + Objetivos), usando pesos 30/30 de Rev.4.
    * Fórmula validada contra el documento oficial:
    *   cuadrante = (nivelDesempeno - 1) * 3 + nivelActitud
    */
@@ -285,6 +295,7 @@
     puntajeSeccion,
     round1,
     calcularResultado,
+    calificacionPorCumplimiento,
     clasificarNivel,
     nivelEje,
     asignarCuadrante,

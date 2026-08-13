@@ -398,8 +398,10 @@
       if (Object.prototype.hasOwnProperty.call(extras, 'fechaCompromiso')) o.fechaCompromiso = extras.fechaCompromiso || '';
       if (Object.prototype.hasOwnProperty.call(extras, 'alcanzable')) o.alcanzable = !!extras.alcanzable;
       if (Object.prototype.hasOwnProperty.call(extras, 'relevante')) o.relevante = !!extras.relevante;
+      if (Object.prototype.hasOwnProperty.call(extras, 'cumplimiento')) o.cumplimiento = extras.cumplimiento;
+      if (Object.prototype.hasOwnProperty.call(extras, 'noCuantificable')) o.noCuantificable = !!extras.noCuantificable;
     } else {
-      db.objetivos.push({ evaluacionId, index, descripcion, resultado, calificacion, meta: extras.meta || '', fechaCompromiso: extras.fechaCompromiso || '', alcanzable: !!extras.alcanzable, relevante: !!extras.relevante });
+      db.objetivos.push({ evaluacionId, index, descripcion, resultado, calificacion, meta: extras.meta || '', fechaCompromiso: extras.fechaCompromiso || '', alcanzable: !!extras.alcanzable, relevante: !!extras.relevante, cumplimiento: extras.cumplimiento ?? '', noCuantificable: !!extras.noCuantificable });
     }
     persist();
   }
