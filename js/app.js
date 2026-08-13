@@ -2310,9 +2310,20 @@
       }
       state.wizard.seccionIdx = Math.min(state.wizard.seccionIdx + 1, SECCIONES_WIZARD.length - 1);
       render();
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }));
     },
-    wizardPrev() { state.wizard.seccionIdx = Math.max(state.wizard.seccionIdx - 1, 0); render(); },
-    irSeccionWizard(idx) { state.wizard.seccionIdx = Math.max(0, Math.min(Number(idx) || 0, SECCIONES_WIZARD.length - 1)); render(); },
+    wizardPrev() {
+      state.wizard.seccionIdx = Math.max(state.wizard.seccionIdx - 1, 0);
+      render();
+      requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' })));
+    },
+    irSeccionWizard(idx) {
+      state.wizard.seccionIdx = Math.max(0, Math.min(Number(idx) || 0, SECCIONES_WIZARD.length - 1));
+      render();
+      requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' })));
+    },
     comprenderObjetivos(evaluacionId) { sessionStorage.setItem(objectivesAckKey(evaluacionId), '1'); render(); },
     guardarProgresoVisual() { const btn = document.querySelector('.premium-save-btn'); if (!btn) return; const original = btn.textContent; btn.textContent = '✓ Guardado'; btn.classList.add('saved'); setTimeout(() => { btn.textContent = original; btn.classList.remove('saved'); }, 1400); },
     rate(evaluacionId, seccion, competenciaId, valor) {
