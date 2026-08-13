@@ -272,10 +272,6 @@
     const gridHtml = renderNineBoxGridCore({ ocupantes, resaltarCuadrante: cuad.cuadrante, onCellClickJs: null, onMarkerClickJs: null });
     const niveles = c.CONFIG_9BOX.etiquetasNivel;
 
-    const resumen = cuad.info
-      ? renderCuadranteInfo(cuad)
-      : '<p class="muted">No hay datos suficientes para ubicar al colaborador en la matriz (faltan calificaciones válidas).</p>';
-
     return `<div class="ninebox-individual">
       <div class="ninebox-full-body ninebox-full-body-sm">
         <div class="ninebox-vaxis-labels"><span>${esc(niveles[2])}</span><span>${esc(niveles[1])}</span><span>${esc(niveles[0])}</span></div>
@@ -291,7 +287,6 @@
         <span class="mini-kpi"><strong>${fmt(resultado.desempenoProm)}</strong><span>Desempeño (esc. 1-5)</span></span>
         <span class="mini-kpi"><strong>${fmt(resultado.actitudProm)}</strong><span>Actitud (esc. 1-5)</span></span>
       </div>
-      ${resumen}
     </div>`;
   }
 

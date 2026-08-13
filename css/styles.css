@@ -1027,3 +1027,19 @@ body{background:linear-gradient(180deg,#f8fbff 0,#f2f7fc 100%);color:var(--premi
 @media(max-width:900px){.premium-header-top{grid-template-columns:auto 1fr auto!important;grid-template-rows:auto auto!important}.premium-nav-tabs{grid-column:1/-1!important;grid-row:2!important;justify-content:flex-start!important;overflow-x:auto!important;scroll-snap-type:x proximity;background:rgba(255,255,255,.045);border-radius:8px;padding:0 5px!important}.premium-nav-tabs a{flex:0 0 auto;scroll-snap-align:start;min-height:40px}.premium-brand img{width:145px!important}.feedback-top-grid,.feedback-analysis-grid,.leader-context-grid{grid-template-columns:1fr}.tools-rating-grid{grid-template-columns:1fr}.agreement-grid{grid-template-columns:1fr}.agreement-grid .span-2{grid-column:auto}.kpi-objective-grid{grid-template-columns:1fr!important}}
 .kpi-leader-note{background:#eef6ff;border:1px solid #cfe1f6;border-radius:10px;padding:12px 14px;color:#315b82;font-size:.76rem;margin:8px 0 14px}.kpi-leader-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;margin-top:8px}.readonly-rating{display:inline-flex;gap:6px;color:#0b55a8;font-weight:800}
 @media(max-width:900px){.premium-login-mobile-logo{background:#0a2f61;border-radius:12px;padding:10px 14px;width:max-content}.premium-login-mobile-logo img{width:210px!important}}
+
+
+/* Rev4 UX — limpieza de retroalimentación y editores inline del líder */
+.feedback-analysis-single{margin:22px 0;}
+.feedback-analysis-single>div{width:100%;}
+.leader-inline-editor{background:linear-gradient(180deg,#f7fbff 0%,#eef6ff 100%);border:1px solid #bed7f2;border-radius:14px;padding:18px;margin:14px 0;box-shadow:0 8px 24px rgba(23,70,125,.06);}
+.leader-inline-grid{display:grid;gap:16px;align-items:end;}
+.leader-inline-grid-2{grid-template-columns:1fr 1fr;}
+.leader-inline-grid-plan{grid-template-columns:1fr 1.25fr minmax(190px,.55fr);}
+.leader-inline-field{display:flex;flex-direction:column;gap:7px;min-width:0;}
+.leader-inline-field label{font-size:.82rem;font-weight:800;color:#0b2545;}
+.leader-inline-field input,.leader-inline-field textarea{width:100%;box-sizing:border-box;border:1px solid #cbdced;border-radius:10px;background:#fff;color:#0b2545;padding:11px 12px;font:inherit;outline:none;transition:border-color .15s ease,box-shadow .15s ease;}
+.leader-inline-field textarea{resize:vertical;min-height:86px;}
+.leader-inline-field input:focus,.leader-inline-field textarea:focus{border-color:#2f7de1;box-shadow:0 0 0 3px rgba(47,125,225,.12);}
+.leader-inline-editor .inline-editor-actions{display:flex;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid #d8e6f4;}
+@media(max-width:900px){.leader-inline-grid-2,.leader-inline-grid-plan{grid-template-columns:1fr}.leader-inline-date{max-width:none}}
