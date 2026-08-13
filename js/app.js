@@ -40,7 +40,7 @@
     'Continuar':'Continue','Enviando…':'Sending…','Código temporal':'Temporary code',
     'Ingresar a la plataforma':'Enter platform','Validando…':'Validating…',
     'El código vence en':'The code expires in','minutos.':'minutes.','vencido':'expired',
-    'Evaluación de Desempeño Administrativo':'Administrative Performance Evaluation',
+    'Evaluación de Desempeño':'Performance Evaluation',
     'Duración estimada':'Estimated duration','¿Quién participa?':'Who participates?','Antes de comenzar':'Before you begin',
     'Confidencialidad':'Confidentiality','¿Cómo se integra?':'How is it structured?','Escala de evaluación':'Rating scale',
     'Comenzar mi evaluación':'Start my evaluation','Tu autoevaluación.':'Your self-assessment.',
@@ -405,7 +405,7 @@
     currentLang = lang === 'en' ? 'en' : 'es';
     localStorage.setItem(LANG_KEY, currentLang);
     document.documentElement.lang = currentLang;
-    document.title = currentLang === 'en' ? 'Inter-Con EDD — Administrative Performance Evaluation' : 'Plataforma EDD Inter-Con — Evaluación del Desempeño Administrativo';
+    document.title = currentLang === 'en' ? 'Inter-Con EDD — Performance Evaluation' : 'Plataforma EDD Inter-Con — Evaluación de Desempeño';
     render();
     // El modal de IA SMART vive fuera de #app-root (para sobrevivir los
     // render() del wizard), así que no se retraduce solo con render(): hay
@@ -466,6 +466,7 @@
     periodo: null,
     wizard: { seccionIdx: 0, evaluacionId: null, tipo: null, colaboradorId: null, liderId: null },
     adminFiltros: {},
+    adminAlertOpen: null,
     usuariosFiltros: {},
     jerarquiasFiltros: {},
     nineboxSel: null,
@@ -622,13 +623,17 @@
     } else {
       tabs = [['dashboard', 'Dashboard'], ['calibracion', 'Calibración'], ['9box', 'Matriz 9-Box'], ['usuarios', 'Usuarios'], ['jerarquias', 'Jerarquías'], ['auditoria', 'Auditoría'], ['config', 'Configuración']];
     }
-    const navHtml = tabs.map((t) => `<a href="#/${area === 'colaborador' ? 'colaborador' : area}/${t[0]}" class="${page === t[0] ? 'active' : ''}">${t[1]}</a>`).join('');
+    const retroPendiente = u.perfil === 'colaborador' && state.periodo && (() => { const cal=S.getCalibracion(u.empleado, state.periodo.id); return !!(cal && cal.retroHabilitada && !cal.aceptacionColaborador); })();
+    const navHtml = tabs.map((t) => {
+      const esRetro = u.perfil === 'colaborador' && t[0] === 'retroalimentacion';
+      return `<a href="#/${area === 'colaborador' ? 'colaborador' : area}/${t[0]}" class="${page === t[0] ? 'active' : ''}${esRetro && retroPendiente ? ' nav-attention' : ''}">${t[1]}${esRetro && retroPendiente ? '<span class="nav-notification-dot" title="Retroalimentación disponible">1</span>' : ''}</a>`;
+    }).join('');
     const iniciales = esc((u.nombre || '').split(/\s+/).slice(0,2).map(x => x[0] || '').join('').toUpperCase());
     return `
     <header class="app-header premium-header">
       <div class="app-header-top premium-header-top">
         <div class="brand premium-brand">
-          <img src="assets/ic-seguridad-privada.png" alt="IC Seguridad Privada" />
+          <img src="assets/logo-ic-blanco-horizontal.png" alt="IC Seguridad Privada" />
         </div>
         <nav class="nav-tabs premium-nav-tabs">${navHtml}</nav>
         <div class="premium-user-menu">
@@ -642,6 +647,13 @@
   }
 
   function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+  function showNotice(message, type) {
+    let host=document.getElementById('appInlineNotice');
+    if(!host){ host=document.createElement('div'); host.id='appInlineNotice'; host.className='app-inline-notice'; document.body.appendChild(host); }
+    host.className='app-inline-notice show '+(type||'info'); host.innerHTML=`<span>${esc(message)}</span><button type="button" aria-label="Cerrar" onclick="this.parentElement.classList.remove('show')">×</button>`;
+    clearTimeout(showNotice._timer); showNotice._timer=setTimeout(()=>host.classList.remove('show'),5200);
+  }
 
   function renderFooter() {
     return `<footer class="app-footer">Demo funcional EDD Inter-Con — FOR-CAP-003 Rev. 4 · Datos simulados almacenados localmente en este navegador.</footer>`;
@@ -695,9 +707,9 @@
         <div class="premium-login-brand-panel">
           <div class="premium-login-overlay"></div>
           <div class="premium-login-brand-content">
-            <img class="premium-login-logo" src="assets/ic-seguridad-privada.png" alt="IC Seguridad Privada" />
+            <img class="premium-login-logo" src="assets/logo-ic-blanco-horizontal.png" alt="IC Seguridad Privada" />
             <div class="premium-login-kicker">Plataforma corporativa</div>
-            <h1>Evaluación de Desempeño<br>Administrativo</h1>
+            <h1>Evaluación de Desempeño</h1>
             <p>Una experiencia simple, segura y confidencial para impulsar tu desarrollo dentro de Inter-Con.</p>
           </div>
           <div class="premium-login-trust">
@@ -709,7 +721,7 @@
         <div class="premium-login-form-panel">
           <div class="premium-login-form-wrap">
             <div class="premium-login-lang">${languageSwitcher(false)}</div>
-            <div class="premium-login-mobile-logo"><img src="assets/ic-seguridad-privada.png" alt="IC Seguridad Privada" /></div>
+            <div class="premium-login-mobile-logo"><img src="assets/logo-ic-blanco-horizontal.png" alt="IC Seguridad Privada" /></div>
             <div class="premium-login-step">${L.paso === 'validar' ? 'Verificación de identidad' : 'Bienvenido(a)'}</div>
             <h2>${L.paso === 'validar' ? 'Ingresa tu código de acceso' : 'Inicia sesión'}</h2>
             <p class="premium-login-description">${L.paso === 'validar' ? 'Revisa tu correo corporativo y captura el código temporal de 6 dígitos.' : 'Utiliza tu número de empleado para acceder a tu evaluación.'}</p>
@@ -803,7 +815,7 @@
     <section class="welcome-page">
       <div class="welcome-hero">
         <div class="welcome-hero-copy">
-          <div class="welcome-eyebrow">Evaluación de Desempeño Administrativo</div>
+          <div class="welcome-eyebrow">Evaluación de Desempeño</div>
           <h1>¡Bienvenida, ${primerNombre}! <span class="welcome-wave">👋</span></h1>
           <p class="welcome-lead">Esta evaluación nos ayuda a conocer tu desempeño, reconocer tus fortalezas e identificar oportunidades de desarrollo que impulsen tu crecimiento dentro de Inter-Con.</p>
 
@@ -874,7 +886,6 @@
             <span><i class="dot-blue"></i>Valores y Actitud <b>40%</b></span>
             <span><i class="dot-purple"></i>Conocimientos y Habilidades Técnicas <b>30%</b></span>
             <span><i class="dot-green"></i>Cumplimiento de Objetivos <b>30%</b></span>
-            <span><i class="dot-yellow"></i></span>
           </div>
         </article>
       </div>
@@ -916,7 +927,7 @@
     if (estado === D.ESTADOS.NO_INICIADA || estado === D.ESTADOS.EN_PROGRESO) {
       accion = `<a class="btn btn-primary" href="#/${estado === D.ESTADOS.NO_INICIADA ? 'colaborador/bienvenida' : 'colaborador/autoevaluacion'}">${estado === D.ESTADOS.NO_INICIADA ? 'Iniciar autoevaluación' : 'Continuar autoevaluación'}</a>`;
     } else if (estado === D.ESTADOS.RETRO_PENDIENTE || estado === D.ESTADOS.CERRADA) {
-      accion = `<a class="btn btn-primary" href="#/colaborador/retroalimentacion">Ver retroalimentación</a>`;
+      accion = `<a class="btn btn-primary" href="#/colaborador/retroalimentacion">Conocer mi retroalimentación</a>`;
     } else {
       accion = `<p class="muted">Tu autoevaluación fue enviada. El proceso continúa con la evaluación de tu líder y la calibración de RH.</p>`;
     }
@@ -943,6 +954,11 @@
   }
 
   const SECCIONES_WIZARD = ['actitud', 'habilidades', 'objetivos', 'resumen'];
+  const HERRAMIENTAS_B2 = [
+    ['excel','Excel'],['office','Word y PowerPoint'],['outlook','Outlook'],['teams','Teams / SharePoint / OneDrive'],
+    ['concur','Concur'],['internos','Sistemas internos de Inter-Con'],['portales','Portales de clientes / CFDI'],
+    ['analisis','Power BI / herramientas de análisis'],['ia','Manejo de IA']
+  ];
 
   function viewAutoevaluacion(col, periodoId, estado) {
     const ev = ensureWizard(col, periodoId);
@@ -1026,7 +1042,7 @@
       { n: 1, label: 'No cumple' }
     ];
     return `<div class="premium-scale-card" aria-label="Escala de evaluación permanente">
-      <div class="premium-scale-title"><strong>Escala de evaluación</strong><span>Siempre visible</span></div>
+      <div class="premium-scale-title"><strong>Escala de evaluación</strong></div>
       <div class="premium-scale-list">${rows.map((r) => `<div class="premium-scale-row"><span class="premium-scale-stars">${'★'.repeat(r.n)}${'☆'.repeat(5-r.n)}</span><span><b>${r.n}</b> ${r.label}</span></div>`).join('')}</div>
       <div class="premium-scale-na"><b>N/A</b><span>No aplica o no hay elementos suficientes.</span></div>
     </div>`;
@@ -1063,18 +1079,25 @@
     const comentario = respuesta ? respuesta.comentario : '';
     const groupName = 'rate_' + evaluacionId + '_' + c.id;
     const onchangeJs = `App.rate('${evaluacionId}','${seccion}','${c.id}',this.value)`;
+    const esHerramientas = c.id === 'B2';
+    const tools = esHerramientas ? S.getHerramientasEvaluacion(evaluacionId) : {};
+    const toolValues = esHerramientas ? HERRAMIENTAS_B2.map(([id]) => tools[id]).filter(v => v !== undefined && v !== '' && v !== null && v !== 'N/A').map(Number).filter(Number.isFinite) : [];
+    const toolAvg = toolValues.length ? C.round1(toolValues.reduce((a,b)=>a+b,0)/toolValues.length) : null;
     return `
     <div class="competency-card competency-card-fixed" data-competencia-id="${esc(c.id)}">
       <div class="competency-topline">
         <div class="competency-title-block"><strong>${esc(c.nombre)}</strong><span class="peso-tag">${c.peso}%</span></div>
         <div class="competency-rate competency-rate-fixed">
-          <label>Calificación</label>
-          ${ratingWidget(groupName, valor, onchangeJs, soloLectura, false)}
+          <label>${esHerramientas ? 'Promedio de herramientas' : 'Calificación'}</label>
+          ${esHerramientas ? `<div class="tools-average ${toolAvg===null?'empty':''}"><strong>${toolAvg===null?'—':f1(toolAvg)}</strong><span>/ 5</span><small>${toolValues.length} herramienta${toolValues.length===1?'':'s'} evaluada${toolValues.length===1?'':'s'}</small></div>` : ratingWidget(groupName, valor, onchangeJs, soloLectura, false)}
         </div>
       </div>
-      <ul class="conductas conductas-below">${c.conductas.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
-      ${c.id === 'B2' ? `<details class="tools-reference"><summary>Cuadro de apoyo — herramientas y sistemas de uso general</summary><div class="tools-reference-grid"><span>Excel</span><span>Word y PowerPoint</span><span>Outlook</span><span>Teams / SharePoint / OneDrive</span><span>Concur</span><span>Sistemas internos de Inter-Con</span><span>Portales de clientes / CFDI</span><span>Power BI u otra herramienta autorizada</span></div><small>Evalúa únicamente las herramientas que apliquen al puesto; usa N/A en las demás.</small></details>` : ''}
-      ${!soloLectura ? `<div class="validation-message" aria-live="polite">Selecciona una calificación para continuar.</div><textarea class="comentario-box" placeholder="Comentario (opcional)" onchange="App.comentar('${evaluacionId}','${seccion}','${c.id}',this.value)">${esc(comentario)}</textarea>` : (comentario ? `<div class="comentario-lectura">${esc(comentario)}</div>` : '')}
+      ${esHerramientas ? `<p class="tools-intro">Califica únicamente las herramientas que aplican a tu puesto. Usa N/A cuando no corresponda. El promedio se calcula automáticamente.</p>
+        <div class="tools-rating-grid">${HERRAMIENTAS_B2.map(([id,nombre]) => {
+          const g='tool_'+evaluacionId+'_'+id; const v=tools[id]??''; const change=`App.rateHerramienta('${evaluacionId}','${seccion}','${id}',this.value)`;
+          return `<div class="tool-rating-row"><div><strong>${esc(nombre)}</strong></div>${ratingWidget(g,v,change,soloLectura,true)}</div>`;
+        }).join('')}</div>` : `<ul class="conductas conductas-below">${c.conductas.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`}
+      ${!soloLectura ? `<div class="validation-message" aria-live="polite">${esHerramientas?'Califica al menos una herramienta aplicable para continuar.':'Selecciona una calificación para continuar.'}</div><textarea class="comentario-box" placeholder="Comentario (opcional)" onchange="App.comentar('${evaluacionId}','${seccion}','${c.id}',this.value)">${esc(comentario)}</textarea>` : (comentario ? `<div class="comentario-lectura">${esc(comentario)}</div>` : '')}
     </div>`;
   }
 
@@ -1317,17 +1340,17 @@
         <div class="kpi-guide-wide-copy">
           <div class="smart-guide-badge">OBJETIVOS DEL PERIODO · 30%</div>
           <h3>Antes de capturar, revisa cómo se califican tus objetivos</h3>
-          <p>Registra hasta cinco objetivos acordados al inicio del periodo con su meta o indicador, resultado alcanzado y porcentaje de cumplimiento.</p>
+          <p>Registra hasta cinco objetivos. Captura qué meta se acordó, cuál fue el resultado final y el porcentaje de cumplimiento respecto a esa meta.</p>
           <div class="kpi-equivalence-inline">
             <span><b>5 ★</b> 110% o más</span><span><b>4 ★</b> 100–109%</span><span><b>3 ★</b> 90–99%</span><span><b>2 ★</b> 75–89%</span><span><b>1 ★</b> &lt;75%</span>
           </div>
-          <small>Si un objetivo no es cuantificable, la calificación puede asignarse con evidencia documentada.</small>
+          
         </div>
         <button type="button" class="btn ${comprendido ? 'btn-ack-done' : 'btn-primary'} kpi-understand-btn" onclick="App.comprenderObjetivos('${ev.id}')" ${comprendido ? 'disabled' : ''}>${comprendido ? '✓ Comprendido' : 'Comprendo lo que dice'}</button>
       </section>
       <section class="smart-capture-panel kpi-capture-full ${comprendido ? '' : 'kpi-capture-locked'}" aria-disabled="${comprendido ? 'false' : 'true'}">
         <div class="smart-capture-head">
-          <div><span class="smart-capture-kicker">CUMPLIMIENTO DE OBJETIVOS · 30%</span><h3>Captura tus objetivos</h3><p>Objetivo, meta o indicador, resultado, porcentaje de cumplimiento y calificación.</p></div>
+          <div><span class="smart-capture-kicker">CUMPLIMIENTO DE OBJETIVOS · 30%</span><h3>Captura tus objetivos</h3><p><b>Meta acordada</b> = lo que debías lograr · <b>Resultado alcanzado</b> = lo que realmente lograste · <b>% cumplimiento</b> = resultado comparado contra la meta. La calificación se asigna automáticamente.</p></div>
           <div class="smart-capture-chip">REV. 4</div>
         </div>
         ${comprendido ? '' : '<div class="kpi-lock-message">🔒 Confirma que comprendiste la guía superior para habilitar la captura.</div>'}
@@ -1338,25 +1361,19 @@
   }
 
   function renderObjetivoRow(evaluacionId, o, index, soloLecturaDescripcion, bloqueado) {
-    const groupName = 'obj_' + evaluacionId + '_' + index;
-    const onchangeJs = `App.editarObjetivoKPI('${evaluacionId}',${index},'calificacion',this.value)`;
-    const cumplimiento = o.cumplimiento ?? '';
-    const autoScore = C.calificacionPorCumplimiento(cumplimiento);
-    const disabled = !!soloLecturaDescripcion || !!bloqueado;
-    return `
-    <div class="objetivo-row smart-objective kpi-objective ${disabled ? 'objective-disabled' : ''}" data-idx="${index}">
-      <div class="smart-objective-head">
-        <div class="objetivo-num">#${index + 1}</div>
-        <button class="smart-remove-objective" type="button" ${disabled ? 'disabled' : ''} onclick="App.quitarObjetivo('${evaluacionId}',${index})" aria-label="Quitar objetivo ${index + 1}" title="Quitar objetivo">× <span>Quitar</span></button>
-      </div>
+    const calif = o.calificacion || '';
+    return `<div class="objetivo-row kpi-objective-row ${bloqueado ? 'is-locked' : ''}" data-idx="${index}">
+      <div class="objetivo-num">#${index + 1}</div>
+      <button class="btn btn-outline btn-sm btn-remove-objective" ${bloqueado ? 'bloqueado' : ''} onclick="App.quitarObjetivo('${evaluacionId}',${index})">× Quitar</button>
       <div class="objetivo-fields kpi-objective-fields">
-        <div class="smart-field smart-field-objective"><label>Objetivo</label><textarea placeholder="Describe el objetivo acordado para el periodo" ${disabled ? 'disabled' : ''} oninput="App.editarObjetivoKPI('${evaluacionId}',${index},'descripcion',this.value)">${esc(o.descripcion || '')}</textarea></div>
-        <div class="smart-field smart-field-meta"><label>Meta o indicador</label><input type="text" placeholder="Ej. 95% de cumplimiento / 25 contratos / ≤ 24 h" value="${esc(o.meta || '')}" ${disabled ? 'disabled' : ''} oninput="App.editarObjetivoKPI('${evaluacionId}',${index},'meta',this.value)"></div>
-        <div class="smart-field"><label>Resultado obtenido</label><textarea placeholder="Describe el resultado realmente alcanzado" ${disabled ? 'disabled' : ''} oninput="App.editarObjetivoKPI('${evaluacionId}',${index},'resultado',this.value)">${esc(o.resultado || '')}</textarea></div>
-        <div class="smart-field kpi-percent-field"><label>% de cumplimiento</label><input type="number" min="0" step="0.1" placeholder="Ej. 103" value="${esc(cumplimiento)}" ${disabled || o.noCuantificable ? 'disabled' : ''} onchange="App.editarObjetivoKPI('${evaluacionId}',${index},'cumplimiento',this.value)"><small>${autoScore ? `Equivale a ${autoScore} ★` : 'La calificación se calculará automáticamente.'}</small></div>
-        <label class="kpi-nonquant"><input type="checkbox" ${o.noCuantificable ? 'checked' : ''} ${disabled ? 'disabled' : ''} onchange="App.editarObjetivoKPI('${evaluacionId}',${index},'noCuantificable',this.checked)"> Objetivo no cuantificable; calificar con evidencia documentada.</label>
-        <div class="smart-field smart-rating-field"><label>Calificación (1-5 / N/A)</label>${ratingWidget(groupName, o.calificacion, onchangeJs, disabled, true)}<small class="objective-rating-help">Si capturas un porcentaje, esta calificación se asigna automáticamente con la tabla Rev. 4.</small></div>
-        <div class="validation-message" aria-live="polite">Completa objetivo, meta/indicador, resultado y una calificación válida.</div>
+        <div class="form-group kpi-objective-main"><label>Objetivo</label><textarea ${bloqueado||soloLecturaDescripcion?'bloqueado':''} placeholder="Describe el objetivo acordado para el periodo" onchange="App.editarObjetivoKPI('${evaluacionId}',${index},'descripcion',this.value)">${esc(o.descripcion || '')}</textarea></div>
+        <div class="kpi-objective-grid">
+          <div class="form-group"><label>Meta acordada <small>¿Qué debía lograrse?</small></label><input ${bloqueado?'bloqueado':''} type="text" value="${esc(o.meta || '')}" placeholder="Ej. Alcanzar 95% de cumplimiento" onchange="App.editarObjetivoKPI('${evaluacionId}',${index},'meta',this.value)"/></div>
+          <div class="form-group"><label>Resultado alcanzado <small>¿Qué se logró al cierre?</small></label><input ${bloqueado?'bloqueado':''} type="text" value="${esc(o.resultado || '')}" placeholder="Ej. Se alcanzó 98% de cumplimiento" onchange="App.editarObjetivoKPI('${evaluacionId}',${index},'resultado',this.value)"/></div>
+          <div class="form-group"><label>% de cumplimiento <small>Resultado vs. meta</small></label><input ${bloqueado?'bloqueado':''} type="number" min="0" step="1" value="${esc(o.cumplimiento ?? '')}" placeholder="Ej. 103" onchange="App.editarObjetivoKPI('${evaluacionId}',${index},'cumplimiento',this.value)"/><small class="kpi-auto-note">La calificación se calcula automáticamente.</small></div>
+          <div class="form-group kpi-auto-rating"><label>Calificación automática</label><div class="auto-rating-display">${calif ? `<strong>${esc(calif)}</strong><span>${'★'.repeat(Number(calif)||0)}${'☆'.repeat(Math.max(0,5-(Number(calif)||0)))}</span>` : '<strong>—</strong><span>Sin cálculo</span>'}</div></div>
+        </div>
+        <div class="validation-message" aria-live="polite">Completa objetivo, meta, resultado y porcentaje de cumplimiento.</div>
       </div>
     </div>`;
   }
@@ -1369,11 +1386,11 @@
     ${secciones.map((s) => {
       const resp = S.getRespuestasPorSeccion(ev.id)[s];
       const map = {}; resp.forEach((r) => map[r.competenciaId] = r.valor);
-      return `<div class="resumen-seccion"><h4>${labelSeccion(s)}</h4><table class="table table-compact"><tbody>
+      return `<div class="resumen-seccion resumen-seccion-${s}"><h4>${labelSeccion(s)}</h4><table class="table table-compact"><tbody>
         ${D.COMPETENCIAS[s].map((c) => `<tr><td>${esc(c.nombre)}</td><td class="text-right">${map[c.id] !== undefined ? esc(map[c.id]) : '<span class="muted">Sin responder</span>'}</td></tr>`).join('')}
       </tbody></table></div>`;
     }).join('')}
-    <div class="resumen-seccion"><h4>C. Cumplimiento de Objetivos</h4>
+    <div class="resumen-seccion resumen-seccion-objetivos"><h4>C. Cumplimiento de Objetivos</h4>
       ${objetivos.length ? `<table class="table table-compact"><thead><tr><th>Objetivo</th><th>Meta</th><th>Resultado</th><th>%</th><th>Calif.</th></tr></thead><tbody>${objetivos.map((o) => `<tr><td>${esc(o.descripcion)}</td><td>${esc(o.meta || '—')}</td><td>${esc(o.resultado || '—')}</td><td>${esc(o.cumplimiento === '' || o.cumplimiento == null ? '—' : o.cumplimiento + '%')}</td><td class="text-right">${esc(o.calificacion)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">No se registraron objetivos.</p>'}
     </div>
     <div class="form-group resumen-comments"><label>Comentarios u observaciones del colaborador</label><textarea placeholder="Agrega contexto adicional si lo consideras necesario. Si más de la mitad de una sección quedó en N/A, justifica aquí." onchange="App.setComentarios('${ev.id}',this.value)">${esc(ev.comentarios || '')}</textarea></div>`;
@@ -1458,26 +1475,27 @@
       <h3>Resultados por sección</h3>
       <div class="seccion-cards">${seccionesCards}</div>
 
-      <div class="two-col">
+      <div class="feedback-top-grid">
+        <div><h3>Matriz 9-Box</h3>${ninaBoxHtml}</div>
+        <div class="feedback-group-card"><span class="admin-section-kicker">TU CLASIFICACIÓN</span>${renderCuadranteInfo(cuad)}</div>
+      </div>
+      <div class="feedback-analysis-grid">
         <div><h3>Radar comparativo</h3>${radarHtml}</div>
-        <div><h3>Matriz 9-Box (tu ubicación)</h3>${ninaBoxHtml}</div>
+        <div><h3>Comparativo por sección</h3><table class="table table-compact"><thead><tr><th>Sección</th><th>Autoeval.</th><th>Líder</th><th>Calibrado*</th></tr></thead><tbody>${['actitud','habilidades','objetivos'].map(s=>`<tr><td>${esc(D.SECCIONES_META[s].titulo)}</td><td>${f1(resAuto?.promedios?.[s])}</td><td>${f1(resLider?.promedios?.[s])}</td><td>${f1(resLider?.promedios?.[s])}</td></tr>`).join('')}</tbody></table><small class="muted">* La calibración ajusta el resultado global; esta vista mantiene la forma de la evaluación del líder como referencia.</small></div>
       </div>
 
-      <h3>Fortalezas</h3><p>${esc(liderEval ? liderEval.fortalezas : '') || '<span class="muted">Sin registrar.</span>'}</p>
-      <h3>Áreas de oportunidad y plan de mejora</h3>
-      ${areas.length ? `<table class="table"><thead><tr><th>Área de oportunidad</th><th>Plan de mejora</th></tr></thead><tbody>${areas.map((a) => `<tr><td>${esc(a.area)}</td><td>${esc(a.planMejora)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">Sin áreas registradas.</p>'}
-      <h3>Plan de desarrollo</h3>
-      ${renderPlanesTabla(planes)}
-      <h3>Cronograma de seguimiento (6 semanas)</h3>
-      ${acciones.length ? renderGantt(acciones) : '<p class="muted">Aún no se genera cronograma.</p>'}
-      <h3>Comentarios del líder</h3><p>${esc(liderEval ? liderEval.comentarios : '') || '<span class="muted">Sin comentarios.</span>'}</p>
-      <h3>Observaciones de RH</h3><p>${esc(cal ? cal.observacionesRH : '') || '<span class="muted">Sin observaciones registradas.</span>'}</p>
-      <h3>Evidencias</h3>
-      <ul class="evidencias-list">${evidencias.map((e) => `<li>${esc(e.nombreArchivo)} <span class="muted">(${esc(e.tipo)}, ${esc(e.fecha)}, ${esc(e.usuario)})</span></li>`).join('') || '<li class="muted">Sin evidencias cargadas.</li>'}</ul>
-      <div class="actions">
-        <button class="btn btn-outline" onclick="App.cargarEvidencia('${col.empleado}','${periodoId}')">Simular carga de evidencia</button>
-        ${estado === D.ESTADOS.RETRO_PENDIENTE ? `<button class="btn btn-primary" ${evidencias.length ? '' : 'disabled title="Carga al menos una evidencia antes de aceptar"'} onclick="App.aceptar('${col.empleado}','${periodoId}')">Aceptar resultado</button>` : badge('Resultado aceptado el ' + (cal ? cal.fechaAceptacion : ''), 'green')}
-      </div>
+      <section class="feedback-agreements"><div class="feedback-section-title"><span>ACUERDOS DE RETROALIMENTACIÓN</span><h3>Lo acordado para tu desarrollo</h3></div>
+        <div class="agreement-grid">
+          <article><h4>Fortalezas</h4><p>${esc(liderEval ? liderEval.fortalezas : '') || '<span class="muted">Sin registrar.</span>'}</p></article>
+          <article><h4>Comentarios del líder</h4><p>${esc(liderEval ? liderEval.comentarios : '') || '<span class="muted">Sin comentarios.</span>'}</p></article>
+          <article class="span-2"><h4>Áreas de oportunidad y plan de mejora</h4>${areas.length ? `<table class="table table-compact"><thead><tr><th>Área de oportunidad</th><th>Plan de mejora</th></tr></thead><tbody>${areas.map(a=>`<tr><td>${esc(a.area)}</td><td>${esc(a.planMejora)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">No aplica.</p>'}</article>
+          <article class="span-2"><h4>Plan de desarrollo</h4>${planes.length ? renderPlanesTabla(planes) : '<p class="muted">No aplica.</p>'}</article>
+          ${cal && cal.observacionesRH ? `<article class="span-2"><h4>Observaciones de RH</h4><p>${esc(cal.observacionesRH)}</p></article>` : ''}
+        </div>
+      </section>
+      <section class="feedback-acceptance-card ${cal&&cal.acuerdosLiberados?'ready':'locked'}"><div><span class="admin-section-kicker">CIERRE DEL PROCESO</span><h3>Confirmación de retroalimentación y plan de desarrollo</h3>${cal&&cal.acuerdosLiberados?'<p>Tu líder confirmó la reunión y liberó los acuerdos finales. Revisa la información anterior antes de aceptar.</p>':'<p>Tu aceptación se habilitará después de la reunión con tu líder y cuando los acuerdos finales sean liberados.</p>'}</div>
+        ${estado===D.ESTADOS.RETRO_PENDIENTE ? `<label class="confirm-check feedback-sign"><input id="confirmAceptacionRetro" type="checkbox" ${cal&&cal.acuerdosLiberados?'':'disabled'}/> Confirmo que recibí la retroalimentación, revisé los acuerdos y conozco el plan de desarrollo definido.</label><button class="btn btn-primary" ${cal&&cal.acuerdosLiberados?'':'disabled'} onclick="App.aceptar('${col.empleado}','${periodoId}')">Aceptar y cerrar retroalimentación ✓</button>` : `<div class="feedback-signed">✓ Retroalimentación aceptada el ${esc(cal?.fechaAceptacion||'')}</div>`}
+      </section>
     </div>`;
   }
 
@@ -1640,25 +1658,18 @@
     const mapLider = {}; objetivosLider.forEach((o) => { mapLider[Number(o.index)] = o; });
     if (!objetivosAuto.length) return '<p class="muted">El colaborador no registró objetivos en este periodo.</p>';
     return `
-    <p class="muted">Revisa la evidencia y califica cada objetivo del colaborador. Cuando exista porcentaje de cumplimiento, utiliza la equivalencia oficial Rev. 4.</p>
+    <div class="kpi-leader-note">La calificación de objetivos se determina automáticamente a partir del porcentaje de cumplimiento registrado. El líder revisa meta y resultado, pero no modifica la equivalencia.</div>
     ${objetivosAuto.map((o, i) => {
-      // Conservamos el índice REAL del objetivo de la autoevaluación. Si el colaborador
-      // quitó un objetivo, los índices pueden no ser consecutivos (ej. 0, 2, 3).
-      // Usar el índice visual (i) hacía que el líder guardara/calificara otro registro y
-      // la validación impedía continuar aunque todas las estrellas estuvieran marcadas.
       const sourceIndex = Number(o.index);
-      const calif = mapLider[sourceIndex] ? mapLider[sourceIndex].calificacion : '';
-      const groupName = 'objl_' + ev.id + '_' + sourceIndex;
-      const onchangeJs = `App.editarObjetivoLider('${ev.id}',${sourceIndex},this.value)`;
-      return `<div class="objetivo-row" data-idx="${sourceIndex}">
-        <div class="objetivo-num">#${i + 1}</div>
-        <div class="objetivo-fields">
-          <div class="objetivo-lectura"><strong>Objetivo:</strong> ${esc(o.descripcion)}</div>
-          <div class="objetivo-lectura"><strong>Meta / indicador:</strong> ${esc(o.meta || '—')}</div><div class="objetivo-lectura"><strong>Resultado:</strong> ${esc(o.resultado)}</div><div class="objetivo-lectura"><strong>% cumplimiento:</strong> ${esc(o.cumplimiento === '' || o.cumplimiento == null ? '—' : o.cumplimiento + '%')}</div>
-          ${ratingWidget(groupName, calif, onchangeJs, false, true)}
-          <div class="validation-message" aria-live="polite">Selecciona una calificación para continuar.</div>
-        </div>
-      </div>`;
+      const calif = o.calificacion || '';
+      const actual = mapLider[sourceIndex];
+      if (!actual || String(actual.calificacion)!==String(calif)) {
+        S.saveObjetivo(ev.id, sourceIndex, o.descripcion||'', o.resultado||'', calif, {meta:o.meta||'', cumplimiento:o.cumplimiento??'', noCuantificable:false});
+      }
+      return `<div class="objetivo-row" data-idx="${sourceIndex}"><div class="objetivo-num">#${i+1}</div><div class="objetivo-fields">
+        <div class="objetivo-lectura"><strong>Objetivo:</strong> ${esc(o.descripcion)}</div>
+        <div class="kpi-leader-grid"><div class="objetivo-lectura"><strong>Meta acordada:</strong> ${esc(o.meta||'—')}</div><div class="objetivo-lectura"><strong>Resultado alcanzado:</strong> ${esc(o.resultado||'—')}</div><div class="objetivo-lectura"><strong>% cumplimiento:</strong> ${esc(o.cumplimiento===''||o.cumplimiento==null?'—':o.cumplimiento+'%')}</div><div class="objetivo-lectura"><strong>Calificación:</strong> <span class="readonly-rating">${esc(calif||'—')} ${calif?'★'.repeat(Number(calif)||0):''}</span></div></div>
+      </div></div>`;
     }).join('')}`;
   }
 
@@ -1667,28 +1678,25 @@
     <p class="muted">Registra retroalimentación cualitativa. Estos campos se mostrarán al colaborador cuando RH habilite la fase de retroalimentación.</p>
     <div class="form-group"><label>Fortalezas del colaborador</label><textarea onchange="App.setFortalezas('${ev.id}',this.value)">${esc(ev.fortalezas)}</textarea></div>
     <div class="form-group"><label>Comentarios generales</label><textarea onchange="App.setComentarios('${ev.id}',this.value)">${esc(ev.comentarios)}</textarea></div>
-    <h4>Áreas de oportunidad y plan de mejora</h4>
-    <div id="areasWrap">${renderAreasEditable(col.empleado, state.periodo.id)}</div>
-    <button class="btn btn-outline btn-sm" onclick="App.agregarAreaOportunidad('${col.empleado}')">+ Agregar área de oportunidad</button>
-    <h4>Plan de desarrollo</h4>
-    <div id="planesWrap">${renderPlanesEditable(col.empleado, state.periodo.id, col.liderId)}</div>
-    <button class="btn btn-outline btn-sm" onclick="App.agregarPlanDesarrollo('${col.empleado}','${col.liderId}')">+ Agregar acción de desarrollo</button>
-    `;
+    <section class="leader-agreement-block"><div class="leader-block-head"><div><span>ACUERDOS</span><h4>Áreas de oportunidad y plan de mejora</h4></div><button class="btn btn-outline btn-sm" onclick="App.mostrarNuevaArea('${col.empleado}')">+ Agregar</button></div>
+      <div id="nuevaArea-${col.empleado}" class="inline-editor hidden"><div class="form-row"><div class="form-group"><label>Área de oportunidad</label><input id="areaNueva-${col.empleado}" placeholder="Describe el punto a desarrollar"/></div><div class="form-group"><label>Plan de mejora</label><input id="planNuevo-${col.empleado}" placeholder="Define la acción acordada"/></div></div><div class="inline-editor-actions"><button class="btn btn-primary btn-sm" onclick="App.guardarNuevaArea('${col.empleado}')">Guardar</button><button class="btn btn-outline btn-sm" onclick="App.ocultarNuevaArea('${col.empleado}')">Cancelar</button></div></div>
+      <div id="areasWrap">${renderAreasEditable(col.empleado, state.periodo.id)}</div>
+    </section>
+    <section class="leader-agreement-block"><div class="leader-block-head"><div><span>DESARROLLO</span><h4>Plan de desarrollo</h4></div><button class="btn btn-outline btn-sm" onclick="App.mostrarNuevoPlan('${col.empleado}')">+ Agregar acción</button></div>
+      <div id="nuevoPlan-${col.empleado}" class="inline-editor hidden"><div class="form-row"><div class="form-group"><label>Competencia a desarrollar</label><input id="competenciaNueva-${col.empleado}" placeholder="Ej. Planeación y organización"/></div><div class="form-group"><label>Acción acordada</label><input id="accionNueva-${col.empleado}" placeholder="Ej. Revisión semanal de prioridades"/></div><div class="form-group"><label>Fecha compromiso</label><input id="fechaNueva-${col.empleado}" type="date" value="2026-09-01"/></div></div><div class="inline-editor-actions"><button class="btn btn-primary btn-sm" onclick="App.guardarNuevoPlan('${col.empleado}','${col.liderId}')">Guardar</button><button class="btn btn-outline btn-sm" onclick="App.ocultarNuevoPlan('${col.empleado}')">Cancelar</button></div></div>
+      <div id="planesWrap">${renderPlanesEditable(col.empleado, state.periodo.id, col.liderId)}</div>
+    </section>`;
   }
 
   function renderAreasEditable(colaboradorId, periodoId) {
     const areas = S.getAreasOportunidad(colaboradorId, periodoId);
     if (!areas.length) return '<p class="muted">Sin áreas registradas todavía.</p>';
-    return `<table class="table table-compact"><thead><tr><th>Área de oportunidad</th><th>Plan de mejora</th><th></th></tr></thead><tbody>
-      ${areas.map((a) => `<tr><td>${esc(a.area)}</td><td>${esc(a.planMejora)}</td><td><button class="btn btn-outline btn-sm" onclick="App.quitarAreaOportunidad('${a.id}','${colaboradorId}')">Quitar</button></td></tr>`).join('')}
-    </tbody></table>`;
+    return `<table class="table table-compact"><thead><tr><th>Área de oportunidad</th><th>Plan de mejora</th><th></th></tr></thead><tbody>${areas.map((a) => `<tr><td>${esc(a.area)}</td><td>${esc(a.planMejora)}</td><td><button class="btn btn-outline btn-sm" onclick="App.quitarAreaOportunidad('${a.id}','${colaboradorId}')">Quitar</button></td></tr>`).join('')}</tbody></table>`;
   }
   function renderPlanesEditable(colaboradorId, periodoId) {
     const planes = S.getPlanesDesarrollo(colaboradorId, periodoId);
     if (!planes.length) return '<p class="muted">Sin acciones registradas todavía.</p>';
-    return `<table class="table table-compact"><thead><tr><th>Competencia</th><th>Acción</th><th>Fecha</th><th>Estado</th><th></th></tr></thead><tbody>
-      ${planes.map((p) => `<tr><td>${esc(p.competencia)}</td><td>${esc(p.accion)}</td><td>${esc(p.fechaCompromiso)}</td><td>${badge(p.estado)}</td><td><button class="btn btn-outline btn-sm" onclick="App.quitarPlanDesarrollo('${p.id}','${colaboradorId}')">Quitar</button></td></tr>`).join('')}
-    </tbody></table>`;
+    return `<table class="table table-compact"><thead><tr><th>Competencia</th><th>Acción</th><th>Fecha</th><th>Estado</th><th></th></tr></thead><tbody>${planes.map((p) => `<tr><td>${esc(p.competencia)}</td><td>${esc(p.accion)}</td><td>${esc(p.fechaCompromiso)}</td><td>${badge(p.estado)}</td><td><button class="btn btn-outline btn-sm" onclick="App.quitarPlanDesarrollo('${p.id}','${colaboradorId}')">Quitar</button></td></tr>`).join('')}</tbody></table>`;
   }
 
   function viewComparacion(lider, colaboradorId, periodoId) {
@@ -1715,7 +1723,7 @@
     const objLider = S.getObjetivos(liderEval.id);
     const avgObjAuto = C.promedioValido(objAuto.map((o) => o.calificacion));
     const avgObjLider = C.promedioValido(objLider.map((o) => o.calificacion));
-    filas.push({ nombre: 'D. Cumplimiento de Objetivos (promedio)', auto: avgObjAuto !== null ? C.round1(avgObjAuto) : 'N/A', lider: avgObjLider !== null ? C.round1(avgObjLider) : 'N/A', comentarioLider: '', comentarioAuto: '' });
+    filas.push({ nombre: 'C. Cumplimiento de Objetivos (promedio)', auto: avgObjAuto !== null ? C.round1(avgObjAuto) : 'N/A', lider: avgObjLider !== null ? C.round1(avgObjLider) : 'N/A', comentarioLider: '', comentarioAuto: '' });
 
     const resAuto = S.getUltimoResultadoPorOrigen(colaboradorId, periodoId, 'autoevaluacion');
     const resLider = S.getUltimoResultadoPorOrigen(colaboradorId, periodoId, 'lider');
@@ -1761,6 +1769,7 @@
       <h3>Ubicación en la Matriz 9-Box</h3>
       ${ninaBoxHtml}
       <p class="muted">Estado actual del proceso: ${badge(estado)}. La calibración y liberación de retroalimentación las gestiona el administrador de RH.</p>
+      ${cal && cal.retroHabilitada ? `<section class="leader-release-card"><span class="admin-section-kicker">CIERRE DE RETROALIMENTACIÓN</span><h3>Reunión y acuerdos con el colaborador</h3><p>Después de realizar la reunión, confirma que revisaron juntos la retroalimentación. Puedes ajustar los planes antes de liberar la versión final para aceptación del colaborador.</p><label class="confirm-check"><input type="checkbox" ${cal.reunionLiderRealizada?'checked':''} onchange="App.confirmarReunionLider('${colaboradorId}','${periodoId}',this.checked)"/> Confirmo que ya realicé la reunión de retroalimentación con el colaborador.</label><div class="actions"><button class="btn btn-primary" ${cal.reunionLiderRealizada&&!cal.acuerdosLiberados?'':'disabled'} onclick="App.liberarAcuerdos('${colaboradorId}','${periodoId}')">${cal.acuerdosLiberados?'✓ Acuerdos liberados para aceptación':'Liberar acuerdos para aceptación'}</button></div></section>` : ''}
     </div>`;
   }
 
@@ -1930,7 +1939,7 @@
     const avancePorArea = areas.map((a) => {
       const arr = datos.filter((d) => d.c.area === a);
       const cerr = arr.filter((d) => d.estado === D.ESTADOS.CERRADA).length;
-      return { area: a, pct: arr.length ? pct((cerr / arr.length) * 100) : 0, total: arr.length };
+      return { area: a, pct: arr.length ? pct((cerr / arr.length) * 100) : 0, total: arr.length, completadas: cerr };
     });
 
     const nivelesCount = {};
@@ -1968,7 +1977,7 @@
         <article class="admin-panel admin-panel-wide">
           <div class="admin-panel-head"><div><span class="admin-section-kicker">COBERTURA</span><h2>Avance por área</h2></div><span class="admin-panel-note">Cierre del proceso</span></div>
           <div class="admin-area-progress">
-            ${avancePorArea.map((a) => `<div class="admin-area-row"><div><strong>${esc(a.area)}</strong><span>${a.total} colaboradores</span></div><div class="admin-area-track"><i style="width:${a.pct}%"></i></div><b>${a.pct}%</b></div>`).join('')}
+            ${avancePorArea.map((a) => `<div class="admin-area-row"><div><strong>${esc(a.area)}</strong><span>${a.completadas}/${a.total} completadas</span></div><div class="admin-area-track"><i style="width:${a.pct}%"></i></div><b>${a.pct}%</b></div>`).join('')}
           </div>
         </article>
 
@@ -2006,10 +2015,18 @@
       </article>
 
       <div class="admin-bottom-grid">
-        <article class="admin-panel"><div class="admin-panel-head"><div><span class="admin-section-kicker">PRIORIDAD</span><h2>Áreas con mayor rezago</h2></div></div><ol class="admin-ranking">${ranking.slice(0,6).map((r,i)=>`<li><span>${i+1}</span><div><strong>${esc(r.area)}</strong><small>${r.total} personas</small></div><b>${r.pct}%</b></li>`).join('')}</ol></article>
-        <article class="admin-panel"><div class="admin-panel-head"><div><span class="admin-section-kicker">ALERTAS</span><h2>Atención requerida</h2></div></div><div class="admin-alert-stack">${vencidas ? `<div class="admin-alert danger"><b>${vencidas}</b><span>autoevaluaciones vencidas</span></div>` : ''}${pendientesCal ? `<div class="admin-alert warning"><b>${pendientesCal}</b><span>evaluaciones esperando calibración</span></div>` : ''}${!vencidas&&!pendientesCal ? '<div class="admin-alert success"><b>✓</b><span>Sin alertas activas</span></div>' : ''}</div></article>
+        <article class="admin-panel"><div class="admin-panel-head"><div><span class="admin-section-kicker">PRIORIDAD</span><h2>Áreas con mayor rezago</h2></div></div><ol class="admin-ranking">${ranking.slice(0,6).map((r,i)=>`<li><span>${i+1}</span><div><strong>${esc(r.area)}</strong><small>${r.completadas}/${r.total} completadas</small></div><b>${r.pct}%</b></li>`).join('')}</ol></article>
+        <article class="admin-panel"><div class="admin-panel-head"><div><span class="admin-section-kicker">ALERTAS</span><h2>Atención requerida</h2></div></div><div class="admin-alert-stack">${vencidas ? `<button class="admin-alert danger" onclick="App.toggleAdminAlert('vencidas')"><b>${vencidas}</b><span>autoevaluaciones vencidas</span><i>Ver detalle →</i></button>${state.adminAlertOpen==='vencidas'?renderAdminAlertDetalle('vencidas',datos):''}` : ''}${pendientesCal ? `<button class="admin-alert warning" onclick="App.toggleAdminAlert('calibracion')"><b>${pendientesCal}</b><span>evaluaciones esperando calibración</span><i>Ver detalle →</i></button>${state.adminAlertOpen==='calibracion'?renderAdminAlertDetalle('calibracion',datos):''}` : ''}${!vencidas&&!pendientesCal ? '<div class="admin-alert success"><b>✓</b><span>Sin alertas activas</span></div>' : ''}</div></article>
       </div>
     </section>`;
+  }
+
+  function renderAdminAlertDetalle(tipo, datos) {
+    const rows = tipo === 'calibracion'
+      ? datos.filter(d => d.estado === D.ESTADOS.PENDIENTE_CALIBRACION)
+      : datos.filter(d => { const a=S.getEvaluacion(d.c.empleado,state.periodo.id,'autoevaluacion'); return (!a || a.estado!==D.ESTADOS.COMPLETADA) && esVencido(state.periodo.fechaLimiteAutoevaluacion); });
+    if (!rows.length) return '<div class="admin-alert-detail">Sin registros pendientes.</div>';
+    return `<div class="admin-alert-detail">${rows.map(d=>{const l=S.getLider(d.c.liderId);return `<div><strong>${esc(d.c.nombre)}</strong><span>${esc(d.c.area)} · Líder: ${esc(l?l.nombre:'—')}</span>${tipo==='calibracion'?`<a href="#/admin/calibracion/${d.c.empleado}">Revisar →</a>`:''}</div>`}).join('')}</div>`;
   }
 
   function viewCalibracionLista(periodoId) {
@@ -2059,6 +2076,8 @@
         <article class="admin-panel calibration-chart-card"><div class="admin-panel-head"><div><span class="admin-section-kicker">TALENTO</span><h2>Ubicación 9-Box</h2></div></div>${ninaBoxHtml}</article>
       </div>
 
+      <article class="admin-panel calibration-leader-context"><div class="admin-panel-head"><div><span class="admin-section-kicker">CONTEXTO DEL LÍDER</span><h2>Retroalimentación y acciones propuestas</h2></div></div><div class="leader-context-grid"><div><h4>Fortalezas</h4><p>${esc(S.getEvaluacion(colaboradorId,periodoId,'lider')?.fortalezas||'')||'<span class="muted">Sin registrar.</span>'}</p></div><div><h4>Comentarios del líder</h4><p>${esc(S.getEvaluacion(colaboradorId,periodoId,'lider')?.comentarios||'')||'<span class="muted">Sin comentarios.</span>'}</p></div></div><h4>Áreas de oportunidad y plan de mejora</h4>${S.getAreasOportunidad(colaboradorId,periodoId).length?`<table class="table table-compact"><tbody>${S.getAreasOportunidad(colaboradorId,periodoId).map(a=>`<tr><td><b>${esc(a.area)}</b></td><td>${esc(a.planMejora)}</td></tr>`).join('')}</tbody></table>`:'<p class="muted">Sin áreas registradas.</p>'}<h4>Plan de desarrollo</h4>${renderPlanesTabla(S.getPlanesDesarrollo(colaboradorId,periodoId))}</article>
+
       <div class="calibration-workspace-grid">
         <article class="admin-panel calibration-context-card">
           <div class="admin-panel-head"><div><span class="admin-section-kicker">CONTEXTO</span><h2>Alertas para RH</h2></div></div>
@@ -2076,7 +2095,7 @@
         </article>
       </div>
 
-      <article class="admin-panel calibration-history-card"><div class="admin-panel-head"><div><span class="admin-section-kicker">AUDITORÍA</span><h2>Trazabilidad de cambios</h2></div><span class="admin-panel-note">${(cal.historial||[]).length} movimientos</span></div><div class="admin-table-wrap"><table class="table table-compact admin-table"><thead><tr><th>Campo</th><th>Anterior</th><th>Nuevo</th><th>Motivo</th><th>Usuario</th><th>Fecha</th><th>Hora</th></tr></thead><tbody>${(cal.historial || []).slice().reverse().map((h) => `<tr><td>${esc(h.campo)}</td><td>${esc(JSON.stringify(h.valorAnterior))}</td><td>${esc(JSON.stringify(h.valorNuevo))}</td><td>${esc(h.motivo)}</td><td>${esc(h.usuario)}</td><td>${esc(h.fecha)}</td><td>${esc(h.hora)}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">Sin cambios registrados.</td></tr>'}</tbody></table></div></article>
+      <article class="admin-panel calibration-history-card"><div class="admin-panel-head"><div><span class="admin-section-kicker">ÚLTIMO CAMBIO</span><h2>Resumen de trazabilidad</h2></div><a href="#/admin/auditoria" class="admin-text-link">Ver auditoría completa →</a></div>${(cal.historial||[]).length?(()=>{const h=cal.historial[cal.historial.length-1];return `<div class="history-summary"><strong>${esc(h.campo)}</strong><span>${esc(h.motivo||'Actualización')}</span><small>${esc(h.usuario)} · ${esc(h.fecha)} ${esc(h.hora)}</small></div>`})():'<p class="muted">Sin cambios registrados.</p>'}</article>
     </section>`;
   }
 
@@ -2304,7 +2323,7 @@
         const seccion = seccionActual;
         const faltantes = validarSeccionVisual(ev.id, seccion);
         if (faltantes) {
-          alert(currentLang === 'en' ? `You cannot continue. You have ${faltantes} pending field${faltantes === 1 ? '' : 's'}. Review the fields marked in red.` : `No puedes continuar. Tienes ${faltantes} campo${faltantes === 1 ? '' : 's'} pendiente${faltantes === 1 ? '' : 's'}. Revisa lo marcado en rojo.`);
+          showNotice(currentLang === 'en' ? `You cannot continue. Review the fields marked in red.` : `No puedes continuar. Revisa los campos marcados en rojo.`,'warning');
           return;
         }
       }
@@ -2455,7 +2474,7 @@
       render();
     },
     enviarAutoevaluacion() {
-      if (!$('#confirmEnvioAuto').checked) { alert(t('Confirma que la información es correcta antes de enviar.')); return; }
+      if (!$('#confirmEnvioAuto').checked) { showNotice(t('Confirma que la información es correcta antes de enviar.'),'warning'); return; }
       const evaluacionId = state.wizard.evaluacionId;
       for (let i = 0; i < SECCIONES_WIZARD.length - 1; i++) {
         const sec = SECCIONES_WIZARD[i];
@@ -2466,17 +2485,17 @@
           state.wizard.seccionIdx = i; render();
           setTimeout(() => {
             const n = validarSeccionVisual(evaluacionId, sec);
-            alert(currentLang === 'en' ? `You cannot submit. You have ${n || 'some'} pending fields; review those marked in red.` : `No puedes enviar. Tienes ${n || 'campos'} pendientes; revisa lo marcado en rojo.`);
+            showNotice(currentLang === 'en' ? `You cannot submit. Review the fields marked in red.` : `No puedes enviar. Revisa los campos marcados en rojo.`,'warning');
           }, 0);
           return;
         }
       }
       const objetivos = S.getObjetivos(evaluacionId).filter((o) => o.descripcion && o.descripcion.trim());
-      if (!objetivos.length) { alert(t('Registra al menos un objetivo antes de enviar.')); return; }
+      if (!objetivos.length) { showNotice(t('Registra al menos un objetivo antes de enviar.'),'warning'); return; }
       const evActual = S.load().evaluaciones.find((e) => e.id === evaluacionId);
       if (requiereJustificacionNA(evaluacionId) && !(evActual && String(evActual.comentarios || '').trim())) {
         state.wizard.seccionIdx = SECCIONES_WIZARD.length - 1; render();
-        setTimeout(() => alert('Más de la mitad de una sección está marcada como N/A. Agrega una justificación en Comentarios u observaciones antes de enviar.'), 0);
+        setTimeout(() => showNotice('Más de la mitad de una sección está marcada como N/A. Agrega una justificación en Comentarios u observaciones antes de enviar.','warning'), 0);
         return;
       }
       S.completarEvaluacion(evaluacionId, state.user.nombre);
@@ -2501,23 +2520,16 @@
     setComentarios(evaluacionId, valor) {
       const db = S.load(); const ev = db.evaluaciones.find((e) => e.id === evaluacionId); if (ev) { ev.comentarios = valor; S.persist(); }
     },
-    agregarAreaOportunidad(colaboradorId) {
-      const area = prompt('Área de oportunidad:'); if (!area) return;
-      const plan = prompt('Plan de mejora:'); if (!plan) return;
-      S.addAreaOportunidad(colaboradorId, state.periodo.id, area, plan, state.user.nombre);
-      render();
-    },
+    mostrarNuevaArea(colaboradorId){ const el=document.getElementById('nuevaArea-'+colaboradorId); if(el) el.classList.remove('hidden'); },
+    ocultarNuevaArea(colaboradorId){ const el=document.getElementById('nuevaArea-'+colaboradorId); if(el) el.classList.add('hidden'); },
+    guardarNuevaArea(colaboradorId){ const a=document.getElementById('areaNueva-'+colaboradorId); const p=document.getElementById('planNuevo-'+colaboradorId); if(!a||!p||!a.value.trim()||!p.value.trim()){showNotice('Completa el área de oportunidad y el plan de mejora.','warning');return;} S.addAreaOportunidad(colaboradorId,state.periodo.id,a.value.trim(),p.value.trim(),state.user.nombre); render(); },
     quitarAreaOportunidad(id) { S.removeAreaOportunidad(id, state.user.nombre); render(); },
-    agregarPlanDesarrollo(colaboradorId, liderId) {
-      const competencia = prompt('Competencia a desarrollar:'); if (!competencia) return;
-      const accion = prompt('Acción:'); if (!accion) return;
-      const fecha = prompt('Fecha compromiso (AAAA-MM-DD):', '2026-09-01') || '2026-09-01';
-      S.addPlanDesarrollo(colaboradorId, state.periodo.id, { competencia, accion, responsable: liderId, fechaCompromiso: fecha }, state.user.nombre);
-      render();
-    },
+    mostrarNuevoPlan(colaboradorId){ const el=document.getElementById('nuevoPlan-'+colaboradorId); if(el) el.classList.remove('hidden'); },
+    ocultarNuevoPlan(colaboradorId){ const el=document.getElementById('nuevoPlan-'+colaboradorId); if(el) el.classList.add('hidden'); },
+    guardarNuevoPlan(colaboradorId,liderId){ const c=document.getElementById('competenciaNueva-'+colaboradorId),a=document.getElementById('accionNueva-'+colaboradorId),f=document.getElementById('fechaNueva-'+colaboradorId); if(!c||!a||!c.value.trim()||!a.value.trim()){showNotice('Completa la competencia y la acción de desarrollo.','warning');return;} S.addPlanDesarrollo(colaboradorId,state.periodo.id,{competencia:c.value.trim(),accion:a.value.trim(),responsable:liderId,fechaCompromiso:f&&f.value?f.value:'2026-09-01'},state.user.nombre); render(); },
     quitarPlanDesarrollo(id) { S.removePlanDesarrollo(id, state.user.nombre); render(); },
     enviarEvaluacionLider(colaboradorId) {
-      if (!$('#confirmEnvioLider').checked) { alert(t('Confirma que la evaluación está completa antes de enviar.')); return; }
+      if (!$('#confirmEnvioLider').checked) { showNotice(t('Confirma que la evaluación está completa antes de enviar.'),'warning'); return; }
       const evaluacionId = state.wizard.evaluacionId;
       for (let i = 0; i < SECCIONES_WIZARD.length - 1; i++) {
         const sec = SECCIONES_WIZARD[i];
@@ -2537,7 +2549,7 @@
           state.wizard.seccionIdx = i; render();
           setTimeout(() => {
             const n = validarSeccionVisual(evaluacionId, sec);
-            alert(currentLang === 'en' ? `You cannot submit. You have ${n || 'some'} pending fields; review those marked in red.` : `No puedes enviar. Tienes ${n || 'campos'} pendientes; revisa lo marcado en rojo.`);
+            showNotice(currentLang === 'en' ? `You cannot submit. Review the fields marked in red.` : `No puedes enviar. Revisa los campos marcados en rojo.`,'warning');
           }, 0);
           return;
         }
@@ -2545,25 +2557,22 @@
       const evActual = S.load().evaluaciones.find((e) => e.id === evaluacionId);
       if (requiereJustificacionNA(evaluacionId) && !(evActual && String(evActual.comentarios || '').trim())) {
         state.wizard.seccionIdx = SECCIONES_WIZARD.length - 1; render();
-        setTimeout(() => alert('Más de la mitad de una sección está marcada como N/A. Justifica el uso de N/A en Comentarios generales antes de enviar.'), 0);
+        setTimeout(() => showNotice('Más de la mitad de una sección está marcada como N/A. Justifica el uso de N/A en Comentarios generales antes de enviar.','warning'), 0);
         return;
       }
       S.completarEvaluacion(evaluacionId, state.user.nombre);
       navigate('#/lider/comparacion/' + colaboradorId);
     },
-    cargarEvidencia(colaboradorId, periodoId) {
-      const nombre = prompt('Nombre del archivo a cargar (simulado), ej. retroalimentacion_firmada.pdf:');
-      if (!nombre) return;
-      const tipo = prompt('Tipo (PDF firmado / Imagen / Documento de retroalimentación):', 'PDF firmado') || 'Documento';
-      S.addEvidencia(colaboradorId, periodoId, nombre, tipo, state.user.nombre, '');
-      render();
-    },
     aceptar(colaboradorId, periodoId) {
-      const evidencias = S.getEvidencias(colaboradorId, periodoId);
-      if (!evidencias.length) { alert(t('Carga al menos una evidencia antes de aceptar el resultado.')); return; }
-      S.aceptarResultado(colaboradorId, periodoId, state.user.nombre);
-      render();
+      const cal=S.getCalibracion(colaboradorId,periodoId); const chk=document.getElementById('confirmAceptacionRetro');
+      if(!cal||!cal.acuerdosLiberados){showNotice('Tu líder debe realizar la reunión y liberar los acuerdos finales antes de que puedas aceptar.','warning');return;}
+      if(!chk||!chk.checked){showNotice('Confirma que recibiste la retroalimentación y revisaste los acuerdos antes de cerrar.','warning');return;}
+      S.aceptarResultado(colaboradorId, periodoId, state.user.nombre); showNotice('Retroalimentación aceptada correctamente.','success'); render();
     },
+    rateHerramienta(evaluacionId,seccion,herramientaId,valor){ S.saveHerramientaEvaluacion(evaluacionId,herramientaId,valor); const vals=Object.values(S.getHerramientasEvaluacion(evaluacionId)).filter(v=>v!=='N/A'&&v!==''&&v!=null).map(Number).filter(Number.isFinite); const avg=vals.length?C.round1(vals.reduce((a,b)=>a+b,0)/vals.length):''; S.saveRespuesta(evaluacionId,seccion,'B2',avg,''); render(); },
+    confirmarReunionLider(colaboradorId,periodoId,checked){ S.crearOActualizarCalibracion(colaboradorId,periodoId,{reunionLiderRealizada:!!checked,fechaReunion:checked?new Date().toISOString():null,_motivo:'Confirmación de reunión de retroalimentación'},state.user.nombre); showNotice(checked?'Reunión marcada como realizada. Puedes ajustar acuerdos antes de liberarlos.':'Se retiró la confirmación de reunión.','info'); render(); },
+    liberarAcuerdos(colaboradorId,periodoId){ const cal=S.getCalibracion(colaboradorId,periodoId); if(!cal||!cal.reunionLiderRealizada){showNotice('Confirma primero que realizaste la reunión de retroalimentación.','warning');return;} S.crearOActualizarCalibracion(colaboradorId,periodoId,{acuerdosLiberados:true,fechaLiberacionAcuerdos:new Date().toISOString(),_motivo:'Líder libera acuerdos finales para aceptación'},state.user.nombre); showNotice('Acuerdos liberados. El colaborador ya puede revisarlos y aceptar.','success'); render(); },
+    toggleAdminAlert(tipo){ state.adminAlertOpen=state.adminAlertOpen===tipo?null:tipo; render(); },
     setFiltroAdmin(campo, valor) { state.adminFiltros[campo] = valor || undefined; render(); },
     limpiarFiltrosAdmin() { state.adminFiltros = {}; render(); },
     previewCalibracion(totalLider) {
@@ -2579,7 +2588,7 @@
     guardarCalibracion(colaboradorId, periodoId, totalLider) {
       const ajuste = parseFloat($('#calAjuste').value) || 0;
       const justificacion = $('#calJustificacion').value.trim();
-      if (ajuste !== 0 && !justificacion) { alert(t('La justificación es obligatoria cuando existe un ajuste distinto de 0.')); return; }
+      if (ajuste !== 0 && !justificacion) { showNotice(t('La justificación es obligatoria cuando existe un ajuste distinto de 0.'),'warning'); return; }
       const resultadoCalibrado = C.round1(Math.max(0, Math.min(100, totalLider + ajuste)));
       const resAuto = S.getUltimoResultadoPorOrigen(colaboradorId, periodoId, 'autoevaluacion');
       S.crearOActualizarCalibracion(colaboradorId, periodoId, {
@@ -2592,18 +2601,19 @@
         responsable: state.user.nombre,
         _motivo: justificacion || 'Calibración de RH'
       }, state.user.nombre);
-      alert(t('Calibración guardada.'));
+      showNotice(t('Calibración guardada.'),'success');
       render();
     },
     habilitarRetro(colaboradorId, periodoId) {
       const cal = S.getCalibracion(colaboradorId, periodoId);
-      if (!cal || cal.resultadoCalibrado === undefined) { alert(t('Guarda la calibración antes de habilitar la retroalimentación.')); return; }
+      if (!cal || cal.resultadoCalibrado === undefined) { showNotice(t('Guarda la calibración antes de habilitar la retroalimentación.'),'warning'); return; }
       if (cal.resultadoCalibrado < 80) {
         const planes = S.getPlanesDesarrollo(colaboradorId, periodoId);
-        if (!planes.length) { alert(t('El resultado es menor a 80. Registra al menos un plan de desarrollo antes de habilitar la retroalimentación.')); return; }
+        if (!planes.length) { showNotice(t('El resultado es menor a 80. Registra al menos un plan de desarrollo antes de habilitar la retroalimentación.'),'warning'); return; }
       }
-      S.habilitarRetroalimentacion(colaboradorId, periodoId, state.user.nombre);
-      alert(t('Retroalimentación habilitada para el colaborador.'));
+      S.crearOActualizarCalibracion(colaboradorId,periodoId,{retroHabilitada:true,notificacionRetroPendiente:true,fechaNotificacion:new Date().toISOString(),_motivo:'RH habilita fase de retroalimentación'},state.user.nombre);
+      console.log('[DEMO][EMAIL] Retroalimentación disponible', { colaboradorId, periodoId });
+      showNotice(t('Retroalimentación habilitada. La notificación queda marcada para envío por correo al integrar el backend.'),'success');
       render();
     },
     selNinebox(numero) { state.nineboxSel = numero; state.nineboxSelEmpleado = null; render(); },
@@ -2620,9 +2630,9 @@
     guardarConfigBrecha() {
       const alineadaMax = parseFloat($('#cfgAlineada').value);
       const revisarMax = parseFloat($('#cfgRevisar').value);
-      if (isNaN(alineadaMax) || isNaN(revisarMax) || alineadaMax >= revisarMax) { alert(t('Verifica que "Alineada" sea menor que "Revisar".')); return; }
+      if (isNaN(alineadaMax) || isNaN(revisarMax) || alineadaMax >= revisarMax) { showNotice(t('Verifica que "Alineada" sea menor que "Revisar".'),'warning'); return; }
       S.updateConfigBrecha({ alineadaMax, revisarMax }, state.user.nombre);
-      alert(t('Umbrales actualizados.'));
+      showNotice(t('Umbrales actualizados.'),'success');
       render();
     },
     reiniciarDemo() {

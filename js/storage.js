@@ -46,7 +46,7 @@
   // limpia. La SESIÓN (login) es independiente de esto: vive en
   // sessionStorage bajo APP_CONFIG.sessionStorageKey (ver auth.js), no en
   // esta clave de localStorage.
-  const STORAGE_KEY = 'edd_interconn_db_v5_demo_50_50';
+  const STORAGE_KEY = 'edd_interconn_db_v6_rev4_feedback';
   let _db = null; // caché en memoria
 
   // ===========================================================================
@@ -76,6 +76,7 @@
       areas_oportunidad: [],
       acciones: [],
       evidencias: [],
+      herramientas_evaluacion: {},
       auditoria: [],
       configuracion: {
         pesosSeccion: C.PESOS_SECCION,
@@ -471,7 +472,7 @@
     let cal = getCalibracion(colaboradorId, periodoId);
     const esNuevo = !cal;
     if (!cal) {
-      cal = { id: generarId('CAL'), colaboradorId: String(colaboradorId), periodoId, historial: [], retroHabilitada: false, aceptacionColaborador: false, fechaAceptacion: null };
+      cal = { id: generarId('CAL'), colaboradorId: String(colaboradorId), periodoId, historial: [], retroHabilitada: false, reunionLiderRealizada: false, acuerdosLiberados: false, aceptacionColaborador: false, fechaAceptacion: null };
       db.calibraciones.push(cal);
     }
     Object.keys(cambios).forEach((campo) => {
@@ -505,6 +506,9 @@
     addAudit(usuario, 'Cierre de evaluación', 'calibraciones', cal.id, false, true);
     return cal;
   }
+
+  function getHerramientasEvaluacion(evaluacionId) { const db=load(); return Object.assign({}, (db.herramientas_evaluacion||{})[evaluacionId] || {}); }
+  function saveHerramientaEvaluacion(evaluacionId, herramientaId, valor) { const db=load(); if(!db.herramientas_evaluacion) db.herramientas_evaluacion={}; if(!db.herramientas_evaluacion[evaluacionId]) db.herramientas_evaluacion[evaluacionId]={}; db.herramientas_evaluacion[evaluacionId][herramientaId]=valor; persist(); return db.herramientas_evaluacion[evaluacionId]; }
 
   // ===========================================================================
   // ÁREAS DE OPORTUNIDAD / PLAN DE DESARROLLO / ACCIONES / EVIDENCIAS
@@ -600,7 +604,7 @@
     getUsuario, getColaborador, getLider, getColaboradoresDeLider, getTodosColaboradores, getTodosLideres, getTodosAdministradores, getJerarquias, getPeriodoActivo,
     getEvaluacion, getOrCreateEvaluacion, getRespuestas, getRespuestasPorSeccion, saveRespuesta,
     getObjetivos, saveObjetivo, removeObjetivo, completarEvaluacion, getResultado, getUltimoResultadoPorOrigen,
-    estadoProceso, getCalibracion, crearOActualizarCalibracion, habilitarRetroalimentacion, aceptarResultado,
+    estadoProceso, getCalibracion, crearOActualizarCalibracion, habilitarRetroalimentacion, aceptarResultado, getHerramientasEvaluacion, saveHerramientaEvaluacion,
     getAreasOportunidad, addAreaOportunidad, removeAreaOportunidad,
     getPlanesDesarrollo, addPlanDesarrollo, updatePlanDesarrollo, removePlanDesarrollo,
     getAcciones, addAccion, updateAccion,
