@@ -879,18 +879,6 @@
         </article>
       </div>
 
-      <div class="welcome-scale">
-        <div class="welcome-scale-title">
-          <div class="welcome-scale-icon">▥</div>
-          <strong>Escala de<br>evaluación</strong>
-        </div>
-        <div class="welcome-scale-item score-5"><b>5</b><span><strong>Excede</strong> significativamente las expectativas.</span></div>
-        <div class="welcome-scale-item score-4"><b>4</b><span><strong>Supera</strong> las expectativas de manera constante.</span></div>
-        <div class="welcome-scale-item score-3"><b>3</b><span><strong>Cumple</strong> con lo esperado para su puesto.</span></div>
-        <div class="welcome-scale-item score-2"><b>2</b><span><strong>Cumple parcialmente;</strong> requiere mejorar.</span></div>
-        <div class="welcome-scale-item score-1"><b>1</b><span><strong>No cumple</strong> con las expectativas del puesto.</span></div>
-        <div class="welcome-scale-item score-na"><b>N/A</b><span>No aplica o no cuento con elementos suficientes para evaluarlo.</span></div>
-      </div>
 
       <div class="welcome-actions">
         <button class="btn welcome-start-btn" onclick="App.comenzarEvaluacion()">→&nbsp;&nbsp;${enProgreso ? 'Continuar mi evaluación' : 'Comenzar mi evaluación'}</button>

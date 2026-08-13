@@ -961,3 +961,18 @@ body{background:linear-gradient(180deg,#f8fbff 0,#f2f7fc 100%);color:var(--premi
 .kpi-capture-full{width:100%}.kpi-capture-locked{position:relative;background:#f4f6f8!important;border-color:#dfe5ea!important}.kpi-capture-locked .objetivo-row,.kpi-capture-locked .smart-capture-head{filter:grayscale(.25);opacity:.58}.kpi-lock-message{background:#e8edf2;color:#637587;border:1px dashed #c7d1dc;border-radius:10px;padding:11px 13px;margin:10px 0 14px;font-size:.73rem;font-weight:600}.objective-disabled textarea,.objective-disabled input{background:#edf1f5!important;color:#8391a0!important}.objective-disabled .star,.objective-disabled .na-pill{opacity:.6}.objective-disabled .smart-remove-objective{opacity:.45;cursor:not-allowed}
 
 @media (max-width: 900px){.competency-card-fixed .competency-topline{grid-template-columns:1fr}.competency-rate-fixed{width:auto;min-width:0}.kpi-guide-wide{grid-template-columns:1fr}.kpi-understand-btn{width:100%}}
+
+
+/* ===== Ajuste UX solicitado: bienvenida sin escala + guía de objetivos con contraste ===== */
+.kpi-guide-wide h3{color:#fff!important;}
+.kpi-guide-wide .smart-guide-badge{color:#fff!important;}
+.kpi-guide-wide-copy{color:#fff!important;}
+.kpi-understand-btn{
+  border:2px solid #fff!important;
+  box-shadow:0 0 0 1px rgba(255,255,255,.18),0 8px 20px rgba(0,0,0,.14);
+}
+.kpi-understand-btn:not(:disabled):hover{
+  border-color:#fff!important;
+  box-shadow:0 0 0 2px rgba(255,255,255,.22),0 10px 24px rgba(0,0,0,.18);
+}
+.kpi-guide-wide .btn-ack-done{border:2px solid #fff!important;}
