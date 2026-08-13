@@ -21,3 +21,5 @@ Base visual: `evaluacion-desempeno-mkt-imagenes.zip`.
 
 ## Nota técnica
 La clave interna `habilidades` se reutiliza para representar el bloque oficial B (Conocimientos y Habilidades Técnicas). La clave interna histórica `conocimientos` queda con peso 0 y fuera del wizard para mantener compatibilidad con datos/funciones existentes sin una migración destructiva.
+
+- UX solicitado 2026-08-13: escala permanente en estrellas en barra lateral, calificaciones alineadas en posición fija, guía de objetivos horizontal con confirmación obligatoria antes de habilitar captura; aplicado también al flujo del líder.

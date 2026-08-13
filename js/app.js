@@ -990,6 +990,7 @@
         <aside class="premium-evaluation-sidebar">
           ${sideSections}
           <div class="premium-reminder-card"><strong>Recordatorio</strong><p>Puedes guardar tu progreso en cualquier momento. Tu evaluación es confidencial.</p></div>
+          ${escalaSidebarHTML()}
         </aside>
         <div class="premium-evaluation-main">
           <div class="premium-evaluation-title">${seccion !== 'resumen' && D.SECCIONES_META[seccion] ? `<div class="premium-section-weight">Peso de la sección: <strong>${D.SECCIONES_META[seccion].peso}%</strong></div>` : ''}<span class="premium-section-kicker">${seccion === 'resumen' ? 'Revisión final' : 'Sección ' + (idx + 1) + ' de 3'}</span><h1>${labelSeccion(seccion)}</h1></div>
@@ -1023,7 +1024,24 @@
   }
 
   function escalaHelpInline() {
-    return `<details class="escala-details"><summary>Ver escala de evaluación</summary>${escalaHelpHTML()}</details>`;
+    // Rev.4 UX: la escala ya no se repite dentro de cada sección. Se mantiene
+    // siempre visible en la barra lateral para evitar ruido y desplazamientos.
+    return '';
+  }
+
+  function escalaSidebarHTML() {
+    const rows = [
+      { n: 5, label: 'Excede significativamente' },
+      { n: 4, label: 'Supera expectativas' },
+      { n: 3, label: 'Cumple lo esperado' },
+      { n: 2, label: 'Cumple parcialmente' },
+      { n: 1, label: 'No cumple' }
+    ];
+    return `<div class="premium-scale-card" aria-label="Escala de evaluación permanente">
+      <div class="premium-scale-title"><strong>Escala de evaluación</strong><span>Siempre visible</span></div>
+      <div class="premium-scale-list">${rows.map((r) => `<div class="premium-scale-row"><span class="premium-scale-stars">${'★'.repeat(r.n)}${'☆'.repeat(5-r.n)}</span><span><b>${r.n}</b> ${r.label}</span></div>`).join('')}</div>
+      <div class="premium-scale-na"><b>N/A</b><span>No aplica o no hay elementos suficientes.</span></div>
+    </div>`;
   }
 
   /**
@@ -1058,18 +1076,15 @@
     const groupName = 'rate_' + evaluacionId + '_' + c.id;
     const onchangeJs = `App.rate('${evaluacionId}','${seccion}','${c.id}',this.value)`;
     return `
-    <div class="competency-card" data-competencia-id="${esc(c.id)}">
-      <div class="competency-header">
-        <div>
-          <strong>${esc(c.nombre)}</strong>
-          <span class="peso-tag">${c.peso}%</span>
-          <ul class="conductas">${c.conductas.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
-        </div>
-        <div class="competency-rate">
+    <div class="competency-card competency-card-fixed" data-competencia-id="${esc(c.id)}">
+      <div class="competency-topline">
+        <div class="competency-title-block"><strong>${esc(c.nombre)}</strong><span class="peso-tag">${c.peso}%</span></div>
+        <div class="competency-rate competency-rate-fixed">
           <label>Calificación</label>
           ${ratingWidget(groupName, valor, onchangeJs, soloLectura, false)}
         </div>
       </div>
+      <ul class="conductas conductas-below">${c.conductas.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
       ${c.id === 'B2' ? `<details class="tools-reference"><summary>Cuadro de apoyo — herramientas y sistemas de uso general</summary><div class="tools-reference-grid"><span>Excel</span><span>Word y PowerPoint</span><span>Outlook</span><span>Teams / SharePoint / OneDrive</span><span>Concur</span><span>Sistemas internos de Inter-Con</span><span>Portales de clientes / CFDI</span><span>Power BI u otra herramienta autorizada</span></div><small>Evalúa únicamente las herramientas que apliquen al puesto; usa N/A en las demás.</small></details>` : ''}
       ${!soloLectura ? `<div class="validation-message" aria-live="polite">Selecciona una calificación para continuar.</div><textarea class="comentario-box" placeholder="Comentario (opcional)" onchange="App.comentar('${evaluacionId}','${seccion}','${c.id}',this.value)">${esc(comentario)}</textarea>` : (comentario ? `<div class="comentario-lectura">${esc(comentario)}</div>` : '')}
     </div>`;
@@ -1298,57 +1313,61 @@
     </div>`;
   }
 
+  function objectivesAckKey(evaluacionId) { return `edd_obj_ack_rev4_${evaluacionId}`; }
+  function objetivosComprendidos(evaluacionId) { return sessionStorage.getItem(objectivesAckKey(evaluacionId)) === '1'; }
+
   function renderObjetivosForm(ev, soloLecturaDescripcion) {
     const objetivos = S.getObjetivos(ev.id);
     const filas = [];
+    const comprendido = objetivosComprendidos(ev.id);
     for (let i = 0; i < Math.max(objetivos.length, 1); i++) {
       filas.push(objetivos[i] || { index: i, descripcion: '', meta: '', resultado: '', cumplimiento: '', noCuantificable: false, calificacion: '' });
     }
     return `
-    <div class="kpi-workspace">
-      <aside class="kpi-guide-panel" aria-label="Guía de objetivos del periodo">
-        <div class="smart-guide-badge">OBJETIVOS DEL PERIODO</div>
-        <h3>¿Qué debes registrar?</h3>
-        <p>Captura los objetivos que acordaste al inicio del periodo. Usa la meta o indicador conocido y registra el resultado realmente alcanzado.</p>
-        <div class="kpi-equivalence-card">
-          <strong>Equivalencia oficial Rev. 4</strong>
-          <div><span>110% o más</span><b>5 ★</b></div>
-          <div><span>100% a 109%</span><b>4 ★</b></div>
-          <div><span>90% a 99%</span><b>3 ★</b></div>
-          <div><span>75% a 89%</span><b>2 ★</b></div>
-          <div><span>Menor a 75%</span><b>1 ★</b></div>
+    <div class="kpi-workspace kpi-workspace-stacked">
+      <section class="kpi-guide-wide ${comprendido ? 'acknowledged' : ''}" aria-label="Guía de objetivos del periodo">
+        <div class="kpi-guide-wide-copy">
+          <div class="smart-guide-badge">OBJETIVOS DEL PERIODO · 30%</div>
+          <h3>Antes de capturar, revisa cómo se califican tus objetivos</h3>
+          <p>Registra hasta cinco objetivos acordados al inicio del periodo con su meta o indicador, resultado alcanzado y porcentaje de cumplimiento.</p>
+          <div class="kpi-equivalence-inline">
+            <span><b>5 ★</b> 110% o más</span><span><b>4 ★</b> 100–109%</span><span><b>3 ★</b> 90–99%</span><span><b>2 ★</b> 75–89%</span><span><b>1 ★</b> &lt;75%</span>
+          </div>
+          <small>Si un objetivo no es cuantificable, la calificación puede asignarse con evidencia documentada.</small>
         </div>
-        <div class="smart-guide-tip"><span>💡</span><p>Si un objetivo no es cuantificable, la calificación puede asignarse con base en evidencia documentada.</p></div>
-      </aside>
-      <section class="smart-capture-panel">
+        <button type="button" class="btn ${comprendido ? 'btn-ack-done' : 'btn-primary'} kpi-understand-btn" onclick="App.comprenderObjetivos('${ev.id}')" ${comprendido ? 'disabled' : ''}>${comprendido ? '✓ Comprendido' : 'Comprendo lo que dice'}</button>
+      </section>
+      <section class="smart-capture-panel kpi-capture-full ${comprendido ? '' : 'kpi-capture-locked'}" aria-disabled="${comprendido ? 'false' : 'true'}">
         <div class="smart-capture-head">
-          <div><span class="smart-capture-kicker">CUMPLIMIENTO DE OBJETIVOS · 30%</span><h3>Captura hasta cinco objetivos</h3><p>Objetivo, meta o indicador, resultado obtenido, porcentaje de cumplimiento y calificación.</p></div>
+          <div><span class="smart-capture-kicker">CUMPLIMIENTO DE OBJETIVOS · 30%</span><h3>Captura tus objetivos</h3><p>Objetivo, meta o indicador, resultado, porcentaje de cumplimiento y calificación.</p></div>
           <div class="smart-capture-chip">REV. 4</div>
         </div>
-        <div id="objetivosWrap">${filas.map((o, i) => renderObjetivoRow(ev.id, o, Number(o.index ?? i), soloLecturaDescripcion)).join('')}</div>
-        ${filas.length < 5 ? `<button class="btn btn-outline btn-sm smart-add-objective" onclick="App.agregarObjetivo('${ev.id}')">+ Agregar objetivo</button>` : ''}
+        ${comprendido ? '' : '<div class="kpi-lock-message">🔒 Confirma que comprendiste la guía superior para habilitar la captura.</div>'}
+        <div id="objetivosWrap">${filas.map((o, i) => renderObjetivoRow(ev.id, o, Number(o.index ?? i), soloLecturaDescripcion, !comprendido)).join('')}</div>
+        ${filas.length < 5 ? `<button class="btn btn-outline btn-sm smart-add-objective" ${comprendido ? '' : 'disabled'} onclick="App.agregarObjetivo('${ev.id}')">+ Agregar objetivo</button>` : ''}
       </section>
     </div>`;
   }
 
-  function renderObjetivoRow(evaluacionId, o, index, soloLecturaDescripcion) {
+  function renderObjetivoRow(evaluacionId, o, index, soloLecturaDescripcion, bloqueado) {
     const groupName = 'obj_' + evaluacionId + '_' + index;
     const onchangeJs = `App.editarObjetivoKPI('${evaluacionId}',${index},'calificacion',this.value)`;
     const cumplimiento = o.cumplimiento ?? '';
     const autoScore = C.calificacionPorCumplimiento(cumplimiento);
+    const disabled = !!soloLecturaDescripcion || !!bloqueado;
     return `
-    <div class="objetivo-row smart-objective kpi-objective" data-idx="${index}">
+    <div class="objetivo-row smart-objective kpi-objective ${disabled ? 'objective-disabled' : ''}" data-idx="${index}">
       <div class="smart-objective-head">
         <div class="objetivo-num">#${index + 1}</div>
-        <button class="smart-remove-objective" type="button" onclick="App.quitarObjetivo('${evaluacionId}',${index})" aria-label="Quitar objetivo ${index + 1}" title="Quitar objetivo">× <span>Quitar</span></button>
+        <button class="smart-remove-objective" type="button" ${disabled ? 'disabled' : ''} onclick="App.quitarObjetivo('${evaluacionId}',${index})" aria-label="Quitar objetivo ${index + 1}" title="Quitar objetivo">× <span>Quitar</span></button>
       </div>
       <div class="objetivo-fields kpi-objective-fields">
-        <div class="smart-field smart-field-objective"><label>Objetivo</label><textarea placeholder="Describe el objetivo acordado para el periodo" ${soloLecturaDescripcion ? 'disabled' : ''} oninput="App.editarObjetivoKPI('${evaluacionId}',${index},'descripcion',this.value)">${esc(o.descripcion || '')}</textarea></div>
-        <div class="smart-field smart-field-meta"><label>Meta o indicador</label><input type="text" placeholder="Ej. 95% de cumplimiento / 25 contratos / ≤ 24 h" value="${esc(o.meta || '')}" ${soloLecturaDescripcion ? 'disabled' : ''} oninput="App.editarObjetivoKPI('${evaluacionId}',${index},'meta',this.value)"></div>
-        <div class="smart-field"><label>Resultado obtenido</label><textarea placeholder="Describe el resultado realmente alcanzado" ${soloLecturaDescripcion ? 'disabled' : ''} oninput="App.editarObjetivoKPI('${evaluacionId}',${index},'resultado',this.value)">${esc(o.resultado || '')}</textarea></div>
-        <div class="smart-field kpi-percent-field"><label>% de cumplimiento</label><input type="number" min="0" step="0.1" placeholder="Ej. 103" value="${esc(cumplimiento)}" ${soloLecturaDescripcion || o.noCuantificable ? 'disabled' : ''} onchange="App.editarObjetivoKPI('${evaluacionId}',${index},'cumplimiento',this.value)"><small>${autoScore ? `Equivale a ${autoScore} ★` : 'La calificación se calculará automáticamente.'}</small></div>
-        <label class="kpi-nonquant"><input type="checkbox" ${o.noCuantificable ? 'checked' : ''} ${soloLecturaDescripcion ? 'disabled' : ''} onchange="App.editarObjetivoKPI('${evaluacionId}',${index},'noCuantificable',this.checked)"> Objetivo no cuantificable; calificar con evidencia documentada.</label>
-        <div class="smart-field smart-rating-field"><label>Calificación (1-5 / N/A)</label>${ratingWidget(groupName, o.calificacion, onchangeJs, false, true)}<small class="objective-rating-help">Si capturas un porcentaje, esta calificación se asigna automáticamente con la tabla Rev. 4.</small></div>
+        <div class="smart-field smart-field-objective"><label>Objetivo</label><textarea placeholder="Describe el objetivo acordado para el periodo" ${disabled ? 'disabled' : ''} oninput="App.editarObjetivoKPI('${evaluacionId}',${index},'descripcion',this.value)">${esc(o.descripcion || '')}</textarea></div>
+        <div class="smart-field smart-field-meta"><label>Meta o indicador</label><input type="text" placeholder="Ej. 95% de cumplimiento / 25 contratos / ≤ 24 h" value="${esc(o.meta || '')}" ${disabled ? 'disabled' : ''} oninput="App.editarObjetivoKPI('${evaluacionId}',${index},'meta',this.value)"></div>
+        <div class="smart-field"><label>Resultado obtenido</label><textarea placeholder="Describe el resultado realmente alcanzado" ${disabled ? 'disabled' : ''} oninput="App.editarObjetivoKPI('${evaluacionId}',${index},'resultado',this.value)">${esc(o.resultado || '')}</textarea></div>
+        <div class="smart-field kpi-percent-field"><label>% de cumplimiento</label><input type="number" min="0" step="0.1" placeholder="Ej. 103" value="${esc(cumplimiento)}" ${disabled || o.noCuantificable ? 'disabled' : ''} onchange="App.editarObjetivoKPI('${evaluacionId}',${index},'cumplimiento',this.value)"><small>${autoScore ? `Equivale a ${autoScore} ★` : 'La calificación se calculará automáticamente.'}</small></div>
+        <label class="kpi-nonquant"><input type="checkbox" ${o.noCuantificable ? 'checked' : ''} ${disabled ? 'disabled' : ''} onchange="App.editarObjetivoKPI('${evaluacionId}',${index},'noCuantificable',this.checked)"> Objetivo no cuantificable; calificar con evidencia documentada.</label>
+        <div class="smart-field smart-rating-field"><label>Calificación (1-5 / N/A)</label>${ratingWidget(groupName, o.calificacion, onchangeJs, disabled, true)}<small class="objective-rating-help">Si capturas un porcentaje, esta calificación se asigna automáticamente con la tabla Rev. 4.</small></div>
         <div class="validation-message" aria-live="polite">Completa objetivo, meta/indicador, resultado y una calificación válida.</div>
       </div>
     </div>`;
@@ -1611,7 +1630,7 @@
     <section class="premium-evaluation-page premium-leader-evaluation">
       <div class="premium-progress-head"><div><span>Progreso de evaluación</span><div class="progress"><div class="progress-bar" style="width:${progresoLider}%"></div></div></div><strong>${progresoLider}%</strong></div>
       <div class="premium-evaluation-layout">
-        <aside class="premium-evaluation-sidebar">${sidebarLider}<div class="premium-reminder-card"><strong>Evaluación del líder</strong><p>Guarda tu avance y verifica cada sección antes de enviar. La autoevaluación se mostrará después del envío.</p></div></aside>
+        <aside class="premium-evaluation-sidebar">${sidebarLider}<div class="premium-reminder-card"><strong>Evaluación del líder</strong><p>Guarda tu avance y verifica cada sección antes de enviar. La autoevaluación se mostrará después del envío.</p></div>${escalaSidebarHTML()}</aside>
         <div class="premium-evaluation-main">
           <div class="premium-evaluation-title"><span class="premium-section-kicker">${seccion === 'resumen' ? 'Revisión final' : 'Sección ' + (idx + 1) + ' de 3'}</span><h1>${labelSeccion(seccion)}${seccion !== 'resumen' && D.SECCIONES_META[seccion] ? ` <em>(${D.SECCIONES_META[seccion].peso}%)</em>` : ''}</h1></div>
           ${contenido}
@@ -2306,6 +2325,7 @@
     },
     wizardPrev() { state.wizard.seccionIdx = Math.max(state.wizard.seccionIdx - 1, 0); render(); },
     irSeccionWizard(idx) { state.wizard.seccionIdx = Math.max(0, Math.min(Number(idx) || 0, SECCIONES_WIZARD.length - 1)); render(); },
+    comprenderObjetivos(evaluacionId) { sessionStorage.setItem(objectivesAckKey(evaluacionId), '1'); render(); },
     guardarProgresoVisual() { const btn = document.querySelector('.premium-save-btn'); if (!btn) return; const original = btn.textContent; btn.textContent = '✓ Guardado'; btn.classList.add('saved'); setTimeout(() => { btn.textContent = original; btn.classList.remove('saved'); }, 1400); },
     rate(evaluacionId, seccion, competenciaId, valor) {
       const existentes = S.getRespuestas(evaluacionId);
