@@ -458,7 +458,7 @@
     if (!liderEval || liderEval.estado !== E.COMPLETADA) return E.PENDIENTE_LIDER;
     if (!calibracion) return E.PENDIENTE_CALIBRACION;
     if (!calibracion.retroHabilitada) return E.CALIBRADA;
-    if (!calibracion.aceptacionColaborador) return E.RETRO_PENDIENTE;
+    if (!(calibracion.firmaLider && calibracion.firmaColaborador) && !calibracion.aceptacionColaborador) return E.RETRO_PENDIENTE;
     return E.CERRADA;
   }
 
@@ -472,7 +472,7 @@
     let cal = getCalibracion(colaboradorId, periodoId);
     const esNuevo = !cal;
     if (!cal) {
-      cal = { id: generarId('CAL'), colaboradorId: String(colaboradorId), periodoId, historial: [], retroHabilitada: false, reunionLiderRealizada: false, acuerdosLiberados: false, aceptacionColaborador: false, fechaAceptacion: null };
+      cal = { id: generarId('CAL'), colaboradorId: String(colaboradorId), periodoId, historial: [], retroHabilitada: false, reunionLiderRealizada: false, acuerdosLiberados: false, firmaLider: false, firmaColaborador: false, fechaFirmaLider: null, fechaFirmaColaborador: null, firmaLiderNombre: '', firmaColaboradorNombre: '', firmaLiderData: '', firmaColaboradorData: '', aceptacionColaborador: false, fechaAceptacion: null };
       db.calibraciones.push(cal);
     }
     Object.keys(cambios).forEach((campo) => {

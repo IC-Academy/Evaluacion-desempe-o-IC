@@ -607,6 +607,7 @@
     root.innerHTML = renderHeader(area, page) + `<main class="container">${body}</main>` + renderFooter();
     bindGlobal();
     translateDOM(root);
+    initSignaturePads();
   }
 
   // =========================================================================
@@ -1392,6 +1393,69 @@
 
   function inicialesAvatar(nombre) { return String(nombre || '?').split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase(); }
 
+  function fmtFechaFirma(iso) {
+    if (!iso) return '—';
+    try { return new Date(iso).toLocaleString('es-MX', { dateStyle:'medium', timeStyle:'short' }); }
+    catch (_) { return esc(iso); }
+  }
+
+  function initSignaturePads() {
+    document.querySelectorAll('canvas[data-signature-role]').forEach((canvas) => {
+      if (canvas.dataset.bound === '1') return;
+      canvas.dataset.bound = '1';
+      const role = canvas.dataset.signatureRole;
+      const empleado = canvas.dataset.employee;
+      const periodo = canvas.dataset.period;
+      const cal = S.getCalibracion(empleado, periodo);
+      const saved = role === 'lider' ? cal?.firmaLiderData : cal?.firmaColaboradorData;
+      const resize = () => {
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = Math.max(1, Math.floor(rect.width * ratio));
+        canvas.height = Math.max(1, Math.floor(rect.height * ratio));
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(ratio,0,0,ratio,0,0);
+        ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#0b2d59';
+        if (saved) { const img = new Image(); img.onload=()=>ctx.drawImage(img,0,0,rect.width,rect.height); img.src=saved; }
+      };
+      resize();
+      let drawing=false, last=null;
+      const pos=(e)=>{ const r=canvas.getBoundingClientRect(); return {x:e.clientX-r.left,y:e.clientY-r.top}; };
+      canvas.addEventListener('pointerdown',(e)=>{ if(canvas.dataset.locked==='1')return; drawing=true; last=pos(e); canvas.setPointerCapture?.(e.pointerId); });
+      canvas.addEventListener('pointermove',(e)=>{ if(!drawing||canvas.dataset.locked==='1')return; const pt=pos(e),ctx=canvas.getContext('2d');ctx.beginPath();ctx.moveTo(last.x,last.y);ctx.lineTo(pt.x,pt.y);ctx.stroke();last=pt; });
+      const stop=()=>{drawing=false;last=null;}; canvas.addEventListener('pointerup',stop);canvas.addEventListener('pointercancel',stop);canvas.addEventListener('pointerleave',stop);
+    });
+  }
+
+  function renderSignatureCard(role, col, periodoId, cal, lockedReason) {
+    const isLeader = role === 'lider';
+    const signed = isLeader ? !!cal?.firmaLider : !!cal?.firmaColaborador;
+    const fecha = isLeader ? cal?.fechaFirmaLider : cal?.fechaFirmaColaborador;
+    const nombre = isLeader ? cal?.firmaLiderNombre : cal?.firmaColaboradorNombre;
+    const canSign = !signed && !lockedReason;
+    const title = isLeader ? 'Firma del líder' : 'Firma del colaborador';
+    const canvasId = `firma-${role}-${String(col.empleado).replace(/[^a-zA-Z0-9_-]/g,'')}`;
+    return `<article class="signature-card ${signed?'signed':canSign?'ready':'locked'}">
+      <div class="signature-card-head"><div><span class="admin-section-kicker">${signed?'CONFIRMADO':'FIRMA DIGITAL'}</span><h4>${title}</h4></div>${signed?'<span class="signature-status">✓ Firmado</span>':'<span class="signature-status pending">Pendiente</span>'}</div>
+      ${signed ? `<div class="signature-signed-summary"><strong>${esc(nombre||'Firma registrada')}</strong><span>${esc(fmtFechaFirma(fecha))}</span></div>${(isLeader?cal?.firmaLiderData:cal?.firmaColaboradorData)?`<img class="signature-preview" src="${isLeader?cal.firmaLiderData:cal.firmaColaboradorData}" alt="Firma registrada"/>`:''}` : `
+        ${lockedReason?`<div class="signature-lock-note">${esc(lockedReason)}</div>`:''}
+        <div class="signature-canvas-wrap"><canvas id="${canvasId}" data-signature-role="${role}" data-employee="${esc(col.empleado)}" data-period="${esc(periodoId)}" data-locked="${canSign?'0':'1'}" aria-label="Área para firmar"></canvas><span>Firma dentro del recuadro</span></div>
+        <div class="signature-actions"><button class="btn btn-outline btn-sm" ${canSign?'':'disabled'} onclick="App.limpiarFirma('${canvasId}')">Limpiar</button><button class="btn btn-primary btn-sm" ${canSign?'':'disabled'} onclick="App.firmarRetroalimentacion('${role}','${esc(col.empleado)}','${esc(periodoId)}','${canvasId}')">Firmar y confirmar</button></div>`}
+    </article>`;
+  }
+
+  function buildRetroDocument(colaboradorId, periodoId) {
+    const col=S.getColaborador(colaboradorId), cal=S.getCalibracion(colaboradorId,periodoId), liderEval=S.getEvaluacion(colaboradorId,periodoId,'lider'), resLider=S.getUltimoResultadoPorOrigen(colaboradorId,periodoId,'lider'), lider=col?S.getLider(col.liderId):null;
+    if(!col||!cal) return null;
+    const total=cal.resultadoCalibrado!==undefined?cal.resultadoCalibrado:(resLider?.puntajes?.total??'—');
+    const nivel=total==='—'?{nivel:'—'}:C.clasificarNivel(total);
+    const cuad=resLider?C.asignarCuadrante(resLider.promedios.actitud,resLider.promedios.desempeno):null;
+    const areas=S.getAreasOportunidad(colaboradorId,periodoId), planes=S.getPlanesDesarrollo(colaboradorId,periodoId);
+    const rowsAreas=areas.length?areas.map(a=>`<tr><td>${esc(a.area)}</td><td>${esc(a.planMejora)}</td></tr>`).join(''):'<tr><td colspan="2">No aplica.</td></tr>';
+    const rowsPlanes=planes.length?planes.map(a=>`<tr><td>${esc(a.competencia)}</td><td>${esc(a.accion)}</td><td>${esc(a.fechaCompromiso||'—')}</td></tr>`).join(''):'<tr><td colspan="3">No aplica.</td></tr>';
+    return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Retroalimentación - ${esc(col.nombre)}</title><style>body{font-family:Arial,sans-serif;color:#102a48;margin:36px;line-height:1.45}header{border-bottom:3px solid #0b5fc6;padding-bottom:18px;margin-bottom:24px}h1{margin:0;font-size:25px}h2{font-size:17px;margin-top:25px;color:#0b5fc6}.meta{display:grid;grid-template-columns:1fr 1fr;gap:9px 24px;background:#f4f8fc;padding:16px;border-radius:10px}.score{display:flex;gap:30px;align-items:center;padding:18px 0}.score b{font-size:34px;color:#0b5fc6}table{width:100%;border-collapse:collapse;margin-top:8px}th,td{border:1px solid #d6e1ec;padding:8px;text-align:left;font-size:12px}th{background:#edf5fe}.signatures{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:34px}.sig{border-top:1px solid #7890a8;padding-top:10px;text-align:center}.sig img{max-width:220px;max-height:70px;display:block;margin:0 auto 8px}.muted{color:#687c91;font-size:12px}@media print{body{margin:18mm}.no-print{display:none}}</style></head><body><header><div class="muted">INTER-CON · Evaluación de Desempeño</div><h1>Constancia de retroalimentación</h1><div class="muted">FOR-CAP-003 Rev. 4 · ${esc(state.periodo?.nombre||periodoId)}</div></header><div class="meta"><div><b>Colaborador:</b> ${esc(col.nombre)}</div><div><b>No. empleado:</b> ${esc(col.empleado)}</div><div><b>Puesto:</b> ${esc(col.puesto||'—')}</div><div><b>Área:</b> ${esc(col.area||'—')}</div><div><b>Líder:</b> ${esc(lider?.nombre||'—')}</div><div><b>Fecha reunión:</b> ${esc(fmtFechaFirma(cal.fechaReunion))}</div></div><div class="score"><b>${esc(f1(total))}</b><div><strong>${esc(nivel.nivel||'—')}</strong><br><span class="muted">Resultado final calibrado · ${cuad?.info?`9-Box ${cuad.cuadrante}: ${esc(cuad.info.nombre)}`:'Sin clasificación 9-Box'}</span></div></div><h2>Fortalezas</h2><p>${esc(liderEval?.fortalezas||'Sin registrar.')}</p><h2>Comentarios del líder</h2><p>${esc(liderEval?.comentarios||'Sin comentarios.')}</p><h2>Áreas de oportunidad y plan de mejora</h2><table><thead><tr><th>Área de oportunidad</th><th>Plan de mejora</th></tr></thead><tbody>${rowsAreas}</tbody></table><h2>Plan de desarrollo</h2><table><thead><tr><th>Competencia</th><th>Acción acordada</th><th>Fecha compromiso</th></tr></thead><tbody>${rowsPlanes}</tbody></table>${cal.observacionesRH?`<h2>Observaciones de RH</h2><p>${esc(cal.observacionesRH)}</p>`:''}<div class="signatures"><div class="sig">${cal.firmaLiderData?`<img src="${cal.firmaLiderData}"/>`:''}<b>${esc(cal.firmaLiderNombre||lider?.nombre||'Líder')}</b><br><span class="muted">${cal.firmaLider?`Firmado ${esc(fmtFechaFirma(cal.fechaFirmaLider))}`:'Firma pendiente'}</span></div><div class="sig">${cal.firmaColaboradorData?`<img src="${cal.firmaColaboradorData}"/>`:''}<b>${esc(cal.firmaColaboradorNombre||col.nombre)}</b><br><span class="muted">${cal.firmaColaborador?`Firmado ${esc(fmtFechaFirma(cal.fechaFirmaColaborador))}`:'Firma pendiente'}</span></div></div><p class="muted" style="margin-top:28px">La firma confirma la recepción y revisión de la retroalimentación y de los acuerdos de desarrollo registrados; no sustituye otros procesos laborales o administrativos aplicables.</p></body></html>`;
+  }
+
   /**
    * Ficha ejecutiva de retroalimentación del colaborador. Reutiliza los
    * campos y funciones ya existentes (resultados, calibración, áreas de
@@ -1486,8 +1550,9 @@
           ${cal && cal.observacionesRH ? `<article class="span-2"><h4>Observaciones de RH</h4><p>${esc(cal.observacionesRH)}</p></article>` : ''}
         </div>
       </section>
-      <section class="feedback-acceptance-card ${cal&&cal.acuerdosLiberados?'ready':'locked'}"><div><span class="admin-section-kicker">CIERRE DEL PROCESO</span><h3>Confirmación de retroalimentación y plan de desarrollo</h3>${cal&&cal.acuerdosLiberados?'<p>Tu líder confirmó la reunión y liberó los acuerdos finales. Revisa la información anterior antes de aceptar.</p>':'<p>Tu aceptación se habilitará después de la reunión con tu líder y cuando los acuerdos finales sean liberados.</p>'}</div>
-        ${estado===D.ESTADOS.RETRO_PENDIENTE ? `<label class="confirm-check feedback-sign"><input id="confirmAceptacionRetro" type="checkbox" ${cal&&cal.acuerdosLiberados?'':'disabled'}/> Confirmo que recibí la retroalimentación, revisé los acuerdos y conozco el plan de desarrollo definido.</label><button class="btn btn-primary" ${cal&&cal.acuerdosLiberados?'':'disabled'} onclick="App.aceptar('${col.empleado}','${periodoId}')">Aceptar y cerrar retroalimentación ✓</button>` : `<div class="feedback-signed">✓ Retroalimentación aceptada el ${esc(cal?.fechaAceptacion||'')}</div>`}
+      <section class="feedback-acceptance-card ${cal&&cal.acuerdosLiberados?'ready':'locked'}"><div class="feedback-signing-head"><div><span class="admin-section-kicker">CIERRE Y CONSTANCIA</span><h3>Confirmación y firma de retroalimentación</h3><p>${cal&&cal.acuerdosLiberados?'Los acuerdos finales ya fueron liberados. Firma cuando hayas revisado el resultado, la retroalimentación y el plan de desarrollo.':'La firma se habilitará después de la reunión y de que el líder libere los acuerdos finales.'}</p></div><div class="document-actions"><button class="btn btn-outline btn-sm" onclick="App.descargarRetroalimentacion('${col.empleado}','${periodoId}')">Descargar constancia</button><button class="btn btn-outline btn-sm" onclick="App.imprimirRetroalimentacion('${col.empleado}','${periodoId}')">Imprimir / Guardar PDF</button></div></div>
+        <div class="signature-grid">${renderSignatureCard('lider',col,periodoId,cal,cal?.acuerdosLiberados?null:'Pendiente de reunión y liberación de acuerdos.')}${renderSignatureCard('colaborador',col,periodoId,cal,!cal?.acuerdosLiberados?'Tu líder aún no ha liberado los acuerdos finales.':!cal?.firmaLider?'La firma del colaborador se habilita después de la firma del líder.':null)}</div>
+        <div class="feedback-legal-note">Al firmar confirmas que recibiste y revisaste la retroalimentación y que conoces los acuerdos registrados.</div>
       </section>
     </div>`;
   }
@@ -1536,7 +1601,8 @@
       const estado = S.estadoProceso(c.empleado, periodoId);
       const autoEval = S.getEvaluacion(c.empleado, periodoId, 'autoevaluacion');
       const liderEval = S.getEvaluacion(c.empleado, periodoId, 'lider');
-      return { c, estado, autoEval, liderEval };
+      const cal = S.getCalibracion(c.empleado, periodoId);
+      return { c, estado, autoEval, liderEval, cal };
     });
     if (soloPendientes) filas = filas.filter((f) => f.estado === D.ESTADOS.PENDIENTE_LIDER);
     const total = filas.length;
@@ -1546,13 +1612,20 @@
     const vencidas = filas.filter((f) => (!f.autoEval || f.autoEval.estado !== D.ESTADOS.COMPLETADA) && esVencido(state.periodo.fechaLimiteAutoevaluacion)).length
       + filas.filter((f) => f.autoEval && f.autoEval.estado === D.ESTADOS.COMPLETADA && (!f.liderEval || f.liderEval.estado !== D.ESTADOS.COMPLETADA) && esVencido(state.periodo.fechaLimiteLider)).length;
     const avance = total ? pct((completadas / total) * 100) : 0;
+    const retroLiberadas = filas.filter((f)=>S.getCalibracion(f.c.empleado,periodoId)?.acuerdosLiberados).length;
+    const firmasLider = filas.filter((f)=>S.getCalibracion(f.c.empleado,periodoId)?.firmaLider).length;
+    const firmasColaborador = filas.filter((f)=>S.getCalibracion(f.c.empleado,periodoId)?.firmaColaborador).length;
+    const retroFirmadas = filas.filter((f)=>{const c=S.getCalibracion(f.c.empleado,periodoId);return c?.firmaLider&&c?.firmaColaborador;}).length;
+    const pendientesFirma = Math.max(0, retroLiberadas - retroFirmadas);
 
     return `
     <div class="kpi-grid">
       ${kpi('Colaboradores', total)}
       ${kpi('Evaluaciones pendientes (líder)', pendientesLider, vencidas ? 'red' : 'yellow')}
-      ${kpi('Completadas', completadas, 'green')}
-      ${kpi('Pendientes de retroalimentación', pendientesRetro, 'yellow')}
+      ${kpi('Retroalimentaciones firmadas', `${retroFirmadas}/${retroLiberadas}`, 'green')}
+      ${kpi('Pendientes por firmar', pendientesFirma, pendientesFirma ? 'yellow' : 'gray')}
+      ${kpi('Firma del líder', `${firmasLider}/${retroLiberadas}`, 'blue')}
+      ${kpi('Firma del colaborador', `${firmasColaborador}/${retroLiberadas}`, 'blue')}
       ${kpi('Avance del equipo', avance + '%', 'blue')}
       ${kpi('Alertas por vencimiento', vencidas, vencidas ? 'red' : 'gray')}
     </div>
@@ -1560,7 +1633,7 @@
       <h2>${soloPendientes ? 'Pendientes por evaluar' : 'Mi equipo'} — ${esc(lider.area)}</h2>
       ${soloPendientes && !filas.length ? '<p class="alert alert-success">No tienes evaluaciones pendientes en este momento.</p>' : ''}
       <table class="table">
-        <thead><tr><th>Nombre</th><th>Puesto</th><th>Área</th><th>Autoevaluación</th><th>Evaluación líder</th><th>Retroalimentación</th><th></th></tr></thead>
+        <thead><tr><th>Nombre</th><th>Puesto</th><th>Área</th><th>Autoevaluación</th><th>Evaluación líder</th><th>Retroalimentación</th><th>Firmas</th><th></th></tr></thead>
         <tbody>
         ${filas.map((f) => {
           const eAuto = !f.autoEval ? 'No iniciada' : f.autoEval.estado;
@@ -1570,7 +1643,7 @@
           if (f.estado === D.ESTADOS.PENDIENTE_LIDER) accion = `<a class="btn btn-primary btn-sm" href="#/lider/evaluar/${f.c.empleado}">Evaluar</a>`;
           else if ([D.ESTADOS.PENDIENTE_CALIBRACION, D.ESTADOS.CALIBRADA, D.ESTADOS.RETRO_PENDIENTE, D.ESTADOS.CERRADA].includes(f.estado)) accion = `<a class="btn btn-outline btn-sm" href="#/lider/comparacion/${f.c.empleado}">Ver comparación</a>`;
           else accion = `<span class="muted">Sin acción disponible</span>`;
-          return `<tr><td>${esc(f.c.nombre)}</td><td>${esc(f.c.puesto)}</td><td>${esc(f.c.area)}</td><td>${badge(eAuto)}</td><td>${badge(eLider)}</td><td>${badge(eRetro)}</td><td>${accion}</td></tr>`;
+          const firmaEstado=f.cal?.firmaLider&&f.cal?.firmaColaborador?'Completa':f.cal?.firmaLider?'Falta colaborador':f.cal?.acuerdosLiberados?'Falta líder':'—'; return `<tr><td>${esc(f.c.nombre)}</td><td>${esc(f.c.puesto)}</td><td>${esc(f.c.area)}</td><td>${badge(eAuto)}</td><td>${badge(eLider)}</td><td>${badge(eRetro)}</td><td>${firmaEstado==='—'?'—':badge(firmaEstado,firmaEstado==='Completa'?'green':firmaEstado==='Falta colaborador'?'yellow':'red')}</td><td>${accion}</td></tr>`;
         }).join('')}
         </tbody>
       </table>
@@ -1762,7 +1835,7 @@
       <h3>Ubicación en la Matriz 9-Box</h3>
       ${ninaBoxHtml}
       <p class="muted">Estado actual del proceso: ${badge(estado)}. La calibración y liberación de retroalimentación las gestiona el administrador de RH.</p>
-      ${cal && cal.retroHabilitada ? `<section class="leader-release-card"><span class="admin-section-kicker">CIERRE DE RETROALIMENTACIÓN</span><h3>Reunión y acuerdos con el colaborador</h3><p>Después de realizar la reunión, confirma que revisaron juntos la retroalimentación. Puedes ajustar los planes antes de liberar la versión final para aceptación del colaborador.</p><label class="confirm-check"><input type="checkbox" ${cal.reunionLiderRealizada?'checked':''} onchange="App.confirmarReunionLider('${colaboradorId}','${periodoId}',this.checked)"/> Confirmo que ya realicé la reunión de retroalimentación con el colaborador.</label><div class="actions"><button class="btn btn-primary" ${cal.reunionLiderRealizada&&!cal.acuerdosLiberados?'':'disabled'} onclick="App.liberarAcuerdos('${colaboradorId}','${periodoId}')">${cal.acuerdosLiberados?'✓ Acuerdos liberados para aceptación':'Liberar acuerdos para aceptación'}</button></div></section>` : ''}
+      ${cal && cal.retroHabilitada ? `<section class="leader-release-card"><div class="feedback-signing-head"><div><span class="admin-section-kicker">CIERRE DE RETROALIMENTACIÓN</span><h3>Reunión, acuerdos y firma</h3><p>Confirma la reunión, ajusta los acuerdos si es necesario y libera la versión final antes de firmar.</p></div><div class="document-actions"><button class="btn btn-outline btn-sm" onclick="App.descargarRetroalimentacion('${colaboradorId}','${periodoId}')">Descargar constancia</button><button class="btn btn-outline btn-sm" onclick="App.imprimirRetroalimentacion('${colaboradorId}','${periodoId}')">Imprimir / Guardar PDF</button></div></div><label class="confirm-check"><input type="checkbox" ${cal.reunionLiderRealizada?'checked':''} ${cal.firmaLider?'disabled':''} onchange="App.confirmarReunionLider('${colaboradorId}','${periodoId}',this.checked)"/> Confirmo que ya realicé la reunión de retroalimentación con el colaborador.</label><div class="actions"><button class="btn btn-primary" ${cal.reunionLiderRealizada&&!cal.acuerdosLiberados&&!cal.firmaLider?'':'disabled'} onclick="App.liberarAcuerdos('${colaboradorId}','${periodoId}')">${cal.acuerdosLiberados?'✓ Acuerdos liberados':'Liberar acuerdos para firma'}</button></div><div class="signature-grid leader-signature-grid">${renderSignatureCard('lider',col,periodoId,cal,!cal.acuerdosLiberados?'Libera primero los acuerdos finales.':null)}${renderSignatureCard('colaborador',col,periodoId,cal,!cal.firmaLider?'Pendiente de firma del líder.':null)}</div></section>` : ''}
     </div>`;
   }
 
@@ -1924,6 +1997,11 @@
     const avanceNacional = total ? pct((cerradas / total) * 100) : 0;
     const promedios = datos.filter((d) => d.totalFinal !== null).map((d) => d.totalFinal);
     const promedioGeneral = promedios.length ? promedios.reduce((a, b) => a + b, 0) / promedios.length : null;
+    const retroLiberadas = datos.filter((d)=>S.getCalibracion(d.c.empleado,periodoId)?.acuerdosLiberados).length;
+    const firmaLiderCount = datos.filter((d)=>S.getCalibracion(d.c.empleado,periodoId)?.firmaLider).length;
+    const firmaColaboradorCount = datos.filter((d)=>S.getCalibracion(d.c.empleado,periodoId)?.firmaColaborador).length;
+    const retroFirmadas = datos.filter((d)=>{const c=S.getCalibracion(d.c.empleado,periodoId);return c?.firmaLider&&c?.firmaColaborador;}).length;
+    const pendientesFirma = Math.max(0, retroLiberadas-retroFirmadas);
 
     const filtros = state.adminFiltros;
     const areas = [...new Set(datos.map((d) => d.c.area))];
@@ -1964,6 +2042,10 @@
         <div class="admin-kpi-card attention"><span>Por calibrar</span><strong>${pendientesCal}</strong><small>Requieren revisión RH</small></div>
         <div class="admin-kpi-card success"><span>Calibradas</span><strong>${calibradas}</strong><small>Con resultado RH</small></div>
         <div class="admin-kpi-card"><span>Promedio general</span><strong>${f1(promedioGeneral)}</strong><small>Resultado disponible</small></div>
+        <div class="admin-kpi-card success"><span>Retroalimentaciones firmadas</span><strong>${retroFirmadas}/${retroLiberadas}</strong><small>Cierre con ambas firmas</small></div>
+        <div class="admin-kpi-card attention"><span>Pendientes por firmar</span><strong>${pendientesFirma}</strong><small>Acuerdos liberados sin cierre</small></div>
+        <div class="admin-kpi-card"><span>Firmas de líder</span><strong>${firmaLiderCount}/${retroLiberadas}</strong><small>Confirmaciones registradas</small></div>
+        <div class="admin-kpi-card"><span>Firmas de colaborador</span><strong>${firmaColaboradorCount}/${retroLiberadas}</strong><small>Confirmaciones registradas</small></div>
       </div>
 
       <div class="admin-dashboard-grid">
@@ -1997,12 +2079,12 @@
           <select onchange="App.setFiltroAdmin('cuadrante', this.value)"><option value="">Todos los cuadrantes</option>${[1,2,3,4,5,6,7,8,9].map((n) => `<option value="${n}" ${filtros.cuadrante === String(n) ? 'selected' : ''}>${n}. ${C.CUADRANTES_INFO[n].nombre}</option>`).join('')}</select>
           <button class="btn btn-outline btn-sm" onclick="App.limpiarFiltrosAdmin()">Limpiar</button>
         </div>
-        <div class="admin-table-wrap"><table class="table admin-table"><thead><tr><th>Colaborador</th><th>Área</th><th>Líder</th><th>Estado</th><th>Puntaje</th><th>9-Box</th><th></th></tr></thead><tbody>
+        <div class="admin-table-wrap"><table class="table admin-table"><thead><tr><th>Colaborador</th><th>Área</th><th>Líder</th><th>Estado</th><th>Puntaje</th><th>9-Box</th><th>Firmas</th><th></th></tr></thead><tbody>
         ${filtrados.map((d) => {
           const lider = S.getLider(d.c.liderId);
           let accion = '';
           if ([D.ESTADOS.PENDIENTE_CALIBRACION,D.ESTADOS.CALIBRADA,D.ESTADOS.RETRO_PENDIENTE].includes(d.estado)) accion = `<a class="btn btn-primary btn-sm" href="#/admin/calibracion/${d.c.empleado}">Revisar</a>`;
-          return `<tr><td><strong>${esc(d.c.nombre)}</strong><small>${esc(d.c.puesto || '')}</small></td><td>${esc(d.c.area)}</td><td>${esc(lider ? lider.nombre : '—')}</td><td>${badge(d.estado)}</td><td><b>${f1(d.totalFinal)}</b></td><td>${d.cuad.cuadrante ? `<span class="admin-box-pill">${d.cuad.cuadrante} · ${esc(d.cuad.info.nombre)}</span>` : '—'}</td><td>${accion}</td></tr>`;
+          const calFirma=S.getCalibracion(d.c.empleado,periodoId); const firmaTxt=calFirma?.firmaLider&&calFirma?.firmaColaborador?'2/2':calFirma?.firmaLider?'1/2':calFirma?.acuerdosLiberados?'0/2':'—'; return `<tr><td><strong>${esc(d.c.nombre)}</strong><small>${esc(d.c.puesto || '')}</small></td><td>${esc(d.c.area)}</td><td>${esc(lider ? lider.nombre : '—')}</td><td>${badge(d.estado)}</td><td><b>${f1(d.totalFinal)}</b></td><td>${d.cuad.cuadrante ? `<span class="admin-box-pill">${d.cuad.cuadrante} · ${esc(d.cuad.info.nombre)}</span>` : '—'}</td><td>${firmaTxt==='—'?'—':badge(firmaTxt,firmaTxt==='2/2'?'green':firmaTxt==='1/2'?'yellow':'red')}</td><td>${accion}</td></tr>`;
         }).join('')}
         </tbody></table></div>
       </article>
@@ -2553,6 +2635,22 @@
       S.completarEvaluacion(evaluacionId, state.user.nombre);
       navigate('#/lider/comparacion/' + colaboradorId);
     },
+    limpiarFirma(canvasId){ const c=document.getElementById(canvasId); if(!c)return; const ctx=c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height); },
+    firmarRetroalimentacion(role,colaboradorId,periodoId,canvasId){
+      const cal=S.getCalibracion(colaboradorId,periodoId), c=document.getElementById(canvasId);
+      if(!cal||!cal.retroHabilitada){showNotice('La retroalimentación todavía no está habilitada.','warning');return;}
+      if(!cal.acuerdosLiberados){showNotice('Los acuerdos finales deben estar liberados antes de firmar.','warning');return;}
+      if(role==='colaborador'&&!cal.firmaLider){showNotice('La firma del colaborador se habilita después de la firma del líder.','warning');return;}
+      if(!c){showNotice('No se encontró el recuadro de firma.','warning');return;}
+      const blank=document.createElement('canvas');blank.width=c.width;blank.height=c.height;
+      if(c.toDataURL()===blank.toDataURL()){showNotice('Firma dentro del recuadro antes de confirmar.','warning');return;}
+      const now=new Date().toISOString(), data=c.toDataURL('image/png');
+      if(role==='lider') S.crearOActualizarCalibracion(colaboradorId,periodoId,{firmaLider:true,fechaFirmaLider:now,firmaLiderNombre:state.user.nombre,firmaLiderData:data,_motivo:'Líder firma constancia de retroalimentación'},state.user.nombre);
+      else S.crearOActualizarCalibracion(colaboradorId,periodoId,{firmaColaborador:true,fechaFirmaColaborador:now,firmaColaboradorNombre:state.user.nombre,firmaColaboradorData:data,aceptacionColaborador:true,fechaAceptacion:now,_motivo:'Colaborador firma constancia de retroalimentación'},state.user.nombre);
+      showNotice(role==='lider'?'Firma del líder registrada. El colaborador ya puede firmar.':'Firma registrada. La retroalimentación quedó cerrada.','success'); render();
+    },
+    descargarRetroalimentacion(colaboradorId,periodoId){ const html=buildRetroDocument(colaboradorId,periodoId); if(!html){showNotice('No hay información suficiente para generar la constancia.','warning');return;} const blob=new Blob([html],{type:'text/html;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`retroalimentacion-${colaboradorId}-${periodoId}.html`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000); },
+    imprimirRetroalimentacion(colaboradorId,periodoId){ const html=buildRetroDocument(colaboradorId,periodoId); if(!html){showNotice('No hay información suficiente para generar la constancia.','warning');return;} const w=window.open('','_blank','noopener,noreferrer');if(!w){showNotice('Permite ventanas emergentes para imprimir la constancia.','warning');return;}w.document.open();w.document.write(html);w.document.close();setTimeout(()=>{w.focus();w.print();},350); },
     aceptar(colaboradorId, periodoId) {
       const cal=S.getCalibracion(colaboradorId,periodoId); const chk=document.getElementById('confirmAceptacionRetro');
       if(!cal||!cal.acuerdosLiberados){showNotice('Tu líder debe realizar la reunión y liberar los acuerdos finales antes de que puedas aceptar.','warning');return;}
@@ -2602,8 +2700,7 @@
         if (!planes.length) { showNotice(t('El resultado es menor a 80. Registra al menos un plan de desarrollo antes de habilitar la retroalimentación.'),'warning'); return; }
       }
       S.crearOActualizarCalibracion(colaboradorId,periodoId,{retroHabilitada:true,notificacionRetroPendiente:true,fechaNotificacion:new Date().toISOString(),_motivo:'RH habilita fase de retroalimentación'},state.user.nombre);
-      console.log('[DEMO][EMAIL] Retroalimentación disponible', { colaboradorId, periodoId });
-      showNotice(t('Retroalimentación habilitada. La notificación queda marcada para envío por correo al integrar el backend.'),'success');
+      showNotice(t('Retroalimentación habilitada. El colaborador podrá continuar cuando reciba la notificación correspondiente.'),'success');
       render();
     },
     selNinebox(numero) { state.nineboxSel = numero; state.nineboxSelEmpleado = null; render(); },
