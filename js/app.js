@@ -2249,6 +2249,14 @@
         <div class="form-group"><label>Revisar hasta</label><input type="number" step="0.01" id="cfgRevisar" value="${cfg.configBrecha.revisarMax}"/></div>
       </div>
       <button class="btn btn-outline" onclick="App.guardarConfigBrecha()">Guardar umbrales</button>
+      <div class="test-tools-card">
+        <div>
+          <span class="eyebrow">HERRAMIENTAS DE PRUEBA</span>
+          <h3>Restaurar datos demo</h3>
+          <p class="muted">Vuelve a cargar la semilla inicial para repetir pruebas de colaborador, líder, calibración y retroalimentación.</p>
+        </div>
+        <button class="btn btn-outline test-reset-btn" onclick="App.reiniciarDemo()">↻ Restaurar datos demo</button>
+      </div>
     </div>`;
   }
 
@@ -2745,7 +2753,6 @@
       render();
     },
     reiniciarDemo() {
-      if (!confirm(t('¿Reiniciar todos los datos de la demo? Esta acción no se puede deshacer.'))) return;
       S.reset();
       A.clearSession();
       state.user = null;

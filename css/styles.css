@@ -1283,3 +1283,11 @@ body{background:linear-gradient(180deg,#f6f9fd 0%,#eef4fa 100%);}
 .signature-party-status strong{color:var(--text-strong);font-size:.93rem}.signature-party-status small{color:var(--text-soft);font-size:.72rem}
 .signature-party-status.signed{border-color:#b9dec5;background:#f6fcf8}.signature-party-status.pending{border-color:#d9e4ef;background:#f8fbfe}
 @media(max-width:680px){.signature-party-status{align-items:flex-start;flex-direction:column}.signature-party-status>div:last-child{align-items:flex-start;text-align:left}}
+
+/* Herramienta de QA: única referencia visible a datos demo conservada para pruebas */
+.test-tools-card{margin-top:28px;padding:20px 22px;border:1px solid #d9e4f2;border-radius:16px;background:linear-gradient(135deg,#f8fbff 0%,#f1f6fc 100%);display:flex;align-items:center;justify-content:space-between;gap:24px}
+.test-tools-card .eyebrow{display:block;color:#4f8fe8;font-size:.7rem;font-weight:800;letter-spacing:.14em;margin-bottom:6px}
+.test-tools-card h3{margin:0 0 6px;color:#0c2f5b;font-size:1rem}
+.test-tools-card p{margin:0;max-width:720px;line-height:1.5}
+.test-reset-btn{white-space:nowrap;min-height:44px}
+@media(max-width:760px){.test-tools-card{align-items:stretch;flex-direction:column}.test-reset-btn{width:100%}}
