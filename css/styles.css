@@ -1043,3 +1043,136 @@ body{background:linear-gradient(180deg,#f8fbff 0,#f2f7fc 100%);color:var(--premi
 .leader-inline-field input:focus,.leader-inline-field textarea:focus{border-color:#2f7de1;box-shadow:0 0 0 3px rgba(47,125,225,.12);}
 .leader-inline-editor .inline-editor-actions{display:flex;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid #d8e6f4;}
 @media(max-width:900px){.leader-inline-grid-2,.leader-inline-grid-plan{grid-template-columns:1fr}.leader-inline-date{max-width:none}}
+
+
+/* =========================================================
+   PRODUCTION POLISH · 2026-08-14
+   Cierre visual para versión final de presentación
+   ========================================================= */
+
+:root{
+  --surface:#ffffff;
+  --surface-soft:#f7faff;
+  --surface-blue:#f1f7fe;
+  --border-soft:#dce7f2;
+  --border-strong:#c8d9eb;
+  --text-strong:#0b2545;
+  --text-soft:#667b91;
+  --brand-blue:#0b5fc6;
+  --brand-navy:#092a53;
+  --shadow-soft:0 10px 28px rgba(18,52,88,.07);
+}
+
+body{background:linear-gradient(180deg,#f6f9fd 0%,#eef4fa 100%);}
+.card,.admin-panel,.premium-evaluation-main,.leader-agreement-block{box-shadow:var(--shadow-soft);}
+.card,.admin-panel{border-color:var(--border-soft);}
+
+/* Login hero: keep copy clear of the people in the artwork. */
+.premium-login-brand-panel{
+  padding:42px 52px 40px;
+  background-position:center center;
+}
+.premium-login-brand-content{
+  transform:translateY(-42px);
+  max-width:520px;
+}
+.premium-login-logo{
+  width:290px;
+  margin-bottom:34px;
+  padding:0;
+  background:transparent;
+  border-radius:0;
+  box-shadow:none;
+}
+.premium-login-kicker{letter-spacing:.18em;font-size:.82rem;}
+.premium-login-brand-content h1{font-size:3.25rem;line-height:1.02;letter-spacing:-.045em;max-width:430px;margin-bottom:28px;}
+.premium-login-brand-content p{font-size:1.06rem;line-height:1.55;max-width:450px;}
+.premium-login-trust{margin-top:auto;}
+.premium-login-trust>div{border-radius:15px;background:rgba(3,37,78,.64);box-shadow:0 12px 28px rgba(0,20,48,.16)}
+.premium-login-form-panel{background:radial-gradient(circle at 100% 0,#edf6ff 0,transparent 36%),#fff;}
+.premium-login-form-wrap{max-width:410px;}
+.premium-login-form input{border-color:var(--border-strong);}
+.premium-login-security{color:#708398;}
+
+/* Leader agreements: same visual language as calibration cards. */
+.leader-agreement-block{
+  background:#fff;
+  border:1px solid var(--border-soft);
+  border-radius:16px;
+  padding:20px 22px;
+  margin-top:18px;
+  box-shadow:0 8px 24px rgba(16,52,92,.045);
+}
+.leader-block-head{padding-bottom:14px;border-bottom:1px solid #edf2f7;margin-bottom:4px;}
+.leader-block-head>div>span{color:#5f9be5;font-size:.68rem;letter-spacing:.13em;font-weight:900;}
+.leader-block-head h4{font-size:1.05rem;color:var(--text-strong);margin:5px 0 0;}
+.leader-block-head .btn{min-height:42px;border-radius:10px;padding-inline:18px;}
+
+.leader-inline-editor.leader-form-surface{
+  background:#f9fbfe;
+  border:1px solid var(--border-soft);
+  border-radius:14px;
+  padding:18px 20px 16px;
+  margin:16px 0 14px;
+  box-shadow:none;
+}
+.leader-form-intro{display:flex;flex-direction:column;gap:3px;margin-bottom:15px;padding-bottom:13px;border-bottom:1px solid #e8eff7;}
+.leader-form-intro strong{font-size:.88rem;color:var(--text-strong);}
+.leader-form-intro span{font-size:.72rem;color:var(--text-soft);line-height:1.45;}
+.leader-inline-grid{align-items:start;gap:16px;}
+.leader-inline-field label{font-size:.74rem;color:#315370;letter-spacing:.01em;}
+.leader-inline-field input,.leader-inline-field textarea{
+  min-height:46px;
+  border:1px solid var(--border-strong);
+  border-radius:10px;
+  background:#fff;
+  color:var(--text-strong);
+  padding:11px 13px;
+  box-shadow:0 1px 2px rgba(14,43,75,.025);
+}
+.leader-inline-field textarea{min-height:102px;line-height:1.5;}
+.leader-inline-field input::placeholder,.leader-inline-field textarea::placeholder{color:#9aa9b8;}
+.leader-inline-editor .inline-editor-actions{margin-top:16px;padding-top:14px;border-top:1px solid #e8eff7;}
+.leader-inline-editor .inline-editor-actions .btn{min-height:42px;border-radius:10px;padding:0 18px;}
+
+/* Calibration and leader screens share field geometry. */
+.calibration-context-grid input,.calibration-adjust-row input,.calibration-field textarea{
+  min-height:46px;border-color:var(--border-strong);border-radius:10px;background:#fff;padding:11px 13px;font-size:.9rem;
+}
+.calibration-field textarea{min-height:110px;}
+.calibration-decision-card,.calibration-context-card{border-radius:16px;}
+.calibration-actions .btn{min-height:46px;border-radius:10px;padding-inline:18px;}
+.calibration-warning-note{font-size:.67rem;padding:10px 12px;}
+.calibration-info-note{font-size:.67rem;padding:10px 12px;}
+
+/* Footer now reads as a product footer rather than a testing disclaimer. */
+.app-footer{color:#788ba0;font-size:.72rem;padding:22px 16px 26px;text-align:center;letter-spacing:.01em;}
+
+/* Stronger consistency for primary actions. */
+.btn-primary{box-shadow:0 7px 18px rgba(11,95,198,.17);}
+.btn{border-radius:10px;}
+.form-group textarea,.form-group input,.form-group select{border-radius:10px;border-color:var(--border-strong);}
+
+/* Refined responsive header: navigation remains reachable without browser zoom. */
+@media(max-width:1180px){
+  .premium-header-top{column-gap:10px!important;}
+  .premium-nav-tabs{overflow-x:auto!important;justify-content:flex-start!important;scrollbar-width:none;padding-bottom:1px!important;}
+  .premium-nav-tabs::-webkit-scrollbar{display:none;}
+  .premium-nav-tabs a{font-size:.73rem!important;flex:0 0 auto!important;}
+}
+@media(max-width:900px){
+  .premium-header-top{padding:8px 12px!important;}
+  .premium-nav-tabs{width:100%;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:2px 4px!important;}
+  .premium-nav-tabs a{min-height:38px;padding-inline:8px!important;}
+  .premium-user-menu{gap:7px;}
+}
+@media(max-width:760px){
+  .premium-login-brand-content{transform:none;}
+}
+@media(max-width:620px){
+  .leader-agreement-block{padding:16px;}
+  .leader-inline-editor.leader-form-surface{padding:15px;}
+  .leader-inline-grid-2,.leader-inline-grid-plan{grid-template-columns:1fr!important;}
+  .leader-inline-editor .inline-editor-actions{display:grid;grid-template-columns:1fr 1fr;}
+  .leader-inline-editor .inline-editor-actions .btn{width:100%;}
+}
