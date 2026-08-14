@@ -1444,6 +1444,18 @@
     </article>`;
   }
 
+  function renderOtherPartySignatureStatus(role, cal) {
+    const isLeader = role === 'lider';
+    const signed = isLeader ? !!cal?.firmaLider : !!cal?.firmaColaborador;
+    const nombre = isLeader ? cal?.firmaLiderNombre : cal?.firmaColaboradorNombre;
+    const fecha = isLeader ? cal?.fechaFirmaLider : cal?.fechaFirmaColaborador;
+    const label = isLeader ? 'Firma del líder' : 'Firma del colaborador';
+    return `<div class="signature-party-status ${signed?'signed':'pending'}">
+      <div><span class="admin-section-kicker">ESTATUS</span><strong>${label}</strong></div>
+      <div>${signed?`<span class="signature-status">✓ Firmado</span><small>${esc(nombre||'Firma registrada')} · ${esc(fmtFechaFirma(fecha))}</small>`:`<span class="signature-status pending">Pendiente</span><small>Aún no se ha registrado esta firma.</small>`}</div>
+    </div>`;
+  }
+
   function buildRetroDocument(colaboradorId, periodoId) {
     const col=S.getColaborador(colaboradorId), cal=S.getCalibracion(colaboradorId,periodoId), liderEval=S.getEvaluacion(colaboradorId,periodoId,'lider'), resLider=S.getUltimoResultadoPorOrigen(colaboradorId,periodoId,'lider'), lider=col?S.getLider(col.liderId):null;
     if(!col||!cal) return null;
@@ -1551,8 +1563,11 @@
         </div>
       </section>
       <section class="feedback-acceptance-card ${cal&&cal.acuerdosLiberados?'ready':'locked'}"><div class="feedback-signing-head"><div><span class="admin-section-kicker">CIERRE Y CONSTANCIA</span><h3>Confirmación y firma de retroalimentación</h3><p>${cal&&cal.acuerdosLiberados?'Los acuerdos finales ya fueron liberados. Firma cuando hayas revisado el resultado, la retroalimentación y el plan de desarrollo.':'La firma se habilitará después de la reunión y de que el líder libere los acuerdos finales.'}</p></div><div class="document-actions"><button class="btn btn-outline btn-sm" onclick="App.descargarRetroalimentacion('${col.empleado}','${periodoId}')">Descargar constancia</button><button class="btn btn-outline btn-sm" onclick="App.imprimirRetroalimentacion('${col.empleado}','${periodoId}')">Imprimir / Guardar PDF</button></div></div>
-        <div class="signature-grid">${renderSignatureCard('lider',col,periodoId,cal,cal?.acuerdosLiberados?null:'Pendiente de reunión y liberación de acuerdos.')}${renderSignatureCard('colaborador',col,periodoId,cal,!cal?.acuerdosLiberados?'Tu líder aún no ha liberado los acuerdos finales.':!cal?.firmaLider?'La firma del colaborador se habilita después de la firma del líder.':null)}</div>
-        <div class="feedback-legal-note">Al firmar confirmas que recibiste y revisaste la retroalimentación y que conoces los acuerdos registrados.</div>
+        <div class="signature-own-flow">
+          ${renderOtherPartySignatureStatus('lider',cal)}
+          ${renderSignatureCard('colaborador',col,periodoId,cal,!cal?.acuerdosLiberados?'Tu líder aún no ha liberado los acuerdos finales.':!cal?.firmaLider?'Tu firma se habilita después de que tu líder firme desde su portal.':null)}
+        </div>
+        <div class="feedback-legal-note">Cada participante firma desde su propio portal. Al firmar confirmas que recibiste y revisaste la retroalimentación y que conoces los acuerdos registrados.</div>
       </section>
     </div>`;
   }
@@ -1835,7 +1850,7 @@
       <h3>Ubicación en la Matriz 9-Box</h3>
       ${ninaBoxHtml}
       <p class="muted">Estado actual del proceso: ${badge(estado)}. La calibración y liberación de retroalimentación las gestiona el administrador de RH.</p>
-      ${cal && cal.retroHabilitada ? `<section class="leader-release-card"><div class="feedback-signing-head"><div><span class="admin-section-kicker">CIERRE DE RETROALIMENTACIÓN</span><h3>Reunión, acuerdos y firma</h3><p>Confirma la reunión, ajusta los acuerdos si es necesario y libera la versión final antes de firmar.</p></div><div class="document-actions"><button class="btn btn-outline btn-sm" onclick="App.descargarRetroalimentacion('${colaboradorId}','${periodoId}')">Descargar constancia</button><button class="btn btn-outline btn-sm" onclick="App.imprimirRetroalimentacion('${colaboradorId}','${periodoId}')">Imprimir / Guardar PDF</button></div></div><label class="confirm-check"><input type="checkbox" ${cal.reunionLiderRealizada?'checked':''} ${cal.firmaLider?'disabled':''} onchange="App.confirmarReunionLider('${colaboradorId}','${periodoId}',this.checked)"/> Confirmo que ya realicé la reunión de retroalimentación con el colaborador.</label><div class="actions"><button class="btn btn-primary" ${cal.reunionLiderRealizada&&!cal.acuerdosLiberados&&!cal.firmaLider?'':'disabled'} onclick="App.liberarAcuerdos('${colaboradorId}','${periodoId}')">${cal.acuerdosLiberados?'✓ Acuerdos liberados':'Liberar acuerdos para firma'}</button></div><div class="signature-grid leader-signature-grid">${renderSignatureCard('lider',col,periodoId,cal,!cal.acuerdosLiberados?'Libera primero los acuerdos finales.':null)}${renderSignatureCard('colaborador',col,periodoId,cal,!cal.firmaLider?'Pendiente de firma del líder.':null)}</div></section>` : ''}
+      ${cal && cal.retroHabilitada ? `<section class="leader-release-card"><div class="feedback-signing-head"><div><span class="admin-section-kicker">CIERRE DE RETROALIMENTACIÓN</span><h3>Reunión, acuerdos y firma</h3><p>Confirma la reunión, ajusta los acuerdos si es necesario y libera la versión final antes de firmar.</p></div><div class="document-actions"><button class="btn btn-outline btn-sm" onclick="App.descargarRetroalimentacion('${colaboradorId}','${periodoId}')">Descargar constancia</button><button class="btn btn-outline btn-sm" onclick="App.imprimirRetroalimentacion('${colaboradorId}','${periodoId}')">Imprimir / Guardar PDF</button></div></div><label class="confirm-check"><input type="checkbox" ${cal.reunionLiderRealizada?'checked':''} ${cal.firmaLider?'disabled':''} onchange="App.confirmarReunionLider('${colaboradorId}','${periodoId}',this.checked)"/> Confirmo que ya realicé la reunión de retroalimentación con el colaborador.</label><div class="actions"><button class="btn btn-primary" ${cal.reunionLiderRealizada&&!cal.acuerdosLiberados&&!cal.firmaLider?'':'disabled'} onclick="App.liberarAcuerdos('${colaboradorId}','${periodoId}')">${cal.acuerdosLiberados?'✓ Acuerdos liberados':'Liberar acuerdos para firma'}</button></div><div class="signature-own-flow leader-signature-grid">${renderSignatureCard('lider',col,periodoId,cal,!cal.acuerdosLiberados?'Libera primero los acuerdos finales.':null)}${renderOtherPartySignatureStatus('colaborador',cal)}</div></section>` : ''}
     </div>`;
   }
 
@@ -2638,6 +2653,13 @@
     limpiarFirma(canvasId){ const c=document.getElementById(canvasId); if(!c)return; const ctx=c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height); },
     firmarRetroalimentacion(role,colaboradorId,periodoId,canvasId){
       const cal=S.getCalibracion(colaboradorId,periodoId), c=document.getElementById(canvasId);
+      const perfil=state.user&&state.user.perfil;
+      if((role==='lider'&&perfil!=='lider')||(role==='colaborador'&&perfil!=='colaborador')){showNotice('Esta firma debe realizarse desde el portal personal correspondiente.','warning');return;}
+      if(role==='colaborador'&&String(state.user.empleado)!==String(colaboradorId)){showNotice('Solo puedes firmar tu propia retroalimentación.','warning');return;}
+      if(role==='lider'){
+        const col=S.getColaborador(colaboradorId);
+        if(!col||String(col.liderId)!==String(state.user.empleado)){showNotice('No tienes autorización para firmar la retroalimentación de este colaborador.','warning');return;}
+      }
       if(!cal||!cal.retroHabilitada){showNotice('La retroalimentación todavía no está habilitada.','warning');return;}
       if(!cal.acuerdosLiberados){showNotice('Los acuerdos finales deben estar liberados antes de firmar.','warning');return;}
       if(role==='colaborador'&&!cal.firmaLider){showNotice('La firma del colaborador se habilita después de la firma del líder.','warning');return;}
