@@ -805,11 +805,13 @@
     if (page === 'autoevaluacion') return viewAutoevaluacion(col, periodoId, estado);
     if (page === 'retroalimentacion') return viewRetroalimentacion(col, periodoId, estado);
     if (page === 'enviado') return viewEnvioExitoso(col);
-    return viewColaboradorInicio(col, periodoId, estado);
+    return viewBienvenidaEvaluacion(col, periodoId, estado);
   }
 
   function viewBienvenidaEvaluacion(col, periodoId, estado) {
     const enProgreso = estado === D.ESTADOS.EN_PROGRESO;
+    const retroDisponible = estado === D.ESTADOS.RETRO_PENDIENTE || estado === D.ESTADOS.CERRADA;
+    const evaluacionEnviada = ![D.ESTADOS.NO_INICIADA, D.ESTADOS.EN_PROGRESO].includes(estado);
     const primerNombre = esc((col.nombre || '').trim().split(/\s+/)[0] || '');
     return `
     <section class="welcome-page">
@@ -892,7 +894,11 @@
 
 
       <div class="welcome-actions">
-        <button class="btn welcome-start-btn" onclick="App.comenzarEvaluacion()">→&nbsp;&nbsp;${enProgreso ? 'Continuar mi evaluación' : 'Comenzar mi evaluación'}</button>
+        ${retroDisponible
+          ? `<a class="btn welcome-start-btn" href="#/colaborador/retroalimentacion">→&nbsp;&nbsp;Conocer mi retroalimentación</a>`
+          : evaluacionEnviada
+            ? `<div class="welcome-process-status"><strong>✓ Tu autoevaluación ya fue enviada</strong><span>El proceso continúa con tu líder y Desarrollo Organizacional. Te notificaremos cuando tu retroalimentación esté disponible.</span></div>`
+            : `<button class="btn welcome-start-btn" onclick="App.comenzarEvaluacion()">→&nbsp;&nbsp;${enProgreso ? 'Continuar mi evaluación' : 'Comenzar mi evaluación'}</button>`}
         <div class="welcome-important">◈ &nbsp;Tu evaluación es importante</div>
       </div>
     </section>`;
@@ -1497,6 +1503,39 @@
     return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Retroalimentación - ${esc(col.nombre)}</title><style>body{font-family:Arial,sans-serif;color:#102a48;margin:36px;line-height:1.45}header{border-bottom:3px solid #0b5fc6;padding-bottom:18px;margin-bottom:24px}h1{margin:0;font-size:25px}h2{font-size:17px;margin-top:25px;color:#0b5fc6}.meta{display:grid;grid-template-columns:1fr 1fr;gap:9px 24px;background:#f4f8fc;padding:16px;border-radius:10px}.score{display:flex;gap:30px;align-items:center;padding:18px 0}.score b{font-size:34px;color:#0b5fc6}table{width:100%;border-collapse:collapse;margin-top:8px}th,td{border:1px solid #d6e1ec;padding:8px;text-align:left;font-size:12px}th{background:#edf5fe}.signatures{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:34px}.sig{border-top:1px solid #7890a8;padding-top:10px;text-align:center}.sig img{max-width:220px;max-height:70px;display:block;margin:0 auto 8px}.muted{color:#687c91;font-size:12px}@media print{body{margin:18mm}.no-print{display:none}}</style></head><body><header><div class="muted">INTER-CON · Evaluación de Desempeño</div><h1>Constancia de retroalimentación</h1><div class="muted">FOR-CAP-003 Rev. 4 · ${esc(state.periodo?.nombre||periodoId)}</div></header><div class="meta"><div><b>Colaborador:</b> ${esc(col.nombre)}</div><div><b>No. empleado:</b> ${esc(col.empleado)}</div><div><b>Puesto:</b> ${esc(col.puesto||'—')}</div><div><b>Área:</b> ${esc(col.area||'—')}</div><div><b>Líder:</b> ${esc(lider?.nombre||'—')}</div><div><b>Fecha reunión:</b> ${esc(fmtFechaFirma(cal.fechaReunion))}</div></div><div class="score"><b>${esc(f1(total))}</b><div><strong>${esc(nivel.nivel||'—')}</strong><br><span class="muted">Resultado final calibrado · ${cuad?.info?`9-Box ${cuad.cuadrante}: ${esc(cuad.info.nombre)}`:'Sin clasificación 9-Box'}</span></div></div><h2>Fortalezas</h2><p>${esc(liderEval?.fortalezas||'Sin registrar.')}</p><h2>Comentarios del líder</h2><p>${esc(liderEval?.comentarios||'Sin comentarios.')}</p><h2>Áreas de oportunidad y plan de mejora</h2><table><thead><tr><th>Área de oportunidad</th><th>Plan de mejora</th></tr></thead><tbody>${rowsAreas}</tbody></table><h2>Plan de desarrollo</h2><table><thead><tr><th>Competencia</th><th>Acción acordada</th><th>Fecha compromiso</th></tr></thead><tbody>${rowsPlanes}</tbody></table>${cal.observacionesRH?`<h2>Observaciones de RH</h2><p>${esc(cal.observacionesRH)}</p>`:''}<div class="signatures"><div class="sig">${cal.firmaLiderData?`<img src="${cal.firmaLiderData}"/>`:''}<b>${esc(cal.firmaLiderNombre||lider?.nombre||'Líder')}</b><br><span class="muted">${cal.firmaLider?`Firmado ${esc(fmtFechaFirma(cal.fechaFirmaLider))}`:'Firma pendiente'}</span></div><div class="sig">${cal.firmaColaboradorData?`<img src="${cal.firmaColaboradorData}"/>`:''}<b>${esc(cal.firmaColaboradorNombre||col.nombre)}</b><br><span class="muted">${cal.firmaColaborador?`Firmado ${esc(fmtFechaFirma(cal.fechaFirmaColaborador))}`:'Firma pendiente'}</span></div></div><p class="muted" style="margin-top:28px">La firma confirma la recepción y revisión de la retroalimentación y de los acuerdos de desarrollo registrados; no sustituye otros procesos laborales o administrativos aplicables.</p></body></html>`;
   }
 
+
+  function buildPerformanceProfile(colaboradorId, periodoId) {
+    const autoEval=S.getEvaluacion(colaboradorId,periodoId,'autoevaluacion');
+    const leaderEval=S.getEvaluacion(colaboradorId,periodoId,'lider');
+    if(!autoEval || !leaderEval) return null;
+    const autoResp=S.getRespuestas(autoEval.id), leaderResp=S.getRespuestas(leaderEval.id);
+    const dims=[]; const auto={}; const lider={};
+    [...D.COMPETENCIAS.actitud,...D.COMPETENCIAS.habilidades].forEach((c)=>{
+      const key=c.id.toLowerCase();
+      const short=c.nombre.replace(/\s*\([^)]*\)/g,'').replace(' y Compromiso con la Sustentabilidad','').replace('Trabajo en Equipo, Unión y Desarrollo de Otros','Trabajo en equipo').replace('Procesos y Herramientas de Trabajo','Procesos y herramientas').replace('Seguimiento, Control y Uso de Recursos','Seguimiento y control');
+      dims.push({key,label:c.nombre,shortLabel:short.length>24?short.slice(0,22)+'…':short});
+      const ar=autoResp.find(r=>r.competenciaId===c.id), lr=leaderResp.find(r=>r.competenciaId===c.id);
+      auto[key]=ar && ar.valor!=='N/A' ? Number(ar.valor) : null;
+      lider[key]=lr && lr.valor!=='N/A' ? Number(lr.valor) : null;
+    });
+    const ao=S.getObjetivos(autoEval.id).filter(o=>(o.descripcion||'').trim()), lo=S.getObjetivos(leaderEval.id).filter(o=>(o.descripcion||'').trim());
+    const avgA=C.promedioValido(ao.map(o=>o.calificacion)), avgL=C.promedioValido(lo.map(o=>o.calificacion));
+    dims.push({key:'objetivos',label:'Cumplimiento de Objetivos',shortLabel:'Objetivos'}); auto.objetivos=avgA; lider.objetivos=avgL;
+    return {dimensiones:dims,autoevaluacion:auto,evaluacionLider:lider};
+  }
+
+  function renderSectionGapSummary(resAuto,resLider){
+    if(!resAuto||!resLider) return '';
+    const sections=[['actitud','Valores y actitud'],['habilidades','Técnica funcional'],['objetivos','Objetivos']];
+    return `<div class="performance-summary-strip">${sections.map(([k,label])=>{
+      const a=Number(resAuto.promedios?.[k]), l=Number(resLider.promedios?.[k]);
+      const lOk=Number.isFinite(l), aOk=Number.isFinite(a);
+      const idealGap=lOk?5-l:null, perception=(aOk&&lOk)?a-l:null;
+      const cls=idealGap===null?'neutral':idealGap<=.5?'good':idealGap<=1.25?'mid':'attention';
+      return `<article class="performance-summary-card ${cls}"><span>${esc(label)}</span><strong>${lOk?l.toFixed(1):'—'}<small>/5 líder</small></strong><div><b>${idealGap===null?'—':`${idealGap.toFixed(1)} pts al ideal`}</b><em>${perception===null?'—':`${perception>0?'+':''}${perception.toFixed(1)} auto vs líder`}</em></div></article>`;
+    }).join('')}</div>`;
+  }
+
   /**
    * Ficha ejecutiva de retroalimentación del colaborador. Reutiliza los
    * campos y funciones ya existentes (resultados, calibración, áreas de
@@ -1534,6 +1573,8 @@
       desempenoProm: resLider ? resLider.promedios.desempeno : null,
       nombreColaborador: col.nombre
     });
+    const performanceProfile = buildPerformanceProfile(col.empleado, periodoId);
+    const performanceWheelHtml = performanceProfile ? global.EDDCharts.renderPerformanceWheel(performanceProfile) : '';
 
     const seccionesCards = ['actitud', 'habilidades', 'objetivos'].map((s) => {
       const meta = D.SECCIONES_META[s];
@@ -1578,9 +1619,12 @@
         <div><h3>Matriz 9-Box</h3>${ninaBoxHtml}</div>
         <div class="feedback-group-card"><span class="admin-section-kicker">TU CLASIFICACIÓN</span>${renderCuadranteInfo(cuad)}</div>
       </div>
-      <div class="feedback-analysis-single">
-        <div><h3>Radar comparativo</h3>${radarHtml}</div>
-      </div>
+      <section class="performance-profile-section">
+        <div class="performance-profile-head"><div><span class="admin-section-kicker">PERFIL DE DESEMPEÑO</span><h3>Lectura multidimensional</h3><p>Compara tu percepción, la evaluación del líder y la distancia contra el nivel ideal esperado.</p></div></div>
+        ${renderSectionGapSummary(resAuto,resLider)}
+        ${performanceWheelHtml}
+        <details class="performance-summary-details"><summary>Ver resumen de las 3 dimensiones</summary><div class="feedback-analysis-single"><div><h3>Radar ejecutivo</h3>${radarHtml}</div></div></details>
+      </section>
 
       ${(()=>{const ae=S.getEvaluacion(col.empleado,periodoId,'autoevaluacion'),le=S.getEvaluacion(col.empleado,periodoId,'lider');if(!ae||!le)return '';const ao=S.getObjetivos(ae.id),lo=S.getObjetivos(le.id).filter(o=>o.ajusteManualLider);return lo.length?`<section class="feedback-objective-adjustments"><div class="feedback-section-title"><span>OBJETIVOS</span><h3>Ajustes realizados por tu líder</h3><p>Cuando la calificación del líder difiere de la equivalencia automática, aquí puedes consultar el motivo registrado.</p></div>${lo.map(o=>{const a=ao.find(x=>Number(x.index)===Number(o.index));return `<article class="objective-adjustment-card"><div><strong>${esc(a?.descripcion||o.descripcion||'Objetivo')}</strong><span class="objective-score-change">Automática ${esc(o.calificacionAutomatica??a?.calificacion??'—')}/5 → Líder ${esc(o.calificacion)}/5</span></div><p><b>Justificación del líder:</b> ${esc(o.justificacionLider||'Sin justificación registrada.')}</p></article>`}).join('')}</section>`:''})()}
       <section class="feedback-agreements"><div class="feedback-section-title"><span>ACUERDOS DE RETROALIMENTACIÓN</span><h3>Lo acordado para tu desarrollo</h3></div>
@@ -1874,6 +1918,8 @@
     const ninaBoxHtml = global.EDDCharts.renderNineBoxIndividual({
       actitudProm: resLider.promedios.actitud, desempenoProm: resLider.promedios.desempeno, nombreColaborador: col.nombre
     });
+    const performanceProfile = buildPerformanceProfile(colaboradorId, periodoId);
+    const performanceWheelHtml = performanceProfile ? global.EDDCharts.renderPerformanceWheel(performanceProfile) : '';
 
     return `
     <div class="card">
@@ -1884,8 +1930,12 @@
         ${kpi('Diferencia global', (resAuto.puntajes.total - resLider.puntajes.total > 0 ? '+' : '') + f1(resAuto.puntajes.total - resLider.puntajes.total))}
       </div>
       <p>Brecha general: ${badge(brechaGeneral.etiqueta, brechaGeneral.etiqueta === 'Alineada' ? 'green' : (brechaGeneral.etiqueta === 'Revisar' ? 'yellow' : 'red'))}</p>
-      <h3>Diferencias por sección (radar comparativo)</h3>
-      ${radarHtml}
+      <section class="performance-profile-section leader-performance-profile">
+        <div class="performance-profile-head"><div><span class="admin-section-kicker">LECTURA MULTIDIMENSIONAL</span><h3>Perfil de desempeño vs. ideal</h3><p>La rueda muestra dónde están alineados colaborador y líder, y en qué dimensiones ambos siguen lejos del estándar esperado.</p></div></div>
+        ${renderSectionGapSummary(resAuto,resLider)}
+        ${performanceWheelHtml}
+        <details class="performance-summary-details"><summary>Ver resumen ejecutivo de 3 dimensiones</summary>${radarHtml}</details>
+      </section>
       ${ajustesObjetivos.length ? `<section class="objective-adjustment-context"><div class="admin-panel-head"><div><span class="admin-section-kicker">AJUSTES DE OBJETIVOS</span><h3>Calificaciones modificadas por el líder</h3></div></div>${ajustesObjetivos.map(a=>`<article class="objective-adjustment-card"><div><strong>${esc(a.objetivo)}</strong><span class="objective-score-change">Automática ${esc(a.automatica)}/5 → Líder ${esc(a.lider)}/5</span></div><p><b>Justificación:</b> ${esc(a.justificacion||'Sin justificación registrada.')}</p></article>`).join('')}</section>` : ''}
       <h3>Diferencias detalladas por competencia</h3>
       <table class="table">

@@ -310,6 +310,72 @@
     </div>`;
   }
 
+
+
+  // ===========================================================================
+  // PERFIL MULTIDIMENSIONAL DE DESEMPEÑO
+  // Inspirado en la lectura radial de instrumentos de liderazgo, pero usando
+  // exclusivamente las competencias oficiales de EDD Inter-Con.
+  // ===========================================================================
+  function renderPerformanceWheel(opts) {
+    opts = opts || {};
+    const dimensiones = opts.dimensiones || [];
+    const auto = opts.autoevaluacion || {};
+    const lider = opts.evaluacionLider || {};
+    const ideal = opts.ideal || 5;
+    const size = opts.size || 430;
+    const center = size / 2;
+    const maxR = size / 2 - 88;
+    const n = Math.max(1, dimensiones.length);
+    const step = (Math.PI * 2) / n;
+
+    const xy = (valor, i, radiusExtra=0) => {
+      const angle = -Math.PI/2 + i*step;
+      const v = Math.max(0, Math.min(5, Number(valor)||0));
+      const r = (v/5)*maxR + radiusExtra;
+      return [center + r*Math.cos(angle), center + r*Math.sin(angle), angle];
+    };
+
+    let grid='';
+    for(let ring=1; ring<=5; ring++){
+      const pts=dimensiones.map((d,i)=>{
+        const p=xy(ring,i); return `${p[0].toFixed(1)},${p[1].toFixed(1)}`;
+      }).join(' ');
+      grid += `<polygon points="${pts}" fill="${ring===5?'#f7fbff':'none'}" fill-opacity="${ring===5?'1':'0'}" stroke="${ring===5?'#cddbea':'#e5edf5'}" stroke-width="${ring===5?'1.4':'1'}"/>`;
+    }
+    dimensiones.forEach((d,i)=>{
+      const p=xy(5,i);
+      grid += `<line x1="${center}" y1="${center}" x2="${p[0].toFixed(1)}" y2="${p[1].toFixed(1)}" stroke="#d9e4ef" stroke-width="1"/>`;
+      const labelR=maxR+38; const angle=p[2];
+      const lx=center+labelR*Math.cos(angle), ly=center+labelR*Math.sin(angle);
+      const anchor=Math.abs(Math.cos(angle))<.2?'middle':(Math.cos(angle)>0?'start':'end');
+      grid += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="${anchor}" dominant-baseline="middle" class="performance-wheel-label">${esc(d.shortLabel || d.label)}</text>`;
+    });
+
+    function series(values,color,opacity,dash){
+      const pts=dimensiones.map((d,i)=>xy(values[d.key],i));
+      const pstr=pts.map(p=>`${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+      const dots=pts.map((p,i)=>{
+        const d=dimensiones[i], v=values[d.key];
+        return `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="4.2" fill="${color}" stroke="#fff" stroke-width="1.4"><title>${esc(d.label)}: ${fmt(v)}</title></circle>`;
+      }).join('');
+      return `<polygon points="${pstr}" fill="${color}" fill-opacity="${opacity}" stroke="${color}" stroke-width="2.4" ${dash?`stroke-dasharray="${dash}"`:''}/>${dots}`;
+    }
+    const idealValues={}; dimensiones.forEach(d=>idealValues[d.key]=ideal);
+    const svg=`<svg viewBox="0 0 ${size} ${size}" class="performance-wheel-svg" role="img" aria-label="Perfil multidimensional de desempeño">${grid}${series(idealValues,'#a8b5c4',0,'6,5')}${series(auto,'#2f7dd3',.11,'')}${series(lider,'#e27a24',.10,'')}</svg>`;
+
+    const details=dimensiones.map(d=>{
+      const a=Number(auto[d.key]), l=Number(lider[d.key]);
+      const aOk=Number.isFinite(a), lOk=Number.isFinite(l);
+      const gapIdeal=lOk ? (ideal-l) : null;
+      const gapPerception=(aOk&&lOk) ? (a-l) : null;
+      const cls=gapIdeal===null?'neutral':gapIdeal<=.5?'good':gapIdeal<=1.25?'mid':'attention';
+      return `<div class="performance-dimension-row ${cls}"><div><strong>${esc(d.label)}</strong><small>${lOk?`Líder ${fmt(l)}/5 · Ideal ${fmt(ideal)}/5`:'Sin evaluación del líder'}</small></div><div class="performance-gap-values"><span>${gapIdeal===null?'—':`-${gapIdeal.toFixed(1)} ideal`}</span><b>${gapPerception===null?'—':`${gapPerception>0?'+':''}${gapPerception.toFixed(1)} percepción`}</b></div></div>`;
+    }).join('');
+
+    return `<div class="performance-wheel-wrap"><div class="performance-wheel-main">${svg}<div class="performance-wheel-legend"><span><i class="pw-dot auto"></i>Autoevaluación</span><span><i class="pw-dot leader"></i>Evaluación del líder</span><span><i class="pw-line ideal"></i>Ideal esperado 5/5</span></div></div><div class="performance-wheel-side"><div class="performance-reading-note"><strong>Cómo leer este perfil</strong><p>La distancia al borde muestra qué tan cerca está cada dimensión del ideal. La separación entre azul y naranja muestra diferencias de percepción entre colaborador y líder.</p></div><div class="performance-dimensions">${details}</div></div></div>`;
+  }
+
   // ===========================================================================
   // EXPORTS
   // ===========================================================================
@@ -319,6 +385,7 @@
     renderNineBoxFull,
     renderNineBoxIndividual,
     renderCuadranteInfo,
+    renderPerformanceWheel,
     dimensionesPorDefecto
   };
 })(window);
