@@ -401,8 +401,11 @@
       if (Object.prototype.hasOwnProperty.call(extras, 'relevante')) o.relevante = !!extras.relevante;
       if (Object.prototype.hasOwnProperty.call(extras, 'cumplimiento')) o.cumplimiento = extras.cumplimiento;
       if (Object.prototype.hasOwnProperty.call(extras, 'noCuantificable')) o.noCuantificable = !!extras.noCuantificable;
+      if (Object.prototype.hasOwnProperty.call(extras, 'calificacionAutomatica')) o.calificacionAutomatica = extras.calificacionAutomatica;
+      if (Object.prototype.hasOwnProperty.call(extras, 'ajusteManualLider')) o.ajusteManualLider = !!extras.ajusteManualLider;
+      if (Object.prototype.hasOwnProperty.call(extras, 'justificacionLider')) o.justificacionLider = extras.justificacionLider || '';
     } else {
-      db.objetivos.push({ evaluacionId, index, descripcion, resultado, calificacion, meta: extras.meta || '', fechaCompromiso: extras.fechaCompromiso || '', alcanzable: !!extras.alcanzable, relevante: !!extras.relevante, cumplimiento: extras.cumplimiento ?? '', noCuantificable: !!extras.noCuantificable });
+      db.objetivos.push({ evaluacionId, index, descripcion, resultado, calificacion, meta: extras.meta || '', fechaCompromiso: extras.fechaCompromiso || '', alcanzable: !!extras.alcanzable, relevante: !!extras.relevante, cumplimiento: extras.cumplimiento ?? '', noCuantificable: !!extras.noCuantificable, calificacionAutomatica: extras.calificacionAutomatica ?? calificacion, ajusteManualLider: !!extras.ajusteManualLider, justificacionLider: extras.justificacionLider || '' });
     }
     persist();
   }

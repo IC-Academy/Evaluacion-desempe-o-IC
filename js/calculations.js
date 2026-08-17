@@ -201,7 +201,17 @@
     const secC = puntajeSeccion(avgC, PESOS_SECCION.conocimientos);
     const secD = puntajeSeccion(avgD, PESOS_SECCION.objetivos);
 
-    const total = secA.puntaje + secB.puntaje + secC.puntaje + secD.puntaje;
+    // Si una sección completa no aplica (por ejemplo Objetivos = N/A), no se convierte en cero.
+    // El resultado global se repondera sobre el peso realmente aplicable para evitar castigar o beneficiar artificialmente.
+    const seccionesAplicables = [
+      { sec: secA, peso: PESOS_SECCION.actitud },
+      { sec: secB, peso: PESOS_SECCION.habilidades },
+      { sec: secC, peso: PESOS_SECCION.conocimientos },
+      { sec: secD, peso: PESOS_SECCION.objetivos }
+    ].filter((x) => !x.sec.sinDatos && x.peso > 0);
+    const pesoAplicable = seccionesAplicables.reduce((acc, x) => acc + x.peso, 0);
+    const puntosAplicables = seccionesAplicables.reduce((acc, x) => acc + x.sec.puntaje, 0);
+    const total = pesoAplicable > 0 ? (puntosAplicables / pesoAplicable) * 100 : 0;
 
     // Eje DESEMPEÑO Rev.4 = Técnica Funcional (B) + Objetivos (C), expresado en escala 1-5.
     const pesosDesempeno = [

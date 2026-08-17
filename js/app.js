@@ -1343,10 +1343,16 @@
     return Math.round(pctValue * 10) / 10;
   }
 
+  function evaluacionSinObjetivos(evaluacionId) {
+    const ev = S.load().evaluaciones.find((e) => e.id === evaluacionId);
+    return !!(ev && ev.objetivosNoAplican);
+  }
+
   function renderObjetivosForm(ev, soloLecturaDescripcion) {
     const objetivos = S.getObjetivos(ev.id);
     const filas = [];
     const comprendido = objetivosComprendidos(ev.id);
+    const noAplican = !!ev.objetivosNoAplican;
     for (let i = 0; i < Math.max(objetivos.length, 1); i++) {
       filas.push(objetivos[i] || { index: i, descripcion: '', meta: '', resultado: '', cumplimiento: '', noCuantificable: false, calificacion: '' });
     }
@@ -1356,22 +1362,23 @@
         <div class="kpi-guide-wide-copy">
           <div class="smart-guide-badge">OBJETIVOS DEL PERIODO · 30%</div>
           <h3>Antes de capturar, revisa cómo se califican tus objetivos</h3>
-          <p>Registra hasta cinco objetivos. Captura qué meta se acordó, cuál fue el resultado final y el porcentaje de cumplimiento respecto a esa meta.</p>
+          <p>Registra hasta cinco objetivos. Captura qué meta se acordó y cuál fue el resultado final. El porcentaje y la calificación se calculan automáticamente.</p>
           <div class="kpi-equivalence-inline">
             <span><b>5 ★</b> 110% o más</span><span><b>4 ★</b> 100–109%</span><span><b>3 ★</b> 90–99%</span><span><b>2 ★</b> 75–89%</span><span><b>1 ★</b> &lt;75%</span>
           </div>
-          
         </div>
         <button type="button" class="btn ${comprendido ? 'btn-ack-done' : 'btn-primary'} kpi-understand-btn" onclick="App.comprenderObjetivos('${ev.id}')" ${comprendido ? 'disabled' : ''}>${comprendido ? '✓ Comprendido' : 'Comprendo lo que dice'}</button>
       </section>
       <section class="smart-capture-panel kpi-capture-full ${comprendido ? '' : 'kpi-capture-locked'}" aria-disabled="${comprendido ? 'false' : 'true'}">
         <div class="smart-capture-head">
-          <div><span class="smart-capture-kicker">CUMPLIMIENTO DE OBJETIVOS · 30%</span><h3>Captura tus objetivos</h3><p><b>Meta acordada</b> = lo que debías lograr · <b>Resultado alcanzado</b> = lo que realmente lograste · <b>% cumplimiento</b> = resultado comparado contra la meta. La calificación se asigna automáticamente.</p></div>
+          <div><span class="smart-capture-kicker">CUMPLIMIENTO DE OBJETIVOS · 30%</span><h3>Captura tus objetivos</h3><p><b>Meta acordada</b> = lo que debías lograr · <b>Resultado alcanzado</b> = lo que realmente lograste. El sistema calcula el cumplimiento y la calificación.</p></div>
           <div class="smart-capture-chip">REV. 4</div>
         </div>
         ${comprendido ? '' : '<div class="kpi-lock-message">🔒 Confirma que comprendiste la guía superior para habilitar la captura.</div>'}
-        <div id="objetivosWrap">${filas.map((o, i) => renderObjetivoRow(ev.id, o, Number(o.index ?? i), soloLecturaDescripcion, !comprendido)).join('')}</div>
-        ${filas.length < 5 ? `<button class="btn btn-outline btn-sm smart-add-objective" ${comprendido ? '' : 'disabled'} onclick="App.agregarObjetivo('${ev.id}')">+ Agregar objetivo</button>` : ''}
+        <div class="objective-na-choice ${noAplican ? 'selected' : ''}">
+          <label class="objective-na-check"><input type="checkbox" ${noAplican ? 'checked' : ''} ${comprendido ? '' : 'disabled'} onchange="App.toggleObjetivosNoAplican('${ev.id}',this.checked)"/><span><strong>No tengo objetivos aplicables en este periodo</strong><small>Usa esta opción únicamente si durante el ciclo no tuviste objetivos o indicadores formales asignados. La sección se registrará como N/A y no contará como cero.</small></span></label>
+        </div>
+        ${noAplican ? '<div class="objective-na-confirmed"><span>✓</span><div><strong>Sección marcada como N/A</strong><p>Tu líder deberá confirmar que esta condición aplica antes de enviar su evaluación.</p></div></div>' : `<div id="objetivosWrap">${filas.map((o, i) => renderObjetivoRow(ev.id, o, Number(o.index ?? i), soloLecturaDescripcion, !comprendido)).join('')}</div>${filas.length < 5 ? `<button class="btn btn-outline btn-sm smart-add-objective" ${comprendido ? '' : 'disabled'} onclick="App.agregarObjetivo('${ev.id}')">+ Agregar objetivo</button>` : ''}`}
       </section>
     </div>`;
   }
@@ -1397,6 +1404,7 @@
   function renderResumenAuto(ev) {
     const secciones = ['actitud', 'habilidades'];
     const objetivos = S.getObjetivos(ev.id).filter((o) => o.descripcion && o.descripcion.trim());
+    const objetivosNoAplican = !!ev.objetivosNoAplican;
     return `
     <p class="muted">Revisa tus respuestas antes de enviar. El resultado y la comparación con tu líder se mostrarán más adelante, en la fase de retroalimentación.</p>
     ${secciones.map((s) => {
@@ -1407,7 +1415,7 @@
       </tbody></table></div>`;
     }).join('')}
     <div class="resumen-seccion resumen-seccion-objetivos"><h4>C. Cumplimiento de Objetivos</h4>
-      ${objetivos.length ? `<table class="table table-compact"><thead><tr><th>Objetivo</th><th>Meta</th><th>Resultado</th><th>%</th><th>Calif.</th></tr></thead><tbody>${objetivos.map((o) => `<tr><td>${esc(o.descripcion)}</td><td>${esc(o.meta || '—')}</td><td>${esc(o.resultado || '—')}</td><td>${esc(o.cumplimiento === '' || o.cumplimiento == null ? '—' : o.cumplimiento + '%')}</td><td class="text-right">${esc(o.calificacion)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">No se registraron objetivos.</p>'}
+      ${objetivosNoAplican ? '<div class="objective-na-summary"><strong>N/A — Sin objetivos aplicables en este periodo</strong><span>Esta sección se excluye del cálculo y deberá ser confirmada por el líder.</span></div>' : (objetivos.length ? `<table class="table table-compact"><thead><tr><th>Objetivo</th><th>Meta</th><th>Resultado</th><th>%</th><th>Calif.</th></tr></thead><tbody>${objetivos.map((o) => `<tr><td>${esc(o.descripcion)}</td><td>${esc(o.meta || '—')}</td><td>${esc(o.resultado || '—')}</td><td>${esc(o.cumplimiento === '' || o.cumplimiento == null ? '—' : o.cumplimiento + '%')}</td><td class="text-right">${esc(o.calificacion)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">No se registraron objetivos.</p>')}
     </div>
     <div class="form-group resumen-comments"><label>Comentarios u observaciones del colaborador</label><textarea placeholder="Agrega contexto adicional si lo consideras necesario. Si más de la mitad de una sección quedó en N/A, justifica aquí." onchange="App.setComentarios('${ev.id}',this.value)">${esc(ev.comentarios || '')}</textarea></div>`;
   }
@@ -1574,6 +1582,7 @@
         <div><h3>Radar comparativo</h3>${radarHtml}</div>
       </div>
 
+      ${(()=>{const ae=S.getEvaluacion(col.empleado,periodoId,'autoevaluacion'),le=S.getEvaluacion(col.empleado,periodoId,'lider');if(!ae||!le)return '';const ao=S.getObjetivos(ae.id),lo=S.getObjetivos(le.id).filter(o=>o.ajusteManualLider);return lo.length?`<section class="feedback-objective-adjustments"><div class="feedback-section-title"><span>OBJETIVOS</span><h3>Ajustes realizados por tu líder</h3><p>Cuando la calificación del líder difiere de la equivalencia automática, aquí puedes consultar el motivo registrado.</p></div>${lo.map(o=>{const a=ao.find(x=>Number(x.index)===Number(o.index));return `<article class="objective-adjustment-card"><div><strong>${esc(a?.descripcion||o.descripcion||'Objetivo')}</strong><span class="objective-score-change">Automática ${esc(o.calificacionAutomatica??a?.calificacion??'—')}/5 → Líder ${esc(o.calificacion)}/5</span></div><p><b>Justificación del líder:</b> ${esc(o.justificacionLider||'Sin justificación registrada.')}</p></article>`}).join('')}</section>`:''})()}
       <section class="feedback-agreements"><div class="feedback-section-title"><span>ACUERDOS DE RETROALIMENTACIÓN</span><h3>Lo acordado para tu desarrollo</h3></div>
         <div class="agreement-grid">
           <article><h4>Fortalezas</h4><p>${esc(liderEval ? liderEval.fortalezas : '') || '<span class="muted">Sin registrar.</span>'}</p></article>
@@ -1761,22 +1770,38 @@
   }
 
   function renderObjetivosLider(ev, autoEval) {
+    const objetivosNoAplican = !!autoEval.objetivosNoAplican;
     const objetivosAuto = S.getObjetivos(autoEval.id).filter((o) => o.descripcion && o.descripcion.trim());
     const objetivosLider = S.getObjetivos(ev.id);
     const mapLider = {}; objetivosLider.forEach((o) => { mapLider[Number(o.index)] = o; });
+    if (objetivosNoAplican) {
+      return `<section class="leader-na-objectives ${ev.objetivosNoAplicanConfirmados ? 'confirmed' : ''}">
+        <div><span class="admin-section-kicker">OBJETIVOS DEL PERIODO</span><h3>El colaborador indicó que no tuvo objetivos aplicables</h3><p>Confirma esta condición únicamente si durante el ciclo no existieron objetivos o indicadores formales para evaluar. Esta sección quedará como N/A y no contará como cero.</p></div>
+        <label class="confirm-check objective-na-leader-confirm"><input type="checkbox" ${ev.objetivosNoAplicanConfirmados ? 'checked' : ''} onchange="App.confirmarObjetivosNoAplicanLider('${ev.id}',this.checked)"/> Confirmo que para este colaborador no aplican objetivos en el periodo.</label>
+      </section>`;
+    }
     if (!objetivosAuto.length) return '<p class="muted">El colaborador no registró objetivos en este periodo.</p>';
     return `
-    <div class="kpi-leader-note">La calificación de objetivos se determina automáticamente a partir del porcentaje de cumplimiento registrado. El líder revisa meta y resultado, pero no modifica la equivalencia.</div>
+    <div class="kpi-leader-note"><strong>Dato objetivo protegido:</strong> meta, resultado y % de cumplimiento provienen de la autoevaluación y no se editan aquí. Puedes conservar la calificación automática o asignar una calificación manual de 1 a 5; si la modificas, la justificación es obligatoria y será visible en retroalimentación y calibración de DO.</div>
     ${objetivosAuto.map((o, i) => {
       const sourceIndex = Number(o.index);
-      const calif = o.calificacion || '';
-      const actual = mapLider[sourceIndex];
-      if (!actual || String(actual.calificacion)!==String(calif)) {
-        S.saveObjetivo(ev.id, sourceIndex, o.descripcion||'', o.resultado||'', calif, {meta:o.meta||'', cumplimiento:o.cumplimiento??'', noCuantificable:false});
+      const autoScore = Number(o.calificacion) || '';
+      let actual = mapLider[sourceIndex];
+      if (!actual) {
+        S.saveObjetivo(ev.id, sourceIndex, o.descripcion||'', o.resultado||'', autoScore, {meta:o.meta||'', cumplimiento:o.cumplimiento??'', noCuantificable:false, calificacionAutomatica:autoScore, ajusteManualLider:false, justificacionLider:''});
+        actual = S.getObjetivos(ev.id).find((x) => Number(x.index) === sourceIndex);
       }
-      return `<div class="objetivo-row" data-idx="${sourceIndex}"><div class="objetivo-num">#${i+1}</div><div class="objetivo-fields">
+      const manual = !!actual?.ajusteManualLider;
+      const scoreLider = actual?.calificacion || autoScore;
+      const just = actual?.justificacionLider || '';
+      return `<div class="objetivo-row leader-objective-review ${manual ? 'manual-active' : ''}" data-idx="${sourceIndex}"><div class="objetivo-num">#${i+1}</div><div class="objetivo-fields">
         <div class="objetivo-lectura"><strong>Objetivo:</strong> ${esc(o.descripcion)}</div>
-        <div class="kpi-leader-grid"><div class="objetivo-lectura"><strong>Meta acordada:</strong> ${esc(o.meta||'—')}</div><div class="objetivo-lectura"><strong>Resultado alcanzado:</strong> ${esc(o.resultado||'—')}</div><div class="objetivo-lectura"><strong>% cumplimiento:</strong> ${esc(o.cumplimiento===''||o.cumplimiento==null?'—':o.cumplimiento+'%')}</div><div class="objetivo-lectura"><strong>Calificación:</strong> <span class="readonly-rating">${esc(calif||'—')} ${calif?'★'.repeat(Number(calif)||0):''}</span></div></div>
+        <div class="kpi-leader-grid"><div class="objetivo-lectura"><strong>Meta acordada:</strong> ${esc(o.meta||'—')}</div><div class="objetivo-lectura"><strong>Resultado alcanzado:</strong> ${esc(o.resultado||'—')}</div><div class="objetivo-lectura"><strong>% cumplimiento:</strong> ${esc(o.cumplimiento===''||o.cumplimiento==null?'—':o.cumplimiento+'%')}</div><div class="objetivo-lectura"><strong>Calificación automática:</strong> <span class="readonly-rating">${esc(autoScore||'—')} ${autoScore?'★'.repeat(Number(autoScore)||0):''}</span></div></div>
+        <div class="leader-score-decision">
+          <div class="leader-score-choice-head"><div><strong>Calificación del líder</strong><span>${manual ? 'Calificación manual activada' : 'Se conserva la equivalencia automática'}</span></div><label class="switch-line"><input type="checkbox" ${manual ? 'checked' : ''} onchange="App.toggleCalificacionManualObjetivo('${ev.id}',${sourceIndex},this.checked)"/><span>Calificar manualmente</span></label></div>
+          ${manual ? `<div class="leader-manual-score"><div class="leader-rating-options" role="radiogroup" aria-label="Calificación manual del objetivo">${[1,2,3,4,5].map(n=>`<button type="button" class="leader-rating-btn ${Number(scoreLider)===n?'selected':''}" onclick="App.calificarObjetivoLider('${ev.id}',${sourceIndex},${n})"><b>${n}</b><span>${'★'.repeat(n)}</span></button>`).join('')}</div><label class="leader-justification-field"><span>Justificación del cambio <em>obligatoria</em></span><textarea placeholder="Explica por qué la calificación del líder debe ser diferente a la equivalencia automática..." oninput="App.justificarObjetivoLider('${ev.id}',${sourceIndex},this.value)">${esc(just)}</textarea></label></div>` : `<div class="leader-auto-score-kept"><span>✓</span><div><strong>${esc(autoScore||'—')}/5</strong><small>Calificación automática conservada</small></div></div>`}
+        </div>
+        <div class="validation-message" aria-live="polite">Si decides calificar manualmente, selecciona una calificación y registra la justificación.</div>
       </div></div>`;
     }).join('')}`;
   }
@@ -1832,6 +1857,7 @@
     const avgObjAuto = C.promedioValido(objAuto.map((o) => o.calificacion));
     const avgObjLider = C.promedioValido(objLider.map((o) => o.calificacion));
     filas.push({ nombre: 'C. Cumplimiento de Objetivos (promedio)', auto: avgObjAuto !== null ? C.round1(avgObjAuto) : 'N/A', lider: avgObjLider !== null ? C.round1(avgObjLider) : 'N/A', comentarioLider: '', comentarioAuto: '' });
+    const ajustesObjetivos = objLider.filter((o) => o.ajusteManualLider).map((ol) => { const oa = objAuto.find((x) => Number(x.index) === Number(ol.index)); return { objetivo: oa?.descripcion || ol.descripcion || 'Objetivo', automatica: ol.calificacionAutomatica ?? oa?.calificacion ?? '—', lider: ol.calificacion, justificacion: ol.justificacionLider || '' }; });
 
     const resAuto = S.getUltimoResultadoPorOrigen(colaboradorId, periodoId, 'autoevaluacion');
     const resLider = S.getUltimoResultadoPorOrigen(colaboradorId, periodoId, 'lider');
@@ -1860,6 +1886,7 @@
       <p>Brecha general: ${badge(brechaGeneral.etiqueta, brechaGeneral.etiqueta === 'Alineada' ? 'green' : (brechaGeneral.etiqueta === 'Revisar' ? 'yellow' : 'red'))}</p>
       <h3>Diferencias por sección (radar comparativo)</h3>
       ${radarHtml}
+      ${ajustesObjetivos.length ? `<section class="objective-adjustment-context"><div class="admin-panel-head"><div><span class="admin-section-kicker">AJUSTES DE OBJETIVOS</span><h3>Calificaciones modificadas por el líder</h3></div></div>${ajustesObjetivos.map(a=>`<article class="objective-adjustment-card"><div><strong>${esc(a.objetivo)}</strong><span class="objective-score-change">Automática ${esc(a.automatica)}/5 → Líder ${esc(a.lider)}/5</span></div><p><b>Justificación:</b> ${esc(a.justificacion||'Sin justificación registrada.')}</p></article>`).join('')}</section>` : ''}
       <h3>Diferencias detalladas por competencia</h3>
       <table class="table">
         <thead><tr><th>Competencia</th><th>Autoevaluación</th><th>Evaluación líder</th><th>Diferencia</th><th>Brecha</th><th>Comentario líder</th><th>Comentario colaborador</th></tr></thead>
@@ -2194,7 +2221,7 @@
         <article class="admin-panel calibration-chart-card"><div class="admin-panel-head"><div><span class="admin-section-kicker">TALENTO</span><h2>Ubicación 9-Box</h2></div></div>${ninaBoxHtml}</article>
       </div>
 
-      <article class="admin-panel calibration-leader-context"><div class="admin-panel-head"><div><span class="admin-section-kicker">CONTEXTO DEL LÍDER</span><h2>Retroalimentación y acciones propuestas</h2></div></div><div class="leader-context-grid"><div><h4>Fortalezas</h4><p>${esc(S.getEvaluacion(colaboradorId,periodoId,'lider')?.fortalezas||'')||'<span class="muted">Sin registrar.</span>'}</p></div><div><h4>Comentarios del líder</h4><p>${esc(S.getEvaluacion(colaboradorId,periodoId,'lider')?.comentarios||'')||'<span class="muted">Sin comentarios.</span>'}</p></div></div><h4>Áreas de oportunidad y plan de mejora</h4>${S.getAreasOportunidad(colaboradorId,periodoId).length?`<table class="table table-compact"><tbody>${S.getAreasOportunidad(colaboradorId,periodoId).map(a=>`<tr><td><b>${esc(a.area)}</b></td><td>${esc(a.planMejora)}</td></tr>`).join('')}</tbody></table>`:'<p class="muted">Sin áreas registradas.</p>'}<h4>Plan de desarrollo</h4>${renderPlanesTabla(S.getPlanesDesarrollo(colaboradorId,periodoId))}</article>
+      <article class="admin-panel calibration-leader-context"><div class="admin-panel-head"><div><span class="admin-section-kicker">CONTEXTO DEL LÍDER</span><h2>Retroalimentación y acciones propuestas</h2></div></div><div class="leader-context-grid"><div><h4>Fortalezas</h4><p>${esc(S.getEvaluacion(colaboradorId,periodoId,'lider')?.fortalezas||'')||'<span class="muted">Sin registrar.</span>'}</p></div><div><h4>Comentarios del líder</h4><p>${esc(S.getEvaluacion(colaboradorId,periodoId,'lider')?.comentarios||'')||'<span class="muted">Sin comentarios.</span>'}</p></div></div>${(()=>{const ae=S.getEvaluacion(colaboradorId,periodoId,'autoevaluacion'),le=S.getEvaluacion(colaboradorId,periodoId,'lider');if(!ae||!le)return '';const ao=S.getObjetivos(ae.id),lo=S.getObjetivos(le.id).filter(o=>o.ajusteManualLider);return lo.length?`<section class="do-objective-adjustments"><span class="admin-section-kicker">AJUSTES DEL LÍDER EN OBJETIVOS</span><h4>Revisión para calibración</h4>${lo.map(o=>{const a=ao.find(x=>Number(x.index)===Number(o.index));return `<article class="objective-adjustment-card"><div><strong>${esc(a?.descripcion||o.descripcion||'Objetivo')}</strong><span class="objective-score-change">Sistema ${esc(o.calificacionAutomatica??a?.calificacion??'—')}/5 → Líder ${esc(o.calificacion)}/5</span></div><p><b>Justificación del líder:</b> ${esc(o.justificacionLider||'Sin justificación registrada.')}</p></article>`}).join('')}</section>`:''})()}<h4>Áreas de oportunidad y plan de mejora</h4>${S.getAreasOportunidad(colaboradorId,periodoId).length?`<table class="table table-compact"><tbody>${S.getAreasOportunidad(colaboradorId,periodoId).map(a=>`<tr><td><b>${esc(a.area)}</b></td><td>${esc(a.planMejora)}</td></tr>`).join('')}</tbody></table>`:'<p class="muted">Sin áreas registradas.</p>'}<h4>Plan de desarrollo</h4>${renderPlanesTabla(S.getPlanesDesarrollo(colaboradorId,periodoId))}</article>
 
       <div class="calibration-workspace-grid">
         <article class="admin-panel calibration-context-card">
@@ -2336,14 +2363,23 @@
         }
       });
     } else if (state.wizard.tipo === 'lider') {
+      const evLider = S.load().evaluaciones.find((e) => e.id === evaluacionId);
+      const autoEval = S.getEvaluacion(state.wizard.colaboradorId, state.periodo.id, 'autoevaluacion');
+      if (autoEval && autoEval.objetivosNoAplican) {
+        if (!evLider || !evLider.objetivosNoAplicanConfirmados) {
+          const block = wizard.querySelector('.leader-na-objectives'); if (block) faltantes.push(block);
+        }
+        return marcarErroresYEnfocar(faltantes);
+      }
       const objetivos = S.getObjetivos(evaluacionId) || [];
       const filas = wizard.querySelectorAll('.objetivo-row');
       filas.forEach((fila) => {
         const idx = Number(fila.dataset.idx);
         const o = objetivos.find((x) => Number(x.index) === idx);
-        if (!o || o.calificacion === '' || o.calificacion === null || o.calificacion === undefined) faltantes.push(fila);
+        if (!o || o.calificacion === '' || o.calificacion === null || o.calificacion === undefined || (o.ajusteManualLider && !String(o.justificacionLider || '').trim())) faltantes.push(fila);
       });
     } else {
+      if (evaluacionSinObjetivos(evaluacionId)) return 0;
       const objetivos = S.getObjetivos(evaluacionId) || [];
       const filas = wizard.querySelectorAll('.objetivo-row');
       filas.forEach((fila, i) => {
@@ -2480,6 +2516,46 @@
       const actual = existentes.find((r) => r.competenciaId === competenciaId);
       S.saveRespuesta(evaluacionId, seccion, competenciaId, actual ? actual.valor : '', comentario);
     },
+    toggleObjetivosNoAplican(evaluacionId, checked) {
+      const db = S.load();
+      const ev = db.evaluaciones.find((e) => e.id === evaluacionId);
+      if (!ev) return;
+      ev.objetivosNoAplican = !!checked;
+      ev.updatedAt = new Date().toISOString();
+      if (checked) db.objetivos = db.objetivos.filter((o) => o.evaluacionId !== evaluacionId);
+      S.persist();
+      render();
+    },
+    confirmarObjetivosNoAplicanLider(evaluacionId, checked) {
+      const db = S.load(); const ev = db.evaluaciones.find((e) => e.id === evaluacionId); if (!ev) return;
+      ev.objetivosNoAplicanConfirmados = !!checked; ev.objetivosNoAplican = !!checked; ev.updatedAt = new Date().toISOString(); S.persist(); render();
+    },
+    toggleCalificacionManualObjetivo(evaluacionId, index, checked) {
+      const autoEval = S.getEvaluacion(state.wizard.colaboradorId, state.periodo.id, 'autoevaluacion');
+      const fuente = autoEval ? S.getObjetivos(autoEval.id).find((o) => Number(o.index) === Number(index)) : null;
+      if (!fuente) return;
+      const actual = S.getObjetivos(evaluacionId).find((o) => Number(o.index) === Number(index));
+      const autoScore = fuente.calificacion || '';
+      const score = checked ? (actual?.calificacion || autoScore) : autoScore;
+      S.saveObjetivo(evaluacionId, Number(index), fuente.descripcion || '', fuente.resultado || '', score, {meta:fuente.meta||'', cumplimiento:fuente.cumplimiento??'', noCuantificable:false, calificacionAutomatica:autoScore, ajusteManualLider:!!checked, justificacionLider:checked?(actual?.justificacionLider||''):''});
+      render();
+    },
+    calificarObjetivoLider(evaluacionId, index, calificacion) {
+      const autoEval = S.getEvaluacion(state.wizard.colaboradorId, state.periodo.id, 'autoevaluacion');
+      const fuente = autoEval ? S.getObjetivos(autoEval.id).find((o) => Number(o.index) === Number(index)) : null;
+      const actual = S.getObjetivos(evaluacionId).find((o) => Number(o.index) === Number(index));
+      if (!fuente) return;
+      S.saveObjetivo(evaluacionId, Number(index), fuente.descripcion || '', fuente.resultado || '', Number(calificacion), {meta:fuente.meta||'', cumplimiento:fuente.cumplimiento??'', noCuantificable:false, calificacionAutomatica:fuente.calificacion||'', ajusteManualLider:true, justificacionLider:actual?.justificacionLider||''});
+      render();
+    },
+    justificarObjetivoLider(evaluacionId, index, texto) {
+      const autoEval = S.getEvaluacion(state.wizard.colaboradorId, state.periodo.id, 'autoevaluacion');
+      const fuente = autoEval ? S.getObjetivos(autoEval.id).find((o) => Number(o.index) === Number(index)) : null;
+      const actual = S.getObjetivos(evaluacionId).find((o) => Number(o.index) === Number(index));
+      if (!fuente || !actual) return;
+      S.saveObjetivo(evaluacionId, Number(index), fuente.descripcion || '', fuente.resultado || '', actual.calificacion || fuente.calificacion || '', {meta:fuente.meta||'', cumplimiento:fuente.cumplimiento??'', noCuantificable:false, calificacionAutomatica:fuente.calificacion||'', ajusteManualLider:true, justificacionLider:texto||''});
+      const fila=document.querySelector(`.objetivo-row[data-idx="${Number(index)}"]`); if(fila&&String(texto||'').trim()&&actual.calificacion) fila.classList.remove('validation-error');
+    },
     agregarObjetivo(evaluacionId) {
       const objetivos = S.getObjetivos(evaluacionId);
       if (objetivos.length >= 5) return;
@@ -2604,7 +2680,7 @@
       for (let i = 0; i < SECCIONES_WIZARD.length - 1; i++) {
         const sec = SECCIONES_WIZARD[i];
         const incompleta = sec === 'objetivos'
-          ? !S.getObjetivos(evaluacionId).some((o) => (o.descripcion || '').trim() && (o.meta || '').trim() && (o.resultado || '').trim() && o.calificacion)
+          ? (!evaluacionSinObjetivos(evaluacionId) && !S.getObjetivos(evaluacionId).some((o) => (o.descripcion || '').trim() && (o.meta || '').trim() && (o.resultado || '').trim() && o.calificacion))
           : (S.getRespuestasPorSeccion(evaluacionId)[sec] || []).filter((r) => r.valor !== '' && r.valor !== null && r.valor !== undefined).length < D.COMPETENCIAS[sec].length;
         if (incompleta) {
           state.wizard.seccionIdx = i; render();
@@ -2616,7 +2692,7 @@
         }
       }
       const objetivos = S.getObjetivos(evaluacionId).filter((o) => o.descripcion && o.descripcion.trim());
-      if (!objetivos.length) { showNotice(t('Registra al menos un objetivo antes de enviar.'),'warning'); return; }
+      if (!evaluacionSinObjetivos(evaluacionId) && !objetivos.length) { showNotice(t('Registra al menos un objetivo o marca que no tienes objetivos aplicables antes de enviar.'),'warning'); return; }
       const evActual = S.load().evaluaciones.find((e) => e.id === evaluacionId);
       if (requiereJustificacionNA(evaluacionId) && !(evActual && String(evActual.comentarios || '').trim())) {
         state.wizard.seccionIdx = SECCIONES_WIZARD.length - 1; render();
@@ -2627,18 +2703,9 @@
       navigate('#/colaborador/enviado');
     },
     editarObjetivoLider(evaluacionId, index, calificacion) {
-      const autoEval = S.getEvaluacion(state.wizard.colaboradorId, state.periodo.id, 'autoevaluacion');
-      const fuente = autoEval ? S.getObjetivos(autoEval.id).find((o) => Number(o.index) === Number(index)) : null;
-      if (!fuente) {
-        console.error('No se encontró el objetivo origen para la evaluación del líder', { evaluacionId, index });
-        return;
-      }
-      // La descripción y el resultado siempre se toman del registro fuente del colaborador,
-      // evitando pasarlos interpolados dentro de HTML/JS y manteniendo la relación por índice.
-      S.saveObjetivo(evaluacionId, Number(index), fuente.descripcion || '', fuente.resultado || '', calificacion, { meta: fuente.meta || '', cumplimiento: fuente.cumplimiento ?? '', noCuantificable: !!fuente.noCuantificable });
-      const fila = document.querySelector(`.objetivo-row[data-idx="${Number(index)}"]`);
-      if (fila && calificacion) fila.classList.remove('validation-error');
+      return Actions.calificarObjetivoLider(evaluacionId, index, calificacion);
     },
+
     setFortalezas(evaluacionId, valor) {
       const db = S.load(); const ev = db.evaluaciones.find((e) => e.id === evaluacionId); if (ev) { ev.fortalezas = valor; S.persist(); }
     },
@@ -2661,12 +2728,17 @@
         let incompleta;
         if (sec === 'objetivos') {
           const autoEval = S.getEvaluacion(colaboradorId, state.periodo.id, 'autoevaluacion');
-          const objetivosAuto = autoEval ? S.getObjetivos(autoEval.id).filter((o) => (o.descripcion || '').trim()) : [];
-          const objetivosLider = S.getObjetivos(evaluacionId);
-          incompleta = objetivosAuto.some((oa) => {
-            const ol = objetivosLider.find((x) => Number(x.index) === Number(oa.index));
-            return !ol || ol.calificacion === '' || ol.calificacion === null || ol.calificacion === undefined;
-          });
+          const evLider = S.load().evaluaciones.find((e) => e.id === evaluacionId);
+          if (autoEval && autoEval.objetivosNoAplican) {
+            incompleta = !(evLider && evLider.objetivosNoAplicanConfirmados);
+          } else {
+            const objetivosAuto = autoEval ? S.getObjetivos(autoEval.id).filter((o) => (o.descripcion || '').trim()) : [];
+            const objetivosLider = S.getObjetivos(evaluacionId);
+            incompleta = objetivosAuto.some((oa) => {
+              const ol = objetivosLider.find((x) => Number(x.index) === Number(oa.index));
+              return !ol || ol.calificacion === '' || ol.calificacion === null || ol.calificacion === undefined || (ol.ajusteManualLider && !String(ol.justificacionLider || '').trim());
+            });
+          }
         } else {
           incompleta = (S.getRespuestasPorSeccion(evaluacionId)[sec] || []).filter((r) => r.valor !== '' && r.valor !== null && r.valor !== undefined).length < D.COMPETENCIAS[sec].length;
         }
