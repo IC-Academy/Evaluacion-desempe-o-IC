@@ -620,14 +620,19 @@
     if (u.perfil === 'colaborador') {
       tabs = [['inicio', 'Inicio'], ['autoevaluacion', 'Autoevaluación'], ['retroalimentacion', 'Retroalimentación']];
     } else if (u.perfil === 'lider') {
-      tabs = [['dashboard', 'Mi equipo'], ['pendientes', 'Pendientes por evaluar']];
+      tabs = [['dashboard', 'Mi equipo'], ['pendientes', 'Pendientes por evaluar'], ['firmas', 'Por firmar']];
     } else {
       tabs = [['dashboard', 'Dashboard'], ['calibracion', 'Calibración'], ['9box', 'Matriz 9-Box'], ['usuarios', 'Usuarios'], ['jerarquias', 'Jerarquías'], ['auditoria', 'Auditoría'], ['config', 'Configuración']];
     }
     const retroPendiente = u.perfil === 'colaborador' && state.periodo && (() => { const cal=S.getCalibracion(u.empleado, state.periodo.id); return !!(cal && cal.retroHabilitada && !cal.aceptacionColaborador); })();
+    const firmasPendientesLider = u.perfil === 'lider' && state.periodo ? S.getColaboradoresDeLider(u.empleado).filter((c) => { const cal = S.getCalibracion(c.empleado, state.periodo.id); return !!(cal && cal.acuerdosLiberados && !cal.firmaLider); }).length : 0;
     const navHtml = tabs.map((t) => {
       const esRetro = u.perfil === 'colaborador' && t[0] === 'retroalimentacion';
-      return `<a href="#/${area === 'colaborador' ? 'colaborador' : area}/${t[0]}" class="${page === t[0] ? 'active' : ''}${esRetro && retroPendiente ? ' nav-attention' : ''}">${t[1]}${esRetro && retroPendiente ? '<span class="nav-notification-dot" title="Retroalimentación disponible">1</span>' : ''}</a>`;
+      const esFirma = u.perfil === 'lider' && t[0] === 'firmas';
+      const atencion = (esRetro && retroPendiente) || (esFirma && firmasPendientesLider > 0);
+      const badgeCount = esRetro && retroPendiente ? 1 : esFirma ? firmasPendientesLider : 0;
+      const titulo = esRetro ? 'Retroalimentación disponible' : 'Acuerdos pendientes por firmar';
+      return `<a href="#/${area === 'colaborador' ? 'colaborador' : area}/${t[0]}" class="${page === t[0] ? 'active' : ''}${atencion ? ' nav-attention' : ''}">${t[1]}${atencion ? `<span class="nav-notification-dot" title="${titulo}">${badgeCount}</span>` : ''}</a>`;
     }).join('');
     const iniciales = esc((u.nombre || '').split(/\s+/).slice(0,2).map(x => x[0] || '').join('').toUpperCase());
     return `
@@ -1322,6 +1327,22 @@
   function objectivesAckKey(evaluacionId) { return `edd_obj_ack_rev4_${evaluacionId}`; }
   function objetivosComprendidos(evaluacionId) { return sessionStorage.getItem(objectivesAckKey(evaluacionId)) === '1'; }
 
+  function numeroObjetivo(valor) {
+    if (valor === null || valor === undefined) return null;
+    const limpio = String(valor).trim().replace(/%/g, '').replace(/,/g, '.').replace(/[^0-9.\-]/g, '');
+    if (!limpio || limpio === '-' || limpio === '.') return null;
+    const n = Number(limpio);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function cumplimientoAutomatico(meta, resultado) {
+    const m = numeroObjetivo(meta);
+    const r = numeroObjetivo(resultado);
+    if (m === null || r === null || m === 0) return '';
+    const pctValue = (r / m) * 100;
+    return Math.round(pctValue * 10) / 10;
+  }
+
   function renderObjetivosForm(ev, soloLecturaDescripcion) {
     const objetivos = S.getObjetivos(ev.id);
     const filas = [];
@@ -1363,9 +1384,9 @@
       <div class="objetivo-fields kpi-objective-fields">
         <div class="form-group kpi-objective-main"><label>Objetivo</label><textarea ${bloqueado||soloLecturaDescripcion?'bloqueado':''} placeholder="Describe el objetivo acordado para el periodo" onchange="App.editarObjetivoKPI('${evaluacionId}',${index},'descripcion',this.value)">${esc(o.descripcion || '')}</textarea></div>
         <div class="kpi-objective-grid">
-          <div class="form-group"><label>Meta acordada <small>¿Qué debía lograrse?</small></label><input ${bloqueado?'bloqueado':''} type="text" value="${esc(o.meta || '')}" placeholder="Ej. Alcanzar 95% de cumplimiento" onchange="App.editarObjetivoKPI('${evaluacionId}',${index},'meta',this.value)"/></div>
-          <div class="form-group"><label>Resultado alcanzado <small>¿Qué se logró al cierre?</small></label><input ${bloqueado?'bloqueado':''} type="text" value="${esc(o.resultado || '')}" placeholder="Ej. Se alcanzó 98% de cumplimiento" onchange="App.editarObjetivoKPI('${evaluacionId}',${index},'resultado',this.value)"/></div>
-          <div class="form-group"><label>% de cumplimiento <small>Resultado vs. meta</small></label><input ${bloqueado?'bloqueado':''} type="number" min="0" step="1" value="${esc(o.cumplimiento ?? '')}" placeholder="Ej. 103" onchange="App.editarObjetivoKPI('${evaluacionId}',${index},'cumplimiento',this.value)"/><small class="kpi-auto-note">La calificación se calcula automáticamente.</small></div>
+          <div class="form-group"><label>Meta acordada <small>¿Qué debía lograrse?</small></label><input ${bloqueado?'bloqueado':''} type="number" step="any" value="${esc(o.meta || '')}" placeholder="Ej. 95" oninput="App.editarObjetivoKPI('${evaluacionId}',${index},'meta',this.value)"/></div>
+          <div class="form-group"><label>Resultado alcanzado <small>¿Qué se logró al cierre?</small></label><input ${bloqueado?'bloqueado':''} type="number" step="any" value="${esc(o.resultado || '')}" placeholder="Ej. 93" oninput="App.editarObjetivoKPI('${evaluacionId}',${index},'resultado',this.value)"/></div>
+          <div class="form-group"><label>% de cumplimiento <small>Resultado ÷ meta × 100</small></label><input class="kpi-auto-field" type="text" value="${esc(o.cumplimiento === '' || o.cumplimiento == null ? '' : o.cumplimiento + '%')}" placeholder="Se calcula automáticamente" readonly tabindex="-1"/><small class="kpi-auto-note">El sistema calcula este porcentaje automáticamente y no puede editarse.</small></div>
           <div class="form-group kpi-auto-rating"><label>Calificación automática</label><div class="auto-rating-display">${calif ? `<strong>${esc(calif)}</strong><span>${'★'.repeat(Number(calif)||0)}${'☆'.repeat(Math.max(0,5-(Number(calif)||0)))}</span>` : '<strong>—</strong><span>Sin cálculo</span>'}</div></div>
         </div>
         <div class="validation-message" aria-live="polite">Completa objetivo, meta, resultado y porcentaje de cumplimiento.</div>
@@ -1606,11 +1627,12 @@
     const periodoId = state.periodo.id;
     if (page === 'evaluar' && param) return viewLiderEvaluar(lider, param, periodoId);
     if (page === 'comparacion' && param) return viewComparacion(lider, param, periodoId);
-    if (page === 'pendientes') return viewLiderDashboard(lider, periodoId, true);
-    return viewLiderDashboard(lider, periodoId, false);
+    if (page === 'pendientes') return viewLiderDashboard(lider, periodoId, true, false);
+    if (page === 'firmas') return viewLiderDashboard(lider, periodoId, false, true);
+    return viewLiderDashboard(lider, periodoId, false, false);
   }
 
-  function viewLiderDashboard(lider, periodoId, soloPendientes) {
+  function viewLiderDashboard(lider, periodoId, soloPendientes, soloFirmas) {
     const equipo = S.getColaboradoresDeLider(lider.empleado);
     let filas = equipo.map((c) => {
       const estado = S.estadoProceso(c.empleado, periodoId);
@@ -1620,6 +1642,7 @@
       return { c, estado, autoEval, liderEval, cal };
     });
     if (soloPendientes) filas = filas.filter((f) => f.estado === D.ESTADOS.PENDIENTE_LIDER);
+    if (soloFirmas) filas = filas.filter((f) => { const cal = S.getCalibracion(f.c.empleado, periodoId); return !!(cal && cal.acuerdosLiberados && !cal.firmaLider); });
     const total = filas.length;
     const completadas = filas.filter((f) => f.estado === D.ESTADOS.CERRADA).length;
     const pendientesLider = filas.filter((f) => f.estado === D.ESTADOS.PENDIENTE_LIDER).length;
@@ -1647,8 +1670,9 @@
       ${kpi('Alertas por vencimiento', vencidas, vencidas ? 'red' : 'gray')}
     </div>
     <div class="card" id="leader-signatures">
-      <h2>${soloPendientes ? 'Pendientes por evaluar' : 'Mi equipo'} — ${esc(lider.area)}</h2>
+      <h2>${soloFirmas ? 'Pendientes por firmar' : soloPendientes ? 'Pendientes por evaluar' : 'Mi equipo'} — ${esc(lider.area)}</h2>
       ${soloPendientes && !filas.length ? '<p class="alert alert-success">No tienes evaluaciones pendientes en este momento.</p>' : ''}
+      ${soloFirmas && !filas.length ? '<p class="alert alert-success">No tienes acuerdos pendientes por firmar en este momento.</p>' : ''}
       <table class="table">
         <thead><tr><th>Nombre</th><th>Puesto</th><th>Área</th><th>Autoevaluación</th><th>Evaluación líder</th><th>Retroalimentación</th><th>Firmas</th><th></th></tr></thead>
         <tbody>
@@ -2471,17 +2495,19 @@
       const objetivos = S.getObjetivos(evaluacionId);
       const o = objetivos.find((x) => Number(x.index) === Number(index)) || { index:Number(index), descripcion:'', meta:'', resultado:'', cumplimiento:'', noCuantificable:false, calificacion:'' };
       o[campo] = valor;
-      if (campo === 'cumplimiento' && valor !== '') {
-        const score = C.calificacionPorCumplimiento(valor);
-        if (score !== null) o.calificacion = score;
+      if (campo === 'meta' || campo === 'resultado') {
+        const cumplimiento = cumplimientoAutomatico(o.meta, o.resultado);
+        o.cumplimiento = cumplimiento;
+        const score = cumplimiento === '' ? null : C.calificacionPorCumplimiento(cumplimiento);
+        o.calificacion = score === null ? '' : score;
       }
       if (campo === 'noCuantificable' && valor) o.cumplimiento = '';
       S.saveObjetivo(evaluacionId, Number(index), o.descripcion || '', o.resultado || '', o.calificacion || '', {
         meta: o.meta || '', cumplimiento: o.cumplimiento ?? '', noCuantificable: !!o.noCuantificable
       });
       const fila = document.querySelector(`.objetivo-row[data-idx="${Number(index)}"]`);
-      if (fila && (o.descripcion || '').trim() && (o.meta || '').trim() && (o.resultado || '').trim() && o.calificacion) fila.classList.remove('validation-error');
-      if (campo === 'cumplimiento' || campo === 'noCuantificable') render();
+      if (fila && (o.descripcion || '').trim() && String(o.meta || '').trim() && String(o.resultado || '').trim() && o.calificacion) fila.classList.remove('validation-error');
+      if (campo === 'meta' || campo === 'resultado' || campo === 'noCuantificable') render();
     },
     editarObjetivoSmart(evaluacionId, index, campo, valor) {
       // Compatibilidad temporal: SMART queda fuera del flujo Rev.4; redirige a captura KPI.

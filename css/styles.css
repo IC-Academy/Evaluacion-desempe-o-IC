@@ -1298,3 +1298,8 @@ body{background:linear-gradient(180deg,#f6f9fd 0%,#eef4fa 100%);}
 .admin-hero-progress{transition:background .25s ease,border-color .25s ease,box-shadow .25s ease}.admin-hero-progress.progress-red{background:rgba(161,42,35,.9)!important;border-color:rgba(255,255,255,.22)!important;box-shadow:0 10px 28px rgba(116,22,18,.22)}.admin-hero-progress.progress-yellow{background:rgba(189,128,8,.92)!important;border-color:rgba(255,255,255,.28)!important;box-shadow:0 10px 28px rgba(130,84,0,.22)}.admin-hero-progress.progress-green{background:rgba(24,126,78,.92)!important;border-color:rgba(255,255,255,.25)!important;box-shadow:0 10px 28px rgba(16,87,52,.22)}
 .admin-hero-progress .admin-progress-value{font-weight:900}.admin-alert-detail>div{grid-template-columns:1.2fr 1.8fr auto}.admin-alert-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}.admin-alert-actions .btn{white-space:nowrap}
 @media(max-width:760px){.leader-action-banner{align-items:flex-start;flex-direction:column}.leader-action-banner .btn{width:100%}.admin-alert-detail>div{grid-template-columns:1fr}.admin-alert-actions{justify-content:flex-start}}
+
+/* Rev. final — objetivos calculados y firma líder visible */
+.kpi-auto-field{background:#f3f7fb!important;border-color:#d6e2ee!important;color:#0c4f9c!important;font-weight:800;cursor:not-allowed;box-shadow:inset 0 0 0 1px rgba(11,95,198,.03)}
+.premium-nav-tabs a.nav-attention{font-weight:800}
+@media(max-width:900px){.premium-nav-tabs{overflow-x:auto;scrollbar-width:thin}.premium-nav-tabs a{white-space:nowrap;flex:0 0 auto}}
