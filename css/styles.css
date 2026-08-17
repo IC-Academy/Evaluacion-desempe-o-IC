@@ -1291,3 +1291,10 @@ body{background:linear-gradient(180deg,#f6f9fd 0%,#eef4fa 100%);}
 .test-tools-card p{margin:0;max-width:720px;line-height:1.5}
 .test-reset-btn{white-space:nowrap;min-height:44px}
 @media(max-width:760px){.test-tools-card{align-items:stretch;flex-direction:column}.test-reset-btn{width:100%}}
+
+/* ===== Cierre UX Dirección / DO — 2026-08-17 ===== */
+.leader-action-banner{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:0 0 18px;padding:17px 20px;border:1px solid #f0b7ad;border-left:5px solid #c8442f;border-radius:14px;background:linear-gradient(135deg,#fff8f6,#fff);box-shadow:0 10px 30px rgba(139,46,32,.08)}
+.leader-action-banner>div{display:grid;gap:3px}.leader-action-banner span{font-size:.66rem;letter-spacing:.12em;font-weight:900;color:#b84632}.leader-action-banner strong{font-size:1rem;color:#102f50}.leader-action-banner small{font-size:.72rem;color:#657b91}.leader-sign-now{box-shadow:0 7px 18px rgba(24,85,190,.18)}
+.admin-hero-progress{transition:background .25s ease,border-color .25s ease,box-shadow .25s ease}.admin-hero-progress.progress-red{background:rgba(161,42,35,.9)!important;border-color:rgba(255,255,255,.22)!important;box-shadow:0 10px 28px rgba(116,22,18,.22)}.admin-hero-progress.progress-yellow{background:rgba(189,128,8,.92)!important;border-color:rgba(255,255,255,.28)!important;box-shadow:0 10px 28px rgba(130,84,0,.22)}.admin-hero-progress.progress-green{background:rgba(24,126,78,.92)!important;border-color:rgba(255,255,255,.25)!important;box-shadow:0 10px 28px rgba(16,87,52,.22)}
+.admin-hero-progress .admin-progress-value{font-weight:900}.admin-alert-detail>div{grid-template-columns:1.2fr 1.8fr auto}.admin-alert-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}.admin-alert-actions .btn{white-space:nowrap}
+@media(max-width:760px){.leader-action-banner{align-items:flex-start;flex-direction:column}.leader-action-banner .btn{width:100%}.admin-alert-detail>div{grid-template-columns:1fr}.admin-alert-actions{justify-content:flex-start}}

@@ -174,6 +174,7 @@
     adminCalibracionGuardar(id, payload) { return apiRequest('/admin/calibraciones/' + encodeURIComponent(id) + '/guardar', { method: 'POST', body: payload }); },
     adminCalibracionLiberar(id, payload) { return apiRequest('/admin/calibraciones/' + encodeURIComponent(id) + '/liberar', { method: 'POST', body: payload }); },
     adminNineBox() { return apiRequest('/admin/nine-box', { method: 'GET' }); },
+    adminEnviarNotificacion(payload) { return apiRequest('/admin/notificaciones/enviar', { method: 'POST', body: payload }); },
 
     // --- Retroalimentación -------------------------------------------------
     retroalimentacionPorId(id) { return apiRequest('/retroalimentacion/' + encodeURIComponent(id), { method: 'GET' }); },
