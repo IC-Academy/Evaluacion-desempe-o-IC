@@ -340,7 +340,7 @@
   // CONSULTAS BÁSICAS
   // ===========================================================================
   function getUsuario(empleado) { return load().usuarios.find((u) => u.empleado === String(empleado)); }
-  function getColaborador(empleado) { return load().colaboradores.find((c) => c.empleado === String(empleado)); }
+  function getColaborador(empleado) { const db=load(); const id=String(empleado); return db.colaboradores.find((c)=>c.empleado===id) || db.lideres.find((l)=>l.empleado===id) || db.administradores.find((a)=>a.empleado===id); }
   function getLider(empleado) { return load().lideres.find((l) => l.empleado === String(empleado)); }
   function getColaboradoresDeLider(liderId) { return load().colaboradores.filter((c) => c.liderId === String(liderId)); }
   function getTodosColaboradores() { return load().colaboradores.slice(); }

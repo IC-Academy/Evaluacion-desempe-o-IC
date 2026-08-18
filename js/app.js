@@ -466,6 +466,7 @@
     periodo: null,
     wizard: { seccionIdx: 0, evaluacionId: null, tipo: null, colaboradorId: null, liderId: null },
     adminFiltros: {},
+    adminKpiGroup: 'avance',
     adminAlertOpen: null,
     usuariosFiltros: {},
     jerarquiasFiltros: {},
@@ -491,6 +492,7 @@
   function esc(str) { return String(str === null || str === undefined ? '' : str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
   function f1(n) { return (n === null || n === undefined || isNaN(n)) ? '—' : Number(n).toFixed(1); }
   function pct(n) { return Math.max(0, Math.min(100, Math.round(n))); }
+  function personalRoute(page) { return state.user && state.user.perfil === 'lider' ? '#/lider/mi-' + page : '#/colaborador/' + page; }
 
   const ESTADO_COLOR = {
     'No iniciada': 'gray', 'En progreso': 'yellow', 'Completada': 'green',
@@ -620,7 +622,7 @@
     if (u.perfil === 'colaborador') {
       tabs = [['inicio', 'Inicio'], ['autoevaluacion', 'Autoevaluación'], ['retroalimentacion', 'Retroalimentación']];
     } else if (u.perfil === 'lider') {
-      tabs = [['dashboard', 'Mi equipo'], ['pendientes', 'Pendientes por evaluar'], ['firmas', 'Por firmar']];
+      tabs = [['mi-inicio', 'Mi evaluación'], ['dashboard', 'Mi equipo'], ['pendientes', 'Pendientes por evaluar'], ['firmas', 'Por firmar']];
     } else {
       tabs = [['dashboard', 'Dashboard'], ['calibracion', 'Calibración'], ['9box', 'Matriz 9-Box'], ['usuarios', 'Usuarios'], ['jerarquias', 'Jerarquías'], ['auditoria', 'Auditoría'], ['config', 'Configuración']];
     }
@@ -629,9 +631,12 @@
     const navHtml = tabs.map((t) => {
       const esRetro = u.perfil === 'colaborador' && t[0] === 'retroalimentacion';
       const esFirma = u.perfil === 'lider' && t[0] === 'firmas';
-      const atencion = (esRetro && retroPendiente) || (esFirma && firmasPendientesLider > 0);
-      const badgeCount = esRetro && retroPendiente ? 1 : esFirma ? firmasPendientesLider : 0;
-      const titulo = esRetro ? 'Retroalimentación disponible' : 'Acuerdos pendientes por firmar';
+      const esMiEvaluacion = u.perfil === 'lider' && t[0] === 'mi-inicio';
+      const estadoPropio = esMiEvaluacion ? S.estadoProceso(u.empleado, state.periodo.id) : null;
+      const autoPropiaPendiente = esMiEvaluacion && [D.ESTADOS.NO_INICIADA, D.ESTADOS.EN_PROGRESO].includes(estadoPropio);
+      const atencion = (esRetro && retroPendiente) || (esFirma && firmasPendientesLider > 0) || autoPropiaPendiente;
+      const badgeCount = esRetro && retroPendiente ? 1 : esFirma ? firmasPendientesLider : autoPropiaPendiente ? 1 : 0;
+      const titulo = esRetro ? 'Retroalimentación disponible' : esFirma ? 'Acuerdos pendientes por firmar' : 'Tu autoevaluación está pendiente';
       return `<a href="#/${area === 'colaborador' ? 'colaborador' : area}/${t[0]}" class="${page === t[0] ? 'active' : ''}${atencion ? ' nav-attention' : ''}">${t[1]}${atencion ? `<span class="nav-notification-dot" title="${titulo}">${badgeCount}</span>` : ''}</a>`;
     }).join('');
     const iniciales = esc((u.nombre || '').split(/\s+/).slice(0,2).map(x => x[0] || '').join('').toUpperCase());
@@ -895,7 +900,7 @@
 
       <div class="welcome-actions">
         ${retroDisponible
-          ? `<a class="btn welcome-start-btn" href="#/colaborador/retroalimentacion">→&nbsp;&nbsp;Conocer mi retroalimentación</a>`
+          ? `<a class="btn welcome-start-btn" href="${personalRoute('retroalimentacion')}">→&nbsp;&nbsp;Conocer mi retroalimentación</a>`
           : evaluacionEnviada
             ? `<div class="welcome-process-status"><strong>✓ Tu autoevaluación ya fue enviada</strong><span>El proceso continúa con tu líder y Desarrollo Organizacional. Te notificaremos cuando tu retroalimentación esté disponible.</span></div>`
             : `<button class="btn welcome-start-btn" onclick="App.comenzarEvaluacion()">→&nbsp;&nbsp;${enProgreso ? 'Continuar mi evaluación' : 'Comenzar mi evaluación'}</button>`}
@@ -912,7 +917,7 @@
       <h1>${yaEnviada ? 'Tu evaluación ya fue enviada' : '¡Evaluación enviada con éxito!'}</h1>
       <p>Gracias por tu participación, ${esc((col.nombre || '').split(/\s+/)[0] || '')}.</p>
       <div class="premium-success-note"><span>✉</span><div><strong>Tu autoevaluación ha sido registrada correctamente.</strong><small>Tu líder recibirá la notificación correspondiente para continuar con el proceso.</small></div></div>
-      <a class="btn btn-primary premium-success-home" href="#/colaborador/inicio">⌂ &nbsp; Ir al inicio</a>
+      <a class="btn btn-primary premium-success-home" href="${personalRoute('inicio')}">⌂ &nbsp; Ir al inicio</a>
       <div class="premium-success-footer">◇ &nbsp; Tu compromiso impulsa tu desarrollo y el éxito de Inter-Con.</div>
     </section>`;
   }
@@ -933,7 +938,7 @@
     if (estado === D.ESTADOS.NO_INICIADA || estado === D.ESTADOS.EN_PROGRESO) {
       accion = `<a class="btn btn-primary" href="#/${estado === D.ESTADOS.NO_INICIADA ? 'colaborador/bienvenida' : 'colaborador/autoevaluacion'}">${estado === D.ESTADOS.NO_INICIADA ? 'Iniciar autoevaluación' : 'Continuar autoevaluación'}</a>`;
     } else if (estado === D.ESTADOS.RETRO_PENDIENTE || estado === D.ESTADOS.CERRADA) {
-      accion = `<a class="btn btn-primary" href="#/colaborador/retroalimentacion">Conocer mi retroalimentación</a>`;
+      accion = `<a class="btn btn-primary" href="${personalRoute('retroalimentacion')}">Conocer mi retroalimentación</a>`;
     } else {
       accion = `<p class="muted">Tu autoevaluación fue enviada. El proceso continúa con la evaluación de tu líder y la calibración de RH.</p>`;
     }
@@ -1678,6 +1683,10 @@
   function renderLider(page, param) {
     const lider = S.getLider(state.user.empleado);
     const periodoId = state.periodo.id;
+    if (page === 'mi-inicio') return renderColaborador('inicio');
+    if (page === 'mi-autoevaluacion') return renderColaborador('autoevaluacion');
+    if (page === 'mi-retroalimentacion') return renderColaborador('retroalimentacion');
+    if (page === 'mi-enviado') return renderColaborador('enviado');
     if (page === 'evaluar' && param) return viewLiderEvaluar(lider, param, periodoId);
     if (page === 'comparacion' && param) return viewComparacion(lider, param, periodoId);
     if (page === 'pendientes') return viewLiderDashboard(lider, periodoId, true, false);
@@ -2155,17 +2164,32 @@
         </div>
       </div>
 
-      <div class="admin-kpi-grid">
-        <div class="admin-kpi-card"><span>Personal a evaluar</span><strong>${total}</strong><small>Universo del periodo</small></div>
-        <div class="admin-kpi-card"><span>Autoevaluaciones</span><strong>${autoCompletadas}</strong><small>${total ? pct(autoCompletadas/total*100) : 0}% completadas</small></div>
-        <div class="admin-kpi-card"><span>Evaluaciones líder</span><strong>${liderCompletadas}</strong><small>${total ? pct(liderCompletadas/total*100) : 0}% completadas</small></div>
-        <div class="admin-kpi-card attention"><span>Por calibrar</span><strong>${pendientesCal}</strong><small>Requieren revisión DO</small></div>
-        <div class="admin-kpi-card success"><span>Calibradas</span><strong>${calibradas}</strong><small>Con resultado DO</small></div>
-        <div class="admin-kpi-card"><span>Promedio general</span><strong>${f1(promedioGeneral)}</strong><small>Resultado disponible</small></div>
-        <div class="admin-kpi-card success"><span>Retroalimentaciones firmadas</span><strong>${retroFirmadas}/${retroLiberadas}</strong><small>Cierre con ambas firmas</small></div>
-        <div class="admin-kpi-card attention"><span>Pendientes por firmar</span><strong>${pendientesFirma}</strong><small>Acuerdos liberados sin cierre</small></div>
-        <div class="admin-kpi-card"><span>Firmas de líder</span><strong>${firmaLiderCount}/${retroLiberadas}</strong><small>Confirmaciones registradas</small></div>
-        <div class="admin-kpi-card"><span>Firmas de colaborador</span><strong>${firmaColaboradorCount}/${retroLiberadas}</strong><small>Confirmaciones registradas</small></div>
+      <div class="admin-metric-switcher" role="tablist" aria-label="Tipo de métricas">
+        ${[['avance','Avance'],['calibracion','Calibración'],['retro','Retroalimentación'],['alertas','Alertas'],['talento','Talento']].map(([id,label])=>`<button type="button" class="admin-metric-tab ${state.adminKpiGroup===id?'active':''}" onclick="App.setAdminKpiGroup('${id}')">${label}</button>`).join('')}
+      </div>
+      <div class="admin-kpi-grid admin-kpi-grid-focused">
+        ${state.adminKpiGroup==='avance' ? `
+          <div class="admin-kpi-card"><span>Personal a evaluar</span><strong>${total}</strong><small>Universo del periodo</small></div>
+          <div class="admin-kpi-card"><span>Autoevaluaciones</span><strong>${autoCompletadas}/${total}</strong><small>${total ? pct(autoCompletadas/total*100) : 0}% completadas</small></div>
+          <div class="admin-kpi-card"><span>Evaluaciones líder</span><strong>${liderCompletadas}/${total}</strong><small>${total ? pct(liderCompletadas/total*100) : 0}% completadas</small></div>
+          <div class="admin-kpi-card"><span>Cierre del ciclo</span><strong>${cerradas}/${total}</strong><small>${avanceNacional}% cerrado</small></div>` : ''}
+        ${state.adminKpiGroup==='calibracion' ? `
+          <div class="admin-kpi-card attention"><span>Por calibrar</span><strong>${pendientesCal}</strong><small>Requieren revisión DO</small></div>
+          <div class="admin-kpi-card success"><span>Calibradas</span><strong>${calibradas}</strong><small>Con resultado DO</small></div>
+          <div class="admin-kpi-card"><span>Promedio general</span><strong>${f1(promedioGeneral)}</strong><small>Resultado disponible</small></div>` : ''}
+        ${state.adminKpiGroup==='retro' ? `
+          <div class="admin-kpi-card success"><span>Retroalimentaciones cerradas</span><strong>${retroFirmadas}/${retroLiberadas}</strong><small>Con ambas firmas</small></div>
+          <div class="admin-kpi-card attention"><span>Pendientes por firmar</span><strong>${pendientesFirma}</strong><small>Acuerdos liberados sin cierre</small></div>
+          <div class="admin-kpi-card"><span>Firma del líder</span><strong>${firmaLiderCount}/${retroLiberadas}</strong><small>Confirmaciones registradas</small></div>
+          <div class="admin-kpi-card"><span>Firma del colaborador</span><strong>${firmaColaboradorCount}/${retroLiberadas}</strong><small>Confirmaciones registradas</small></div>` : ''}
+        ${state.adminKpiGroup==='alertas' ? `
+          <div class="admin-kpi-card attention"><span>Autoevaluaciones vencidas</span><strong>${vencidas}</strong><small>Requieren seguimiento</small></div>
+          <div class="admin-kpi-card attention"><span>Esperando calibración</span><strong>${pendientesCal}</strong><small>Acción de DO</small></div>
+          <div class="admin-kpi-card"><span>Firmas pendientes</span><strong>${pendientesFirma}</strong><small>Acuerdos sin cierre</small></div>` : ''}
+        ${state.adminKpiGroup==='talento' ? `
+          <div class="admin-kpi-card"><span>Promedio general</span><strong>${f1(promedioGeneral)}</strong><small>Resultado global</small></div>
+          <div class="admin-kpi-card"><span>Con resultado</span><strong>${promedios.length}/${total}</strong><small>Personas con puntaje disponible</small></div>
+          <div class="admin-kpi-card"><span>Ubicados en 9-Box</span><strong>${datos.filter(d=>d.cuad.cuadrante).length}</strong><small>Talento clasificado</small></div>` : ''}
       </div>
 
       <div class="admin-dashboard-grid">
@@ -2524,7 +2548,7 @@
     },
     comenzarEvaluacion() {
       marcarIntroVista();
-      navigate('#/colaborador/autoevaluacion');
+      navigate(personalRoute('autoevaluacion'));
     },
     wizardNext(seccionActual) {
       if (seccionActual !== 'resumen') {
@@ -2750,7 +2774,7 @@
         return;
       }
       S.completarEvaluacion(evaluacionId, state.user.nombre);
-      navigate('#/colaborador/enviado');
+      navigate(personalRoute('enviado'));
     },
     editarObjetivoLider(evaluacionId, index, calificacion) {
       return Actions.calificarObjetivoLider(evaluacionId, index, calificacion);
@@ -2852,6 +2876,7 @@
         showNotice(`Notificación de prueba enviada a ${col.nombre}. En producción se enviará por correo mediante n8n.`,'success');
       }
     },
+    setAdminKpiGroup(grupo){ state.adminKpiGroup=grupo||'avance'; render(); },
     toggleAdminAlert(tipo){ state.adminAlertOpen=state.adminAlertOpen===tipo?null:tipo; render(); },
     setFiltroAdmin(campo, valor) { state.adminFiltros[campo] = valor || undefined; render(); },
     limpiarFiltrosAdmin() { state.adminFiltros = {}; render(); },
