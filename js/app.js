@@ -995,7 +995,7 @@
     const sideSections = ['actitud','habilidades','objetivos'].map((s,i) => `
       <button class="premium-section-step ${seccion === s ? 'active' : ''} ${i < idx ? 'done' : ''}" onclick="App.irSeccionWizard(${i})">
         <span><strong>${labelSeccion(s)}</strong><small>${s === 'actitud' ? 'Eje ACTITUD' : 'Eje DESEMPEÑO'}</small></span>
-        <b>${counts[s]}/${total[s]}</b>
+        <b>${s==='objetivos' && ev.objetivosNoAplican ? 'N/A' : counts[s]+'/'+total[s]}</b>
       </button>`).join('');
 
     return `
@@ -1065,7 +1065,7 @@
    * que sean mutuamente excluyentes; el relleno visual usa el truco CSS de
    * hermanos generales (~) sobre <label class="star">, ver styles.css.
    */
-  function ratingWidget(groupName, valorActual, onchangeJs, disabled, compact) {
+  function ratingWidget(groupName, valorActual, onchangeJs, disabled, compact, allowNA = true) {
     const safeGroup = String(groupName).replace(/[^a-zA-Z0-9_-]/g, '_');
     const estrellas = [5, 4, 3, 2, 1].map((v) => {
       const id = safeGroup + '_s' + v;
@@ -1079,8 +1079,7 @@
     const vacio = valorActual === '' || valorActual === null || valorActual === undefined;
     return `<div class="rating-widget${disabled ? ' rating-readonly' : ''}${compact ? ' rating-compact' : ''}">
       <div class="star-rating">${estrellas}</div>
-      <input type="radio" class="na-radio" name="${safeGroup}" id="${idNA}" value="N/A" ${checkedNA ? 'checked' : ''} ${disabled ? 'disabled' : ''} onchange="${onchangeJs}"/>
-      <label class="na-pill" for="${idNA}" title="No aplica o sin elementos suficientes para evaluar">N/A</label>
+      ${allowNA ? `<input type="radio" class="na-radio" name="${safeGroup}" id="${idNA}" value="N/A" ${checkedNA ? 'checked' : ''} ${disabled ? 'disabled' : ''} onchange="${onchangeJs}"/><label class="na-pill" for="${idNA}" title="No aplica o sin elementos suficientes para evaluar">N/A</label>` : '<span class="required-tool-pill">Obligatorio</span>'}
       ${vacio ? '<span class="rating-empty-hint">Sin calificar</span>' : ''}
     </div>`;
   }
@@ -1103,10 +1102,10 @@
           ${esHerramientas ? `<div class="tools-average ${toolAvg===null?'empty':''}"><strong>${toolAvg===null?'—':f1(toolAvg)}</strong><span>/ 5</span><small>${toolValues.length} herramienta${toolValues.length===1?'':'s'} evaluada${toolValues.length===1?'':'s'}</small></div>` : ratingWidget(groupName, valor, onchangeJs, soloLectura, false)}
         </div>
       </div>
-      ${esHerramientas ? `<p class="tools-intro">Califica únicamente las herramientas que aplican a tu puesto. Usa N/A cuando no corresponda. El promedio se calcula automáticamente.</p>
+      ${esHerramientas ? `<p class="tools-intro">Califica las herramientas que aplican a tu puesto. Usa N/A cuando no corresponda. <b>Manejo de IA es obligatorio para todos</b> y no admite N/A. El promedio se calcula automáticamente.</p>
         <div class="tools-rating-grid">${HERRAMIENTAS_B2.map(([id,nombre]) => {
           const g='tool_'+evaluacionId+'_'+id; const v=tools[id]??''; const change=`App.rateHerramienta('${evaluacionId}','${seccion}','${id}',this.value)`;
-          return `<div class="tool-rating-row"><div><strong>${esc(nombre)}</strong></div>${ratingWidget(g,v,change,soloLectura,true)}</div>`;
+          return `<div class="tool-rating-row"><div><strong>${esc(nombre)}</strong></div>${ratingWidget(g,v,change,soloLectura,true,id!=='ia')}</div>`;
         }).join('')}</div>` : `<ul class="conductas conductas-below">${c.conductas.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`}
       ${!soloLectura ? `<div class="validation-message" aria-live="polite">${esHerramientas?'Califica al menos una herramienta aplicable para continuar.':'Selecciona una calificación para continuar.'}</div><textarea class="comentario-box" placeholder="Comentario (opcional)" onchange="App.comentar('${evaluacionId}','${seccion}','${c.id}',this.value)">${esc(comentario)}</textarea>` : (comentario ? `<div class="comentario-lectura">${esc(comentario)}</div>` : '')}
     </div>`;
@@ -1387,9 +1386,15 @@
         </div>
         ${comprendido ? '' : '<div class="kpi-lock-message">🔒 Confirma que comprendiste la guía superior para habilitar la captura.</div>'}
         <div class="objective-na-choice ${noAplican ? 'selected' : ''}">
-          <label class="objective-na-check"><input type="checkbox" ${noAplican ? 'checked' : ''} ${comprendido ? '' : 'disabled'} onchange="App.toggleObjetivosNoAplican('${ev.id}',this.checked)"/><span><strong>No tengo objetivos aplicables en este periodo</strong><small>Usa esta opción únicamente si durante el ciclo no tuviste objetivos o indicadores formales asignados. La sección se registrará como N/A y no contará como cero.</small></span></label>
+          <label class="objective-na-check"><input type="checkbox" ${noAplican ? 'checked' : ''} ${comprendido ? '' : 'disabled'} onchange="App.toggleObjetivosNoAplican('${ev.id}',this.checked)"/><span><strong>No tuve objetivos definidos en este periodo</strong><small>Esta opción existe porque este primer ciclo también busca detectar puestos o equipos que operaron sin objetivos formales. No se registra como cero.</small></span></label>
         </div>
-        ${noAplican ? '<div class="objective-na-confirmed"><span>✓</span><div><strong>Sección marcada como N/A</strong><p>Tu líder deberá confirmar que esta condición aplica antes de enviar su evaluación.</p></div></div>' : `<div id="objetivosWrap">${filas.map((o, i) => renderObjetivoRow(ev.id, o, Number(o.index ?? i), soloLecturaDescripcion, !comprendido)).join('')}</div>${filas.length < 5 ? `<button class="btn btn-outline btn-sm smart-add-objective" ${comprendido ? '' : 'disabled'} onclick="App.agregarObjetivo('${ev.id}')">+ Agregar objetivo</button>` : ''}`}
+        ${noAplican ? `<div class="objective-na-diagnostic">
+          <div class="objective-na-confirmed"><span>✓</span><div><strong>Sección marcada como N/A</strong><p>La ausencia de objetivos se registrará como un dato de madurez de gestión y deberá ser validada por tu líder.</p></div></div>
+          <div class="objective-na-fields">
+            <label><span>Motivo principal <em>obligatorio</em></span><select onchange="App.setObjetivosNoAplicanMotivo('${ev.id}',this.value)"><option value="">Selecciona un motivo</option>${['No se definieron objetivos formales para mi puesto','Ingresé después del periodo de definición','Mi función operó sin metas documentadas','Otro'].map(x=>`<option value="${x}" ${ev.objetivosNoAplicanMotivo===x?'selected':''}>${x}</option>`).join('')}</select></label>
+            <label><span>Contexto breve <em>obligatorio</em></span><textarea placeholder="Explica brevemente por qué no tuviste objetivos definidos durante el periodo." oninput="App.setObjetivosNoAplicanDetalle('${ev.id}',this.value)">${esc(ev.objetivosNoAplicanDetalle||'')}</textarea></label>
+          </div>
+        </div>` : `<div id="objetivosWrap">${filas.map((o, i) => renderObjetivoRow(ev.id, o, Number(o.index ?? i), soloLecturaDescripcion, !comprendido)).join('')}</div>${filas.length < 5 ? `<button class="btn btn-outline btn-sm smart-add-objective" ${comprendido ? '' : 'disabled'} onclick="App.agregarObjetivo('${ev.id}')">+ Agregar objetivo</button>` : ''}`}
       </section>
     </div>`;
   }
@@ -1426,7 +1431,7 @@
       </tbody></table></div>`;
     }).join('')}
     <div class="resumen-seccion resumen-seccion-objetivos"><h4>C. Cumplimiento de Objetivos</h4>
-      ${objetivosNoAplican ? '<div class="objective-na-summary"><strong>N/A — Sin objetivos aplicables en este periodo</strong><span>Esta sección se excluye del cálculo y deberá ser confirmada por el líder.</span></div>' : (objetivos.length ? `<table class="table table-compact"><thead><tr><th>Objetivo</th><th>Meta</th><th>Resultado</th><th>%</th><th>Calif.</th></tr></thead><tbody>${objetivos.map((o) => `<tr><td>${esc(o.descripcion)}</td><td>${esc(o.meta || '—')}</td><td>${esc(o.resultado || '—')}</td><td>${esc(o.cumplimiento === '' || o.cumplimiento == null ? '—' : o.cumplimiento + '%')}</td><td class="text-right">${esc(o.calificacion)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">No se registraron objetivos.</p>')}
+      ${objetivosNoAplican ? `<div class="objective-na-summary"><strong>N/A — Sin objetivos definidos en este periodo</strong><span>${esc(ev.objetivosNoAplicanMotivo||'Motivo pendiente')} · ${esc(ev.objetivosNoAplicanDetalle||'Sin contexto registrado')}.</span></div>` : (objetivos.length ? `<table class="table table-compact"><thead><tr><th>Objetivo</th><th>Meta</th><th>Resultado</th><th>%</th><th>Calif.</th></tr></thead><tbody>${objetivos.map((o) => `<tr><td>${esc(o.descripcion)}</td><td>${esc(o.meta || '—')}</td><td>${esc(o.resultado || '—')}</td><td>${esc(o.cumplimiento === '' || o.cumplimiento == null ? '—' : o.cumplimiento + '%')}</td><td class="text-right">${esc(o.calificacion)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">No se registraron objetivos.</p>')}
     </div>
     <div class="form-group resumen-comments"><label>Comentarios u observaciones del colaborador</label><textarea placeholder="Agrega contexto adicional si lo consideras necesario. Si más de la mitad de una sección quedó en N/A, justifica aquí." onchange="App.setComentarios('${ev.id}',this.value)">${esc(ev.comentarios || '')}</textarea></div>`;
   }
@@ -1840,9 +1845,17 @@
     const objetivosLider = S.getObjetivos(ev.id);
     const mapLider = {}; objetivosLider.forEach((o) => { mapLider[Number(o.index)] = o; });
     if (objetivosNoAplican) {
-      return `<section class="leader-na-objectives ${ev.objetivosNoAplicanConfirmados ? 'confirmed' : ''}">
-        <div><span class="admin-section-kicker">OBJETIVOS DEL PERIODO</span><h3>El colaborador indicó que no tuvo objetivos aplicables</h3><p>Confirma esta condición únicamente si durante el ciclo no existieron objetivos o indicadores formales para evaluar. Esta sección quedará como N/A y no contará como cero.</p></div>
-        <label class="confirm-check objective-na-leader-confirm"><input type="checkbox" ${ev.objetivosNoAplicanConfirmados ? 'checked' : ''} onchange="App.confirmarObjetivosNoAplicanLider('${ev.id}',this.checked)"/> Confirmo que para este colaborador no aplican objetivos en el periodo.</label>
+      const decision = ev.objetivosNoAplicanDecision || (ev.objetivosNoAplicanConfirmados ? 'confirmado' : '');
+      const leaderObjs = S.getObjetivos(ev.id);
+      const leaderRows = leaderObjs.length ? leaderObjs : [{index:0,descripcion:'',meta:'',resultado:'',cumplimiento:'',calificacion:''}];
+      return `<section class="leader-na-objectives ${decision==='confirmado' ? 'confirmed' : ''} ${decision==='rechazado' ? 'rejected' : ''}">
+        <div><span class="admin-section-kicker">OBJETIVOS DEL PERIODO</span><h3>El colaborador reportó que no tuvo objetivos definidos</h3><p><b>Motivo:</b> ${esc(autoEval.objetivosNoAplicanMotivo||'Sin motivo registrado')}<br><b>Contexto:</b> ${esc(autoEval.objetivosNoAplicanDetalle||'Sin contexto registrado')}</p><p>Como líder, valida si esta ausencia corresponde a la realidad del periodo. Esto permite distinguir una brecha de desempeño de una brecha de gestión.</p></div>
+        <div class="leader-na-decision">
+          <button type="button" class="decision-card ${decision==='confirmado'?'active confirm':''}" onclick="App.decisionObjetivosNoAplicanLider('${ev.id}','confirmado')"><b>✓ Confirmar sin objetivos</b><span>La sección queda N/A y se reporta como indicador de madurez de gestión.</span></button>
+          <button type="button" class="decision-card ${decision==='rechazado'?'active reject':''}" onclick="App.decisionObjetivosNoAplicanLider('${ev.id}','rechazado')"><b>Había objetivos</b><span>Debes documentarlos y evaluarlos para este cierre.</span></button>
+        </div>
+        ${decision==='confirmado' ? `<label class="leader-na-comment"><span>Comentario del líder <em>obligatorio</em></span><textarea placeholder="Confirma el contexto o explica por qué no se definieron objetivos para este puesto." oninput="App.setObjetivosNoAplicanComentarioLider('${ev.id}',this.value)">${esc(ev.objetivosNoAplicanComentarioLider||'')}</textarea></label>` : ''}
+        ${decision==='rechazado' ? `<div class="leader-objectives-recovery"><div class="leader-form-intro"><strong>Documenta los objetivos que sí existían</strong><span>Captura objetivo, meta y resultado. El cumplimiento y la equivalencia se calcularán automáticamente. Esta discrepancia quedará visible para DO.</span></div><div id="objetivosWrap">${leaderRows.map((o,i)=>renderObjetivoRow(ev.id,o,Number(o.index??i),false,false)).join('')}</div>${leaderRows.length<5?`<button class="btn btn-outline btn-sm smart-add-objective" onclick="App.agregarObjetivo('${ev.id}')">+ Agregar objetivo</button>`:''}<label class="leader-na-comment"><span>Justificación de la discrepancia <em>obligatoria</em></span><textarea placeholder="Explica por qué consideras que sí existían objetivos aunque el colaborador reportó lo contrario." oninput="App.setObjetivosNoAplicanComentarioLider('${ev.id}',this.value)">${esc(ev.objetivosNoAplicanComentarioLider||'')}</textarea></label></div>` : ''}
       </section>`;
     }
     if (!objetivosAuto.length) return '<p class="muted">El colaborador no registró objetivos en este periodo.</p>';
@@ -1958,6 +1971,7 @@
         <details class="performance-summary-details"><summary>Ver resumen ejecutivo de 3 dimensiones</summary>${radarHtml}</details>
       </section>
       ${ajustesObjetivos.length ? `<section class="objective-adjustment-context"><div class="admin-panel-head"><div><span class="admin-section-kicker">AJUSTES DE OBJETIVOS</span><h3>Calificaciones modificadas por el líder</h3></div></div>${ajustesObjetivos.map(a=>`<article class="objective-adjustment-card"><div><strong>${esc(a.objetivo)}</strong><span class="objective-score-change">Automática ${esc(a.automatica)}/5 → Líder ${esc(a.lider)}/5</span></div><p><b>Justificación:</b> ${esc(a.justificacion||'Sin justificación registrada.')}</p></article>`).join('')}</section>` : ''}
+      ${autoEval?.objetivosNoAplican ? `<section class="objective-adjustment-context objective-governance-context"><div class="admin-panel-head"><div><span class="admin-section-kicker">MADUREZ DE OBJETIVOS</span><h3>Validación de ausencia de objetivos</h3></div></div><article class="objective-adjustment-card"><div><strong>Colaborador: N/A — sin objetivos definidos</strong><span class="objective-score-change">Líder: ${evLider?.objetivosNoAplicanDecision==='rechazado'?'reporta que sí existían objetivos':'confirma ausencia de objetivos'}</span></div><p><b>Motivo del colaborador:</b> ${esc(autoEval.objetivosNoAplicanMotivo||'Sin motivo')} — ${esc(autoEval.objetivosNoAplicanDetalle||'Sin contexto')}</p><p><b>Contexto del líder:</b> ${esc(evLider?.objetivosNoAplicanComentarioLider||'Pendiente de documentar')}</p></article></section>` : ''}
       <h3>Diferencias detalladas por competencia</h3>
       <table class="table">
         <thead><tr><th>Competencia</th><th>Autoevaluación</th><th>Evaluación líder</th><th>Diferencia</th><th>Brecha</th><th>Comentario líder</th><th>Comentario colaborador</th></tr></thead>
@@ -2146,6 +2160,12 @@
 
     const filtros = state.adminFiltros;
     const areas = [...new Set(datos.map((d) => d.c.area))];
+    const objetivosConDefinicion = datos.filter((d)=>{ const a=S.getEvaluacion(d.c.empleado,periodoId,'autoevaluacion'); return a && !a.objetivosNoAplican && S.getObjetivos(a.id).some(o=>(o.descripcion||'').trim()); }).length;
+    const objetivosSinDefinicion = datos.filter((d)=>S.getEvaluacion(d.c.empleado,periodoId,'autoevaluacion')?.objetivosNoAplican).length;
+    const objetivosPendientesDefinir = Math.max(0,total-objetivosConDefinicion-objetivosSinDefinicion);
+    const coberturaObjetivos = total ? pct((objetivosConDefinicion/total)*100) : 0;
+    const sinObjetivosPorArea = areas.map(a=>{ const arr=datos.filter(d=>d.c.area===a); const sin=arr.filter(d=>S.getEvaluacion(d.c.empleado,periodoId,'autoevaluacion')?.objetivosNoAplican).length; return {area:a,sin,total:arr.length,pct:arr.length?pct(sin/arr.length*100):0}; }).filter(x=>x.sin>0).sort((a,b)=>b.pct-a.pct);
+
     const filtrados = datos.filter((d) => (!filtros.area || d.c.area === filtros.area) && (!filtros.estado || d.estado === filtros.estado) && (!filtros.cuadrante || String(d.cuad.cuadrante) === filtros.cuadrante));
 
     const avancePorArea = areas.map((a) => {
@@ -2177,7 +2197,7 @@
       </div>
 
       <div class="admin-metric-switcher" role="tablist" aria-label="Tipo de métricas">
-        ${[['avance','Avance'],['calibracion','Calibración'],['retro','Retroalimentación'],['alertas','Alertas'],['talento','Talento']].map(([id,label])=>`<button type="button" class="admin-metric-tab ${state.adminKpiGroup===id?'active':''}" onclick="App.setAdminKpiGroup('${id}')">${label}</button>`).join('')}
+        ${[['avance','Avance'],['objetivos','Objetivos'],['calibracion','Calibración'],['retro','Retroalimentación'],['alertas','Alertas'],['talento','Talento']].map(([id,label])=>`<button type="button" class="admin-metric-tab ${state.adminKpiGroup===id?'active':''}" onclick="App.setAdminKpiGroup('${id}')">${label}</button>`).join('')}
       </div>
       <div class="admin-kpi-grid admin-kpi-grid-focused">
         ${state.adminKpiGroup==='avance' ? `
@@ -2185,6 +2205,11 @@
           <div class="admin-kpi-card"><span>Autoevaluaciones</span><strong>${autoCompletadas}/${total}</strong><small>${total ? pct(autoCompletadas/total*100) : 0}% completadas</small></div>
           <div class="admin-kpi-card"><span>Evaluaciones líder</span><strong>${liderCompletadas}/${total}</strong><small>${total ? pct(liderCompletadas/total*100) : 0}% completadas</small></div>
           <div class="admin-kpi-card"><span>Cierre del ciclo</span><strong>${cerradas}/${total}</strong><small>${avanceNacional}% cerrado</small></div>` : ''}
+        ${state.adminKpiGroup==='objetivos' ? `
+          <div class="admin-kpi-card success"><span>Cobertura de objetivos</span><strong>${coberturaObjetivos}%</strong><small>${objetivosConDefinicion}/${total} con objetivos documentados</small></div>
+          <div class="admin-kpi-card attention"><span>Sin objetivos definidos</span><strong>${objetivosSinDefinicion}</strong><small>Sección C reportada como N/A</small></div>
+          <div class="admin-kpi-card"><span>Pendientes de definir</span><strong>${objetivosPendientesDefinir}</strong><small>Aún sin captura o declaración</small></div>
+          <div class="admin-kpi-card"><span>Áreas con casos</span><strong>${sinObjetivosPorArea.length}</strong><small>Con al menos una persona sin objetivos</small></div>` : ''}
         ${state.adminKpiGroup==='calibracion' ? `
           <div class="admin-kpi-card attention"><span>Por calibrar</span><strong>${pendientesCal}</strong><small>Requieren revisión DO</small></div>
           <div class="admin-kpi-card success"><span>Calibradas</span><strong>${calibradas}</strong><small>Con resultado DO</small></div>
@@ -2203,6 +2228,8 @@
           <div class="admin-kpi-card"><span>Con resultado</span><strong>${promedios.length}/${total}</strong><small>Personas con puntaje disponible</small></div>
           <div class="admin-kpi-card"><span>Ubicados en 9-Box</span><strong>${datos.filter(d=>d.cuad.cuadrante).length}</strong><small>Talento clasificado</small></div>` : ''}
       </div>
+
+      ${state.adminKpiGroup==='objetivos' && objetivosSinDefinicion ? `<section class="objective-maturity-panel"><div class="admin-panel-head"><div><span class="admin-section-kicker">MADUREZ DE GESTIÓN</span><h2>Personas sin objetivos definidos</h2><p>Este indicador no califica negativamente al colaborador; permite identificar brechas de definición y seguimiento de objetivos por área y liderazgo.</p></div></div><div class="objective-maturity-list">${datos.filter(d=>S.getEvaluacion(d.c.empleado,periodoId,'autoevaluacion')?.objetivosNoAplican).map(d=>{const a=S.getEvaluacion(d.c.empleado,periodoId,'autoevaluacion');return `<div><span><b>${esc(d.c.nombre)}</b><small>${esc(d.c.area)} · Líder: ${esc((S.getColaborador(d.c.liderId)||{}).nombre||d.c.liderId||'—')}</small></span><span><b>${esc(a.objetivosNoAplicanMotivo||'Sin motivo')}</b><small>${esc(a.objetivosNoAplicanDetalle||'Sin contexto')}</small></span></div>`}).join('')}</div>${sinObjetivosPorArea.length?`<div class="objective-area-summary">${sinObjetivosPorArea.map(x=>`<span><b>${esc(x.area)}</b> ${x.sin}/${x.total} · ${x.pct}%</span>`).join('')}</div>`:''}</section>` : ''}
 
       <div class="admin-dashboard-grid">
         <article class="admin-panel admin-panel-wide">
@@ -2454,13 +2481,22 @@
           faltantes.push(Array.from(wizard.querySelectorAll('.competency-card')).find((el) => el.dataset.competenciaId === String(c.id)));
         }
       });
+      if (seccion === 'habilidades') {
+        const iaValor = S.getHerramientasEvaluacion(evaluacionId)?.ia;
+        if (iaValor === undefined || iaValor === '' || iaValor === null || iaValor === 'N/A') {
+          const b2 = Array.from(wizard.querySelectorAll('.competency-card')).find((el) => el.dataset.competenciaId === 'B2');
+          if (b2 && !faltantes.includes(b2)) faltantes.push(b2);
+        }
+      }
     } else if (state.wizard.tipo === 'lider') {
       const evLider = S.load().evaluaciones.find((e) => e.id === evaluacionId);
       const autoEval = S.getEvaluacion(state.wizard.colaboradorId, state.periodo.id, 'autoevaluacion');
       if (autoEval && autoEval.objetivosNoAplican) {
-        if (!evLider || !evLider.objetivosNoAplicanConfirmados) {
-          const block = wizard.querySelector('.leader-na-objectives'); if (block) faltantes.push(block);
-        }
+        const decision=evLider?.objetivosNoAplicanDecision || (evLider?.objetivosNoAplicanConfirmados?'confirmado':'');
+        let ok=false;
+        if(decision==='confirmado') ok=!!String(evLider?.objetivosNoAplicanComentarioLider||'').trim();
+        if(decision==='rechazado'){ const objs=S.getObjetivos(evaluacionId).filter(o=>(o.descripcion||'').trim()); ok=objs.length>0 && objs.every(o=>(o.descripcion||'').trim()&&String(o.meta||'').trim()&&String(o.resultado||'').trim()&&o.calificacion) && !!String(evLider?.objetivosNoAplicanComentarioLider||'').trim(); }
+        if(!ok){ const block=wizard.querySelector('.leader-na-objectives'); if(block) faltantes.push(block); }
         return marcarErroresYEnfocar(faltantes);
       }
       const objetivos = S.getObjetivos(evaluacionId) || [];
@@ -2471,7 +2507,7 @@
         if (!o || o.calificacion === '' || o.calificacion === null || o.calificacion === undefined || (o.ajusteManualLider && !String(o.justificacionLider || '').trim())) faltantes.push(fila);
       });
     } else {
-      if (evaluacionSinObjetivos(evaluacionId)) return 0;
+      if (evaluacionSinObjetivos(evaluacionId)) { const evNA=S.load().evaluaciones.find(e=>e.id===evaluacionId); if(!String(evNA?.objetivosNoAplicanMotivo||'').trim()||!String(evNA?.objetivosNoAplicanDetalle||'').trim()){ const block=wizard.querySelector('.objective-na-diagnostic')||wizard.querySelector('.objective-na-choice'); if(block) faltantes.push(block); } return marcarErroresYEnfocar(faltantes); }
       const objetivos = S.getObjetivos(evaluacionId) || [];
       const filas = wizard.querySelectorAll('.objetivo-row');
       filas.forEach((fila, i) => {
@@ -2614,10 +2650,14 @@
       if (!ev) return;
       ev.objetivosNoAplican = !!checked;
       ev.updatedAt = new Date().toISOString();
-      if (checked) db.objetivos = db.objetivos.filter((o) => o.evaluacionId !== evaluacionId);
+      if (checked) db.objetivos = db.objetivos.filter((o) => o.evaluacionId !== evaluacionId); else { ev.objetivosNoAplicanMotivo=''; ev.objetivosNoAplicanDetalle=''; }
       S.persist();
       render();
     },
+    setObjetivosNoAplicanMotivo(evaluacionId, valor) { const ev=S.load().evaluaciones.find(e=>e.id===evaluacionId); if(!ev)return; ev.objetivosNoAplicanMotivo=valor||''; ev.updatedAt=new Date().toISOString(); S.persist(); },
+    setObjetivosNoAplicanDetalle(evaluacionId, valor) { const ev=S.load().evaluaciones.find(e=>e.id===evaluacionId); if(!ev)return; ev.objetivosNoAplicanDetalle=valor||''; ev.updatedAt=new Date().toISOString(); S.persist(); },
+    decisionObjetivosNoAplicanLider(evaluacionId, decision) { const ev=S.load().evaluaciones.find(e=>e.id===evaluacionId); if(!ev)return; ev.objetivosNoAplicanDecision=decision; ev.objetivosNoAplicanConfirmados=decision==='confirmado'; ev.objetivosNoAplican=decision==='confirmado'; ev.updatedAt=new Date().toISOString(); if(decision==='confirmado'){ const db=S.load(); db.objetivos=db.objetivos.filter(o=>o.evaluacionId!==evaluacionId); S.persist(); } else S.persist(); render(); },
+    setObjetivosNoAplicanComentarioLider(evaluacionId, valor) { const ev=S.load().evaluaciones.find(e=>e.id===evaluacionId); if(!ev)return; ev.objetivosNoAplicanComentarioLider=valor||''; ev.updatedAt=new Date().toISOString(); S.persist(); },
     confirmarObjetivosNoAplicanLider(evaluacionId, checked) {
       const db = S.load(); const ev = db.evaluaciones.find((e) => e.id === evaluacionId); if (!ev) return;
       ev.objetivosNoAplicanConfirmados = !!checked; ev.objetivosNoAplican = !!checked; ev.updatedAt = new Date().toISOString(); S.persist(); render();

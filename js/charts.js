@@ -205,9 +205,13 @@
         if (onCellClickJs) clases.push('ninebox-cell-clickable');
         if (resaltarCuadrante === numero) clases.push('ninebox-cell-sel');
         const marcadores = gente.map((o) => {
-          const markClass = 'ninebox-marker' + (o.destacado ? ' ninebox-marker-destacado' : '');
+          const markClass = 'ninebox-person-chip' + (o.destacado ? ' ninebox-person-chip-destacado' : '');
           const markClick = onMarkerClickJs ? ` onclick="event.stopPropagation();${onMarkerClickJs(o.empleado)}"` : '';
-          return `<span class="${markClass}" title="${esc(o.nombre)}" style="background:${info.color}"${markClick}>${esc(iniciales(o.nombre))}</span>`;
+          return `<button type="button" class="${markClass}" title="${esc(o.nombre)}"${markClick}>
+            <span class="ninebox-person-avatar" style="background:${info.color}">${esc(iniciales(o.nombre))}</span>
+            <span class="ninebox-person-name">${esc(o.nombre)}</span>
+            ${o.destacado ? '<span class="ninebox-person-current">Ubicación actual</span>' : ''}
+          </button>`;
         }).join('');
         cols.push(`<div class="${clases.join(' ')} ninebox-q${numero}" style="--q-color:${info.color}"${onclickAttr}>
           <div class="ninebox-cell-top">
