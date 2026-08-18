@@ -117,6 +117,9 @@
         tipo, // 'autoevaluacion' | 'lider'
         estado,
         fortalezas: '',
+        oportunidadesDesarrollo: '',
+        debilidadesBrechas: '',
+        riesgosAtencion: '',
         comentarios: '',
         createdAt,
         updatedAt: createdAt,
@@ -358,7 +361,7 @@
     let ev = getEvaluacion(colaboradorId, periodoId, tipo);
     if (!ev) {
       const t = nowParts();
-      ev = { id: generarId('EVAL'), periodoId, colaboradorId: String(colaboradorId), liderId: String(liderId), tipo, estado: global.EDDData.ESTADOS.EN_PROGRESO, fortalezas: '', comentarios: '', createdAt: t.iso, updatedAt: t.iso, completedAt: null };
+      ev = { id: generarId('EVAL'), periodoId, colaboradorId: String(colaboradorId), liderId: String(liderId), tipo, estado: global.EDDData.ESTADOS.EN_PROGRESO, fortalezas: '', oportunidadesDesarrollo: '', debilidadesBrechas: '', riesgosAtencion: '', comentarios: '', createdAt: t.iso, updatedAt: t.iso, completedAt: null };
       db.evaluaciones.push(ev);
       persist();
       addAudit(colaboradorId, 'Inicio de evaluación', 'evaluaciones', ev.id, null, tipo);
@@ -402,10 +405,11 @@
       if (Object.prototype.hasOwnProperty.call(extras, 'cumplimiento')) o.cumplimiento = extras.cumplimiento;
       if (Object.prototype.hasOwnProperty.call(extras, 'noCuantificable')) o.noCuantificable = !!extras.noCuantificable;
       if (Object.prototype.hasOwnProperty.call(extras, 'calificacionAutomatica')) o.calificacionAutomatica = extras.calificacionAutomatica;
+      if (Object.prototype.hasOwnProperty.call(extras, 'cumplimientoAutomatico')) o.cumplimientoAutomatico = extras.cumplimientoAutomatico;
       if (Object.prototype.hasOwnProperty.call(extras, 'ajusteManualLider')) o.ajusteManualLider = !!extras.ajusteManualLider;
       if (Object.prototype.hasOwnProperty.call(extras, 'justificacionLider')) o.justificacionLider = extras.justificacionLider || '';
     } else {
-      db.objetivos.push({ evaluacionId, index, descripcion, resultado, calificacion, meta: extras.meta || '', fechaCompromiso: extras.fechaCompromiso || '', alcanzable: !!extras.alcanzable, relevante: !!extras.relevante, cumplimiento: extras.cumplimiento ?? '', noCuantificable: !!extras.noCuantificable, calificacionAutomatica: extras.calificacionAutomatica ?? calificacion, ajusteManualLider: !!extras.ajusteManualLider, justificacionLider: extras.justificacionLider || '' });
+      db.objetivos.push({ evaluacionId, index, descripcion, resultado, calificacion, meta: extras.meta || '', fechaCompromiso: extras.fechaCompromiso || '', alcanzable: !!extras.alcanzable, relevante: !!extras.relevante, cumplimiento: extras.cumplimiento ?? '', cumplimientoAutomatico: extras.cumplimientoAutomatico ?? extras.cumplimiento ?? '', noCuantificable: !!extras.noCuantificable, calificacionAutomatica: extras.calificacionAutomatica ?? calificacion, ajusteManualLider: !!extras.ajusteManualLider, justificacionLider: extras.justificacionLider || '' });
     }
     persist();
   }
