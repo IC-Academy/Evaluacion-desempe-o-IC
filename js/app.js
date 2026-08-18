@@ -1517,8 +1517,20 @@
     const dims=[]; const auto={}; const lider={};
     [...D.COMPETENCIAS.actitud,...D.COMPETENCIAS.habilidades].forEach((c)=>{
       const key=c.id.toLowerCase();
-      const short=c.nombre.replace(/\s*\([^)]*\)/g,'').replace(' y Compromiso con la Sustentabilidad','').replace('Trabajo en Equipo, Unión y Desarrollo de Otros','Trabajo en equipo').replace('Procesos y Herramientas de Trabajo','Procesos y herramientas').replace('Seguimiento, Control y Uso de Recursos','Seguimiento y control');
-      dims.push({key,label:c.nombre,shortLabel:short.length>24?short.slice(0,22)+'…':short});
+      const chartLabels={
+        A1:'Compromiso Organizacional',
+        A2:'Actitud de Servicio',
+        A3:'Trabajo en Equipo',
+        A4:'Comunicación Efectiva',
+        A5:'Adaptabilidad e Iniciativa',
+        B1:'Dominio del Puesto',
+        B2:'Procesos y Herramientas',
+        B3:'Orientación a Resultados',
+        B4:'Planeación y Organización',
+        B5:'Seguimiento y Control'
+      };
+      const short=chartLabels[c.id] || c.nombre.replace(/\s*\([^)]*\)/g,'');
+      dims.push({key,label:c.nombre,shortLabel:short});
       const ar=autoResp.find(r=>r.competenciaId===c.id), lr=leaderResp.find(r=>r.competenciaId===c.id);
       auto[key]=ar && ar.valor!=='N/A' ? Number(ar.valor) : null;
       lider[key]=lr && lr.valor!=='N/A' ? Number(lr.valor) : null;

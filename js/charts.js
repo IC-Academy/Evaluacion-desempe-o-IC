@@ -354,15 +354,15 @@
       const lines=[]; let current='';
       words.forEach((word)=>{
         const next=current?`${current} ${word}`:word;
-        if(next.length>20 && current){ lines.push(current); current=word; }
+        if(next.length>18 && current){ lines.push(current); current=word; }
         else current=next;
       });
       if(current) lines.push(current);
-      const visible=lines.slice(0,3);
-      if(lines.length>3) visible[2]=visible[2].replace(/[.…]*$/,'')+'…';
+      // Nunca truncar etiquetas del perfil: si una dimensión necesita 2–4 líneas,
+      // se muestran completas. El nombre oficial permanece además en el panel lateral.
       const lineH=12;
-      const startY=ly-((visible.length-1)*lineH/2);
-      grid += `<text x="${lx.toFixed(1)}" y="${startY.toFixed(1)}" text-anchor="${anchor}" class="performance-wheel-label">${visible.map((line,idx)=>`<tspan x="${lx.toFixed(1)}" dy="${idx===0?0:lineH}">${esc(line)}</tspan>`).join('')}</text>`;
+      const startY=ly-((lines.length-1)*lineH/2);
+      grid += `<text x="${lx.toFixed(1)}" y="${startY.toFixed(1)}" text-anchor="${anchor}" class="performance-wheel-label">${lines.map((line,idx)=>`<tspan x="${lx.toFixed(1)}" dy="${idx===0?0:lineH}">${esc(line)}</tspan>`).join('')}</text>`;
     });
 
     function series(values,color,opacity,dash){

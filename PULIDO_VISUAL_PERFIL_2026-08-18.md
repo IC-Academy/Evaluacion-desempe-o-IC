@@ -7,3 +7,10 @@
 - Panel lateral de competencias muestra nombres completos y mayor respiración visual.
 - Ajustes responsive para escritorio, laptop y pantallas angostas.
 - Se actualizaron referencias visibles de RH a DO dentro de la pantalla de calibración tocada.
+
+
+## Corrección final de etiquetas
+- Eliminado el truncado con puntos suspensivos en el perfil multidimensional.
+- Etiquetas ejecutivas completas y consistentes alrededor del radar.
+- El nombre oficial completo de cada competencia permanece en el panel lateral.
+- El SVG permite etiquetas multilínea sin recorte intencional.
