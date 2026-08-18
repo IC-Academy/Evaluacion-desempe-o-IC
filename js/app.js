@@ -520,6 +520,7 @@
 
 
   function apiReadMode() { return global.APP_CONFIG && global.APP_CONFIG.mode === 'api' && global.APP_CONFIG.readApiEnabled !== false; }
+  function apiTestCaptureMode() { return apiReadMode() && global.APP_CONFIG && global.APP_CONFIG.testCaptureEnabled === true && global.APP_CONFIG.writeApiEnabled !== true; }
   function apiData(resp) { return resp && Object.prototype.hasOwnProperty.call(resp, 'data') ? resp.data : resp; }
   function periodoRemotoNormalizado(p) {
     if (!p) return null;
@@ -875,7 +876,7 @@
     if (page === 'autoevaluacion' && !introVista() && (estado === D.ESTADOS.NO_INICIADA || estado === D.ESTADOS.EN_PROGRESO)) {
       return viewBienvenidaEvaluacion(col, periodoId, estado);
     }
-    if (page === 'autoevaluacion' && apiReadMode() && !global.APP_CONFIG.writeApiEnabled) return viewReadOnlyEvaluationIntegration(col, estado);
+    if (page === 'autoevaluacion' && apiReadMode() && !global.APP_CONFIG.writeApiEnabled && !apiTestCaptureMode()) return viewReadOnlyEvaluationIntegration(col, estado);
     if (page === 'autoevaluacion') return viewAutoevaluacion(col, periodoId, estado);
     if (page === 'retroalimentacion') return viewRetroalimentacion(col, periodoId, estado);
     if (page === 'enviado') return viewEnvioExitoso(col);
@@ -906,7 +907,7 @@
       <div class="welcome-hero">
         <div class="welcome-hero-copy">
           <div class="welcome-eyebrow">Evaluación de Desempeño</div>
-          <h1>¡Bienvenida, ${primerNombre}! <span class="welcome-wave">👋</span></h1>
+          <h1>¡Hola, ${primerNombre}! <span class="welcome-wave">👋</span></h1>
           <p class="welcome-lead">Esta evaluación nos ayuda a conocer tu desempeño, reconocer tus fortalezas e identificar oportunidades de desarrollo que impulsen tu crecimiento dentro de Inter-Con.</p>
 
           <div class="welcome-persona">
@@ -1088,6 +1089,7 @@
       </button>`).join('');
 
     return `
+    ${apiTestCaptureMode() ? `<div class="alert alert-info backend-test-capture-note"><strong>Modo de prueba funcional.</strong> Puedes completar y enviar esta evaluación para validar el flujo visual. La captura se guarda únicamente en este navegador y todavía no modifica Airtable.</div>` : ''}
     <section class="premium-evaluation-page">
       <div class="premium-progress-head"><div><span>Progreso general</span><div class="progress"><div class="progress-bar" style="width:${progreso}%"></div></div></div><strong>${progreso}%</strong></div>
       <div class="premium-evaluation-layout">
@@ -3015,6 +3017,7 @@
         return;
       }
       S.completarEvaluacion(evaluacionId, state.user.nombre);
+      if (apiTestCaptureMode()) showNotice('Prueba completada localmente. Aún no se envió a Airtable porque la capa de escritura sigue pendiente.','info');
       navigate(personalRoute('enviado'));
     },
     editarObjetivoLider(evaluacionId, index, calificacion) {

@@ -72,6 +72,9 @@
     // todavía se conectarán en la siguiente fase, por lo que no deben
     // considerarse persistidas en backend hasta que exista su endpoint.
     readApiEnabled: true,
+    // Permite validar el formulario completo con la identidad real de /auth/me
+    // mientras la escritura n8n/Airtable se termina. Nunca se presenta como dato persistido.
+    testCaptureEnabled: true,
     writeApiEnabled: false
   };
 
