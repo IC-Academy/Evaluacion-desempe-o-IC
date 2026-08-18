@@ -882,11 +882,25 @@
     return viewBienvenidaEvaluacion(col, periodoId, estado);
   }
 
+  function nombreParaSaludo(nombreCompleto) {
+    const raw = String(nombreCompleto || '').trim();
+    if (!raw) return '';
+    const partes = raw.split(/\s+/).filter(Boolean);
+    // El maestro corporativo puede venir en formato APELLIDO PATERNO +
+    // APELLIDO MATERNO + NOMBRE(S), normalmente completamente en mayúsculas.
+    // Para ese caso usamos el primer nombre (tercer bloque) sin alterar el
+    // nombre completo que se muestra en la ficha del colaborador.
+    const letras = raw.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/g, '');
+    const pareceApellidoPrimero = partes.length >= 3 && letras && letras === letras.toUpperCase();
+    const elegido = pareceApellidoPrimero ? partes[2] : partes[0];
+    return elegido.charAt(0).toUpperCase() + elegido.slice(1).toLowerCase();
+  }
+
   function viewBienvenidaEvaluacion(col, periodoId, estado) {
     const enProgreso = estado === D.ESTADOS.EN_PROGRESO;
     const retroDisponible = estado === D.ESTADOS.RETRO_PENDIENTE || estado === D.ESTADOS.CERRADA;
     const evaluacionEnviada = ![D.ESTADOS.NO_INICIADA, D.ESTADOS.EN_PROGRESO].includes(estado);
-    const primerNombre = esc((col.nombre || '').trim().split(/\s+/)[0] || '');
+    const primerNombre = esc(nombreParaSaludo(col.nombre));
     return `
     <section class="welcome-page">
       <div class="welcome-hero">
@@ -1802,7 +1816,7 @@
     const pendingEval = team.filter(x => /pendiente|no iniciada|en progreso/i.test(String(x.leaderStatus || x.processState || ''))).length;
     const pendingLeaderSignature = team.filter(x => x.leaderSignaturePending).length;
     const pendingEmployeeSignature = team.filter(x => x.employeeSignaturePending).length;
-    return `<section class="backend-live-section"><div class="kpi-grid">${kpi('Colaboradores',team.length)}${kpi('Pendientes por evaluar',pendingEval,pendingEval?'yellow':'gray')}${kpi('Por firmar líder',pendingLeaderSignature,pendingLeaderSignature?'red':'gray')}${kpi('Firma colaborador pendiente',pendingEmployeeSignature,pendingEmployeeSignature?'yellow':'gray')}</div><div class="card"><div class="admin-panel-head"><div><span class="admin-section-kicker">DATOS EN VIVO</span><h2>${soloFirmas?'Pendientes por firmar':soloPendientes?'Pendientes por evaluar':'Mi equipo'}</h2><p>Origen: n8n + Airtable · identidad y jerarquía validadas por sesión.</p></div><button class="btn btn-outline btn-sm" onclick="App.recargarBackend()">Actualizar</button></div><div class="admin-table-wrap"><table class="table"><thead><tr><th>Nombre</th><th>Puesto</th><th>Área</th><th>Autoevaluación</th><th>Evaluación líder</th><th>Proceso</th><th>Retroalimentación</th><th>Firma</th></tr></thead><tbody>${team.map(x=>`<tr><td><strong>${esc(x.name||x.employeeName||x.employeeId)}</strong><small>${esc(x.employeeId||'')}</small></td><td>${esc(x.position||'—')}</td><td>${esc(x.area||'—')}</td><td>${badge(x.selfStatus||'—')}</td><td>${badge(x.leaderStatus||'—')}</td><td>${badge(x.processState||'—')}</td><td>${badge(x.feedbackState||'—')}</td><td>${x.leaderSignaturePending?badge('Pendiente líder','red'):x.employeeSignaturePending?badge('Pendiente colaborador','yellow'):'—'}</td></tr>`).join('')||`<tr><td colspan="8" class="muted">Sin registros para esta vista.</td></tr>`}</tbody></table></div><p class="backend-read-note">Las acciones de evaluación y firma se habilitarán al conectar la capa de escritura.</p></div></section>`;
+    return `<section class="backend-live-section"><div class="kpi-grid">${kpi('Colaboradores',team.length)}${kpi('Pendientes por evaluar',pendingEval,pendingEval?'yellow':'gray')}${kpi('Por firmar líder',pendingLeaderSignature,pendingLeaderSignature?'red':'gray')}${kpi('Firma colaborador pendiente',pendingEmployeeSignature,pendingEmployeeSignature?'yellow':'gray')}</div><div class="card"><div class="admin-panel-head"><div><span class="admin-section-kicker">DATOS EN VIVO</span><h2>${soloFirmas?'Pendientes por firmar':soloPendientes?'Pendientes por evaluar':'Mi equipo'}</h2><p>Origen: n8n + Airtable · identidad y jerarquía validadas por sesión.</p></div><button class="btn btn-outline btn-sm" onclick="App.recargarBackend()">Actualizar</button></div><div class="admin-table-wrap"><table class="table"><thead><tr><th>Nombre</th><th>Puesto</th><th>Área</th><th>Autoevaluación</th><th>Evaluación líder</th><th>Proceso</th><th>Retroalimentación</th><th>Firma</th></tr></thead><tbody>${team.map(x=>`<tr><td><div class="backend-person-cell"><strong>${esc(x.name||x.employeeName||x.employeeId)}</strong><small>${esc(x.employeeId||'')}</small></div></td><td>${esc(x.position||'—')}</td><td>${esc(x.area||'—')}</td><td>${badge(x.selfStatus||'—')}</td><td>${badge(x.leaderStatus||'—')}</td><td>${badge(x.processState||'—')}</td><td>${badge(x.feedbackState||'—')}</td><td>${x.leaderSignaturePending?badge('Pendiente líder','red'):x.employeeSignaturePending?badge('Pendiente colaborador','yellow'):'—'}</td></tr>`).join('')||`<tr><td colspan="8" class="muted">Sin registros para esta vista.</td></tr>`}</tbody></table></div><p class="backend-read-note">Las acciones de evaluación y firma se habilitarán al conectar la capa de escritura.</p></div></section>`;
   }
 
   function viewLiderDashboard(lider, periodoId, soloPendientes, soloFirmas) {
@@ -2116,10 +2130,69 @@
 
   function viewAdminDashboardApi() {
     const d = state.remote.dashboard || {};
-    const p=d.progress||{}, c=d.calibration||{}, f=d.feedback||{}, a=d.alerts||{}, tlt=d.talent||{}, o=d.objectives||{};
-    const overdue=(a.overdueSelfEvaluations&&a.overdueSelfEvaluations.count)||0;
-    const nine=Array.isArray(tlt.nineBoxDistribution)?tlt.nineBoxDistribution:[];
-    return `<section class="admin-dashboard-premium backend-live-section"><div class="admin-hero"><div><span class="admin-eyebrow">DESARROLLO ORGANIZACIONAL · DATOS EN VIVO</span><h1>Evaluación de Desempeño</h1><p>Información agregada directamente desde n8n + Airtable.</p></div><div class="admin-hero-progress"><span>Avance del ciclo</span><strong>${Number(p.cycleProgressPercent||0).toFixed(0)}%</strong>${progressBar(p.cycleProgressPercent||0)}</div></div><div class="admin-kpi-strip"><div class="admin-kpi-card"><span>Personal a evaluar</span><strong>${p.totalEmployees??'—'}</strong><small>Universo del periodo</small></div><div class="admin-kpi-card success"><span>Autoevaluaciones</span><strong>${p.selfCompleted??'—'}</strong><small>${p.selfPending??'—'} pendientes</small></div><div class="admin-kpi-card"><span>Evaluaciones líder</span><strong>${p.leaderCompleted??'—'}</strong><small>${p.leaderPending??'—'} pendientes</small></div><div class="admin-kpi-card attention"><span>Por calibrar</span><strong>${c.pending??'—'}</strong><small>${c.completed??'—'} calibradas</small></div><div class="admin-kpi-card"><span>Cierre</span><strong>${f.closurePercent??0}%</strong><small>${f.closed??0} cerradas</small></div><div class="admin-kpi-card attention"><span>Alertas vencidas</span><strong>${overdue}</strong><small>Autoevaluaciones</small></div></div><div class="admin-dashboard-grid"><article class="admin-panel"><div class="admin-panel-head"><div><span class="admin-section-kicker">OBJETIVOS</span><h2>Madurez de gestión</h2></div></div><div class="info-grid"><div><span class="label">Con objetivos</span><span class="value">${o.withObjectives??'—'}</span></div><div><span class="label">Sin objetivos</span><span class="value">${o.withoutObjectives??'—'}</span></div><div><span class="label">Cobertura</span><span class="value">${o.coveragePercent??'—'}%</span></div></div>${o.dataGapNote?`<p class="backend-read-note">${esc(o.dataGapNote)}</p>`:''}</article><article class="admin-panel"><div class="admin-panel-head"><div><span class="admin-section-kicker">TALENTO</span><h2>Distribución 9-Box</h2></div></div><div class="admin-nine-mini">${nine.map(x=>`<div><span>${esc(x.quadrant)}</span><b>${esc(x.count)}</b><small>${esc(x.name||'')}</small></div>`).join('')||'<p class="muted">Sin distribución disponible.</p>'}</div></article><article class="admin-panel admin-panel-wide"><div class="admin-panel-head"><div><span class="admin-section-kicker">RETROALIMENTACIÓN</span><h2>Cierre y firmas</h2></div><button class="btn btn-outline btn-sm" onclick="App.recargarBackend()">Actualizar</button></div><div class="kpi-grid">${kpi('Liberadas',f.released??0)}${kpi('Pendiente reunión',f.pendingMeeting??0,'yellow')}${kpi('Firma líder',f.pendingLeaderSignature??0,'yellow')}${kpi('Firma colaborador',f.pendingEmployeeSignature??0,'yellow')}${kpi('Cerradas',f.closed??0,'green')}</div></article></div><p class="backend-read-note">Backend Read API v1 activa. Calibración, firmas y otras escrituras continúan bloqueadas hasta conectar sus endpoints de escritura.</p></section>`;
+    const p = d.progress || {}, c = d.calibration || {}, f = d.feedback || {}, a = d.alerts || {}, tlt = d.talent || {}, o = d.objectives || {};
+    const total = Number(p.totalEmployees || 0);
+    const avance = Number(p.cycleProgressPercent || 0);
+    const cerradas = Number(f.closed || p.closed || 0);
+    const semaforoAvance = avance >= 90 ? 'green' : avance >= 60 ? 'yellow' : 'red';
+    const selfDone = Number(p.selfCompleted || 0), selfPending = Number(p.selfPending ?? Math.max(0,total-selfDone));
+    const leaderDone = Number(p.leaderCompleted || 0), leaderPending = Number(p.leaderPending ?? Math.max(0,total-leaderDone));
+    const calPending = Number(c.pending || 0), calDone = Number(c.completed || 0);
+    const avgCal = c.averageCalibratedScore ?? c.averageScore ?? null;
+    const overdueSelf = (a.overdueSelfEvaluations && a.overdueSelfEvaluations.count) || 0;
+    const overdueLeader = (a.overdueLeaderEvaluations && a.overdueLeaderEvaluations.count) || 0;
+    const overdueFeedback = (a.overdueFeedback && a.overdueFeedback.count) || 0;
+    const pendingSignature = Number(f.pendingLeaderSignature || 0) + Number(f.pendingEmployeeSignature || 0);
+    const nine = Array.isArray(tlt.nineBoxDistribution) ? tlt.nineBoxDistribution : [];
+    const avgAtt = tlt.averageAttitude ?? null, avgPerf = tlt.averagePerformance ?? null;
+    const noObjPeople = Array.isArray(o.withoutObjectivesEmployees) ? o.withoutObjectivesEmployees : [];
+    const noObjAreas = Array.isArray(o.withoutObjectivesByArea) ? o.withoutObjectivesByArea : [];
+    const overdueEmployees = (a.overdueSelfEvaluations && Array.isArray(a.overdueSelfEvaluations.employees)) ? a.overdueSelfEvaluations.employees : [];
+
+    const metricTabs = [['avance','Avance'],['objetivos','Objetivos'],['calibracion','Calibración'],['retro','Retroalimentación'],['alertas','Alertas'],['talento','Talento']];
+    let detalle = '';
+    if (state.adminKpiGroup === 'avance') {
+      detalle = `<div class="admin-dashboard-grid backend-admin-grid">
+        <article class="admin-panel admin-panel-wide"><div class="admin-panel-head"><div><span class="admin-section-kicker">COBERTURA</span><h2>Estado del ciclo</h2><p>Información consolidada directamente desde n8n + Airtable.</p></div><button class="btn btn-outline btn-sm" onclick="App.recargarBackend()">Actualizar datos</button></div>
+        <div class="backend-progress-cards"><div><span>Autoevaluación</span><strong>${selfDone}/${total}</strong>${progressBar(total ? selfDone/total*100 : 0)}</div><div><span>Evaluación de líder</span><strong>${leaderDone}/${total}</strong>${progressBar(total ? leaderDone/total*100 : 0)}</div><div><span>Cierre</span><strong>${cerradas}/${total}</strong>${progressBar(avance)}</div></div></article>
+      </div>`;
+    } else if (state.adminKpiGroup === 'objetivos') {
+      detalle = `<div class="admin-dashboard-grid backend-admin-grid"><article class="admin-panel admin-panel-wide"><div class="admin-panel-head"><div><span class="admin-section-kicker">MADUREZ DE GESTIÓN</span><h2>Cobertura de objetivos</h2><p>La ausencia de objetivos es un indicador de gestión; no se interpreta automáticamente como bajo desempeño del colaborador.</p></div></div>
+        <div class="backend-objective-summary"><div><span>Con objetivos</span><strong>${o.withObjectives ?? '—'}</strong></div><div><span>Sin objetivos</span><strong>${o.withoutObjectives ?? '—'}</strong></div><div><span>Cobertura</span><strong>${o.coveragePercent ?? '—'}%</strong></div></div>
+        ${o.dataGapNote ? `<div class="backend-data-gap"><strong>Gap de datos actual</strong><span>${esc(o.dataGapNote)}</span></div>` : ''}
+        ${noObjAreas.length ? `<div class="objective-area-summary">${noObjAreas.map(x=>`<span><b>${esc(x.area||x.name||'Área')}</b> ${esc(x.count ?? x.withoutObjectives ?? '—')}${x.percentage!=null?' · '+esc(x.percentage)+'%':''}</span>`).join('')}</div>` : ''}
+        ${noObjPeople.length ? `<div class="objective-maturity-list">${noObjPeople.slice(0,30).map(x=>`<div><span><b>${esc(x.name||x.employeeName||x.employeeId||'Colaborador')}</b><small>${esc(x.area||'')}</small></span><span><small>${esc(x.reason||'Sin motivo persistido en Airtable')}</small></span></div>`).join('')}</div>` : ''}
+      </article></div>`;
+    } else if (state.adminKpiGroup === 'calibracion') {
+      detalle = `<div class="admin-dashboard-grid backend-admin-grid"><article class="admin-panel admin-panel-wide"><div class="admin-panel-head"><div><span class="admin-section-kicker">CALIBRACIÓN</span><h2>Seguimiento de revisión DO</h2></div></div><div class="backend-objective-summary"><div><span>Pendientes</span><strong>${calPending}</strong></div><div><span>Calibradas</span><strong>${calDone}</strong></div><div><span>Promedio calibrado</span><strong>${avgCal==null?'—':f1(avgCal)}</strong></div></div><p class="backend-read-note">Los detalles y acciones de calibración permanecen sin escritura hasta conectar la siguiente capa del backend.</p></article></div>`;
+    } else if (state.adminKpiGroup === 'retro') {
+      detalle = `<div class="admin-dashboard-grid backend-admin-grid"><article class="admin-panel admin-panel-wide"><div class="admin-panel-head"><div><span class="admin-section-kicker">RETROALIMENTACIÓN</span><h2>Cierre y firmas</h2></div></div><div class="backend-signature-grid">${kpi('Liberadas',f.released??0)}${kpi('Pendiente reunión',f.pendingMeeting??0,'yellow')}${kpi('Firma líder pendiente',f.pendingLeaderSignature??0,'yellow')}${kpi('Firma colaborador pendiente',f.pendingEmployeeSignature??0,'yellow')}${kpi('Cerradas',f.closed??0,'green')}</div></article></div>`;
+    } else if (state.adminKpiGroup === 'alertas') {
+      detalle = `<div class="admin-dashboard-grid backend-admin-grid"><article class="admin-panel admin-panel-wide"><div class="admin-panel-head"><div><span class="admin-section-kicker">ALERTAS</span><h2>Seguimiento requerido</h2><p>Personas y etapas que requieren atención durante el ciclo.</p></div></div>
+        <div class="backend-objective-summary"><div><span>Autoevaluación vencida</span><strong>${overdueSelf}</strong></div><div><span>Evaluación líder vencida</span><strong>${overdueLeader}</strong></div><div><span>Retroalimentación vencida</span><strong>${overdueFeedback}</strong></div><div><span>Firmas pendientes</span><strong>${pendingSignature}</strong></div></div>
+        ${overdueEmployees.length ? `<div class="admin-table-wrap"><table class="table"><thead><tr><th>Colaborador</th><th>Área</th><th>Líder</th><th>Fecha límite</th></tr></thead><tbody>${overdueEmployees.slice(0,50).map(x=>`<tr><td><strong>${esc(x.name||x.employeeName||x.employeeId||'—')}</strong></td><td>${esc(x.area||'—')}</td><td>${esc(x.leader||x.leaderName||'—')}</td><td>${esc(x.deadline||'—')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">No hay detalle de colaboradores para esta alerta.</p>'}
+      </article></div>`;
+    } else {
+      detalle = `<div class="admin-dashboard-grid backend-admin-grid"><article class="admin-panel admin-panel-wide"><div class="admin-panel-head"><div><span class="admin-section-kicker">TALENTO</span><h2>Distribución 9-Box</h2><p>Vista agregada de la distribución disponible en backend.</p></div></div>
+        <div class="backend-talent-summary"><div><span>Actitud promedio</span><strong>${avgAtt==null?'—':f1(avgAtt)}</strong></div><div><span>Desempeño promedio</span><strong>${avgPerf==null?'—':f1(avgPerf)}</strong></div></div>
+        <div class="backend-ninebox-grid">${nine.length ? nine.map(x=>`<article><span>Cuadrante ${esc(x.quadrant??'—')}</span><strong>${esc(x.count??0)}</strong><small>${esc(x.name||'')}</small></article>`).join('') : '<div class="backend-empty-wide"><strong>Sin distribución disponible</strong><span>Se poblará conforme existan evaluaciones con resultado.</span></div>'}</div>
+      </article></div>`;
+    }
+
+    return `<section class="admin-premium-shell backend-admin-premium">
+      <div class="admin-premium-hero"><div><span class="admin-kicker">PANEL DE DESARROLLO ORGANIZACIONAL · DATOS EN VIVO</span><h1>Evaluación de Desempeño</h1><p>Seguimiento del ciclo con información real de n8n + Airtable, conservando la experiencia completa del portal.</p></div><div class="admin-hero-progress progress-${semaforoAvance}"><div class="admin-progress-value">${avance.toFixed(0)}%</div><div><strong>Avance del ciclo</strong><span>${cerradas} de ${total} evaluaciones cerradas</span></div></div></div>
+      <div class="admin-metric-switcher" role="tablist" aria-label="Tipo de métricas">${metricTabs.map(([id,label])=>`<button type="button" class="admin-metric-tab ${state.adminKpiGroup===id?'active':''}" onclick="App.setAdminKpiGroup('${id}')">${label}</button>`).join('')}</div>
+      <div class="admin-kpi-grid admin-kpi-grid-focused">
+        ${state.adminKpiGroup==='avance'?`<div class="admin-kpi-card"><span>Personal a evaluar</span><strong>${total}</strong><small>Universo del periodo</small></div><div class="admin-kpi-card"><span>Autoevaluaciones</span><strong>${selfDone}/${total}</strong><small>${selfPending} pendientes</small></div><div class="admin-kpi-card"><span>Evaluaciones líder</span><strong>${leaderDone}/${total}</strong><small>${leaderPending} pendientes</small></div><div class="admin-kpi-card"><span>Cierre del ciclo</span><strong>${cerradas}/${total}</strong><small>${avance.toFixed(0)}% cerrado</small></div>`:''}
+        ${state.adminKpiGroup==='objetivos'?`<div class="admin-kpi-card success"><span>Cobertura de objetivos</span><strong>${o.coveragePercent??'—'}%</strong><small>${o.withObjectives??'—'} con objetivos</small></div><div class="admin-kpi-card attention"><span>Sin objetivos</span><strong>${o.withoutObjectives??'—'}</strong><small>Gap de gestión</small></div>`:''}
+        ${state.adminKpiGroup==='calibracion'?`<div class="admin-kpi-card attention"><span>Por calibrar</span><strong>${calPending}</strong><small>Requieren revisión DO</small></div><div class="admin-kpi-card success"><span>Calibradas</span><strong>${calDone}</strong><small>Con resultado</small></div><div class="admin-kpi-card"><span>Promedio calibrado</span><strong>${avgCal==null?'—':f1(avgCal)}</strong><small>Resultado disponible</small></div>`:''}
+        ${state.adminKpiGroup==='retro'?`<div class="admin-kpi-card success"><span>Liberadas</span><strong>${f.released??0}</strong><small>Para retroalimentación</small></div><div class="admin-kpi-card attention"><span>Firma líder</span><strong>${f.pendingLeaderSignature??0}</strong><small>Pendientes</small></div><div class="admin-kpi-card attention"><span>Firma colaborador</span><strong>${f.pendingEmployeeSignature??0}</strong><small>Pendientes</small></div><div class="admin-kpi-card"><span>Cerradas</span><strong>${f.closed??0}</strong><small>${f.closurePercent??0}% de cierre</small></div>`:''}
+        ${state.adminKpiGroup==='alertas'?`<div class="admin-kpi-card attention"><span>Autoevaluaciones vencidas</span><strong>${overdueSelf}</strong><small>Requieren seguimiento</small></div><div class="admin-kpi-card attention"><span>Evaluaciones líder vencidas</span><strong>${overdueLeader}</strong><small>Seguimiento con liderazgo</small></div><div class="admin-kpi-card"><span>Firmas pendientes</span><strong>${pendingSignature}</strong><small>Proceso sin cerrar</small></div>`:''}
+        ${state.adminKpiGroup==='talento'?`<div class="admin-kpi-card"><span>Actitud promedio</span><strong>${avgAtt==null?'—':f1(avgAtt)}</strong><small>Base disponible</small></div><div class="admin-kpi-card"><span>Desempeño promedio</span><strong>${avgPerf==null?'—':f1(avgPerf)}</strong><small>Base disponible</small></div><div class="admin-kpi-card"><span>Cuadrantes con datos</span><strong>${nine.filter(x=>Number(x.count||0)>0).length}</strong><small>Distribución 9-Box</small></div>`:''}
+      </div>
+      ${detalle}
+      <div class="backend-live-footer"><span><i></i> Lectura backend activa</span><small>Las acciones de escritura se habilitarán en la siguiente fase.</small><button class="btn btn-outline btn-sm" onclick="App.recargarBackend()">Actualizar</button></div>
+    </section>`;
   }
 
   // =========================================================================
