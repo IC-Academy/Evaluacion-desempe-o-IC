@@ -209,9 +209,13 @@
           const markClick = onMarkerClickJs ? ` onclick="event.stopPropagation();${onMarkerClickJs(o.empleado)}"` : '';
           return `<span class="${markClass}" title="${esc(o.nombre)}" style="background:${info.color}"${markClick}>${esc(iniciales(o.nombre))}</span>`;
         }).join('');
-        cols.push(`<div class="${clases.join(' ')}" style="border-color:${info.color}"${onclickAttr}>
-          <div class="ninebox-cell-icon">${icono}</div>
-          <div class="ninebox-cell-title">${numero}. ${esc(info.nombre)}</div>
+        cols.push(`<div class="${clases.join(' ')} ninebox-q${numero}" style="--q-color:${info.color}"${onclickAttr}>
+          <div class="ninebox-cell-top">
+            <span class="ninebox-number-badge" style="background:${info.color}">${numero}</span>
+            <div class="ninebox-cell-icon">${icono}</div>
+          </div>
+          <div class="ninebox-cell-title">${esc(info.nombre)}</div>
+          <div class="ninebox-cell-copy">${esc(info.significado)}</div>
           <div class="ninebox-markers">${marcadores}</div>
         </div>`);
       }
@@ -268,26 +272,51 @@
     resultado = resultado || {};
     const c = C();
     const cuad = c.asignarCuadrante(resultado.actitudProm, resultado.desempenoProm);
-    const ocupantes = cuad.cuadrante ? [{ empleado: 'actual', nombre: resultado.nombreColaborador || 'Colaborador', cuadrante: cuad.cuadrante, destacado: true }] : [];
+    const nombre = resultado.nombreColaborador || 'Colaborador';
+    const ocupantes = cuad.cuadrante ? [{ empleado: 'actual', nombre, cuadrante: cuad.cuadrante, destacado: true }] : [];
     const gridHtml = renderNineBoxGridCore({ ocupantes, resaltarCuadrante: cuad.cuadrante, onCellClickJs: null, onMarkerClickJs: null });
     const niveles = c.CONFIG_9BOX.etiquetasNivel;
+    const info = cuad && cuad.info ? cuad.info : null;
+    const inicial = iniciales(nombre);
 
-    return `<div class="ninebox-individual">
-      <div class="ninebox-full-body ninebox-full-body-sm">
-        <div class="ninebox-vaxis-labels"><span>${esc(niveles[2])}</span><span>${esc(niveles[1])}</span><span>${esc(niveles[0])}</span></div>
-        <div class="ninebox-axes"><div class="axis-y">${esc(c.CONFIG_9BOX.ejeVertical)} ▲</div></div>
-        <div class="ninebox-grid ninebox-grid-sm">${gridHtml}</div>
+    return `<section class="ninebox-premium-card">
+      <div class="ninebox-premium-head">
+        <div>
+          <span class="ninebox-kicker">MATRIZ DE TALENTO</span>
+          <h3>Matriz 9-Box de Talento</h3>
+          <p>Ubicación según el equilibrio entre desempeño y actitud.</p>
+        </div>
+        ${info ? `<div class="ninebox-current-pill"><span class="ninebox-current-dot">⌖</span><div><small>Ubicación actual</small><strong style="color:${info.color}">${cuad.cuadrante} · ${esc(info.nombre)}</strong></div></div>` : ''}
       </div>
-      <div class="ninebox-haxis-row">
-        <div class="ninebox-haxis-spacer"></div>
-        <div class="ninebox-haxis-labels"><span>${esc(niveles[0])}</span><span>${esc(niveles[1])}</span><span>${esc(niveles[2])}</span></div>
+
+      <div class="ninebox-premium-layout">
+        <div class="ninebox-matrix-panel">
+          <div class="ninebox-axis-title ninebox-axis-title-top">ACTITUD</div>
+          <div class="ninebox-axis-levels-top"><span>${esc(niveles[0])}</span><span>${esc(niveles[1])}</span><span>${esc(niveles[2])}</span></div>
+          <div class="ninebox-matrix-body">
+            <div class="ninebox-y-title">DESEMPEÑO</div>
+            <div class="ninebox-y-levels"><span>${esc(niveles[2])}</span><span>${esc(niveles[1])}</span><span>${esc(niveles[0])}</span></div>
+            <div class="ninebox-grid ninebox-grid-premium">${gridHtml}</div>
+          </div>
+          <div class="ninebox-axis-levels-bottom"><span>${esc(niveles[0])}</span><span>${esc(niveles[1])}</span><span>${esc(niveles[2])}</span></div>
+          <div class="ninebox-axis-title">DESEMPEÑO</div>
+        </div>
+
+        <aside class="ninebox-insight-card ${info ? '' : 'is-empty'}">
+          ${info ? `<div class="ninebox-insight-title"><span class="ninebox-number-badge lg" style="background:${info.color}">${cuad.cuadrante}</span><div><h4>${esc(info.nombre)}</h4><small>Lectura del cuadrante</small></div></div>
+          <div class="ninebox-insight-section"><span>Descripción</span><p>${esc(info.significado)}</p></div>
+          <div class="ninebox-insight-section"><span>Enfoque sugerido</span><p>${esc(info.seguimiento)}</p></div>
+          <div class="ninebox-insight-note">La matriz es una referencia para revisión humana; no sustituye el criterio de Desarrollo Organizacional ni del líder.</div>` : '<p class="muted">La clasificación aparecerá cuando existan resultados suficientes.</p>'}
+        </aside>
       </div>
-      <div class="axis-x">${esc(c.CONFIG_9BOX.ejeHorizontal)} ►</div>
-      <div class="ninebox-individual-scores">
-        <span class="mini-kpi"><strong>${fmt(resultado.desempenoProm)}</strong><span>Desempeño (esc. 1-5)</span></span>
-        <span class="mini-kpi"><strong>${fmt(resultado.actitudProm)}</strong><span>Actitud (esc. 1-5)</span></span>
+
+      <div class="ninebox-profile-strip">
+        <div class="ninebox-profile-person"><span class="ninebox-avatar" style="${info ? `background:${info.color}` : ''}">${esc(inicial)}</span><div><small>Perfil actual</small><strong>${esc(nombre)}</strong></div></div>
+        <div class="ninebox-profile-metric"><span class="metric-icon">▥</span><div><small>Desempeño</small><strong>${fmt(resultado.desempenoProm)} / 5</strong></div></div>
+        <div class="ninebox-profile-metric"><span class="metric-icon">◎</span><div><small>Actitud</small><strong>${fmt(resultado.actitudProm)} / 5</strong></div></div>
+        <div class="ninebox-profile-metric"><span class="metric-icon">⌖</span><div><small>Ubicación actual</small><strong style="${info ? `color:${info.color}` : ''}">${info ? `${cuad.cuadrante} · ${esc(info.nombre)}` : '—'}</strong></div></div>
       </div>
-    </div>`;
+    </section>`;
   }
 
   // ===========================================================================
