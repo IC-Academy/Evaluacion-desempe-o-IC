@@ -129,6 +129,9 @@
       const resp = await global.EDDApi.authVerifyCode(numeroEmpleado, codigo, pendiente.requestId);
       guardarSesionDesdeApi(resp);
       pendiente = null;
+      // /auth/me es la fuente autoritativa de identidad/capacidades. Si está
+      // disponible, enriquecemos la sesión inmediatamente después del OTP.
+      try { await refreshProfileFromApi(); } catch (e) { console.warn('EDDAuth: no fue posible hidratar /auth/me tras login.', e); }
       return resp;
     }
 
@@ -167,12 +170,32 @@
   }
 
   function guardarSesionDesdeApi(resp) {
-    const expiresIn = resp.expiresIn || cfg().defaultSessionSeconds;
+    const payload = (resp && resp.data && resp.data.token) ? resp.data : (resp || {});
+    const expiresIn = payload.expiresIn || cfg().defaultSessionSeconds;
     guardarSesion({
-      token: resp.token,
+      token: payload.token,
       expiresAt: new Date(Date.now() + expiresIn * 1000).toISOString(),
-      user: resp.user
+      user: payload.user || {}
     });
+  }
+
+  async function refreshProfileFromApi() {
+    if (cfg().mode !== 'api') return getSession();
+    const resp = await global.EDDApi.authMe();
+    const data = resp && resp.data ? resp.data : resp;
+    if (!data || !data.employee) return getSession();
+    const session = getSession();
+    if (!session) return null;
+    const emp = data.employee || {};
+    const caps = data.capabilities || {};
+    session.user = Object.assign({}, session.user || {}, {
+      numeroEmpleado: emp.employeeId || session.user.numeroEmpleado,
+      nombreCompleto: emp.name || session.user.nombreCompleto,
+      correo: emp.email || '', puesto: emp.position || '', area: emp.area || '', direccion: emp.direction || '',
+      rol: data.platformRole || session.user.rol, capabilities: caps
+    });
+    guardarSesion(session);
+    return session;
   }
 
   // ===========================================================================
@@ -206,11 +229,17 @@
   function getAppUser(session) {
     session = session || getSession();
     if (!session) return null;
+    const caps = session.user.capabilities || {};
     const rolNormalizado = String(session.user.rol || '').toLowerCase();
+    const perfil = caps.isAdmin ? 'administrador' : (caps.canEvaluate ? 'lider' : (ROL_API_A_INTERNO[rolNormalizado] || rolNormalizado || 'colaborador'));
     return {
       empleado: session.user.numeroEmpleado,
       nombre: session.user.nombreCompleto,
-      perfil: ROL_API_A_INTERNO[rolNormalizado] || rolNormalizado
+      perfil,
+      puesto: session.user.puesto || '',
+      area: session.user.area || '',
+      direccion: session.user.direccion || '',
+      capabilities: caps
     };
   }
 
@@ -239,7 +268,7 @@
   });
 
   global.EDDAuth = {
-    requestCode, verifyCode, getSession, clearSession, getAppUser, getToken, logout,
+    requestCode, verifyCode, getSession, clearSession, getAppUser, getToken, logout, refreshProfileFromApi,
     maskEmail, pendienteActual, limpiarPendiente,
     ROL_INTERNO_A_API
   };

@@ -123,7 +123,7 @@
     }
 
     if (!response.ok) {
-      const msg = (data && data.message) ? data.message : 'Ocurrió un error al procesar la solicitud.';
+      const msg = (data && data.error && data.error.message) ? data.error.message : ((data && data.message) ? data.message : 'Ocurrió un error al procesar la solicitud.');
       console.error('EDDApi: respuesta de error', endpoint, response.status, data);
       throw new ApiError('http', msg, response.status, data);
     }
@@ -155,14 +155,20 @@
       return apiRequest('/auth/me', { method: 'GET' });
     },
 
-    // --- Colaborador -------------------------------------------------------
-    evaluacionesMias() { return apiRequest('/evaluaciones/mias', { method: 'GET' }); },
-    evaluacionPorId(id) { return apiRequest('/evaluaciones/' + encodeURIComponent(id), { method: 'GET' }); },
+    // --- Capa de lectura real (Backend Integration v1) -----------------------
+    evaluationsMine() { return apiRequest('/evaluations/mine', { method: 'GET' }); },
+    evaluationDetail(id) { return apiRequest('/evaluations/' + encodeURIComponent(id), { method: 'GET' }); },
+    leaderTeam() { return apiRequest('/leader/team', { method: 'GET' }); },
+    adminDashboard() { return apiRequest('/admin/dashboard', { method: 'GET' }); },
+
+    // Alias en español conservados para compatibilidad con código previo.
+    evaluacionesMias() { return this.evaluationsMine(); },
+    evaluacionPorId(id) { return this.evaluationDetail(id); },
     autoevaluacionGuardar(id, payload) { return apiRequest('/autoevaluacion/' + encodeURIComponent(id) + '/guardar', { method: 'POST', body: payload }); },
     autoevaluacionEnviar(id, payload) { return apiRequest('/autoevaluacion/' + encodeURIComponent(id) + '/enviar', { method: 'POST', body: payload }); },
 
     // --- Líder ---------------------------------------------------------------
-    liderEquipo() { return apiRequest('/lider/equipo', { method: 'GET' }); },
+    liderEquipo() { return this.leaderTeam(); },
     liderEvaluaciones() { return apiRequest('/lider/evaluaciones', { method: 'GET' }); },
     liderEvaluacionPorId(id) { return apiRequest('/lider/evaluaciones/' + encodeURIComponent(id), { method: 'GET' }); },
     liderEvaluacionGuardar(id, payload) { return apiRequest('/lider/evaluaciones/' + encodeURIComponent(id) + '/guardar', { method: 'POST', body: payload }); },

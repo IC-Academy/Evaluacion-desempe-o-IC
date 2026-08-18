@@ -472,6 +472,7 @@
     jerarquiasFiltros: {},
     nineboxSel: null,
     nineboxSelEmpleado: null,
+    remote: { ready: false, loading: false, error: null, me: null, mine: null, detail: null, team: null, dashboard: null, lastSync: null },
     // --- Estado del login de dos pasos (beta 3) ---
     login: {
       paso: 'solicitar',   // 'solicitar' | 'validar'
@@ -516,6 +517,65 @@
 
   function fechaHoy() { return '2026-07-28'; } // fecha de referencia de la demo (ver <env>)
   function esVencido(fechaLimite) { return fechaLimite && fechaHoy() > fechaLimite; }
+
+
+  function apiReadMode() { return global.APP_CONFIG && global.APP_CONFIG.mode === 'api' && global.APP_CONFIG.readApiEnabled !== false; }
+  function apiData(resp) { return resp && Object.prototype.hasOwnProperty.call(resp, 'data') ? resp.data : resp; }
+  function periodoRemotoNormalizado(p) {
+    if (!p) return null;
+    return {
+      id: p.id || p.periodId || 'ACTIVO',
+      nombre: p.name || p.nombre || 'Periodo activo',
+      fechaLimiteAutoevaluacion: p.selfDeadline || p.fechaLimiteAutoevaluacion || '',
+      fechaLimiteLider: p.leaderDeadline || p.fechaLimiteLider || '',
+      fechaLimiteRetroalimentacion: p.feedbackDeadline || p.fechaLimiteRetroalimentacion || ''
+    };
+  }
+  function empleadoRemoto() {
+    const me = state.remote.me || {};
+    const e = me.employee || {};
+    return {
+      empleado: e.employeeId || state.user.empleado,
+      nombre: e.name || state.user.nombre,
+      correoCorporativo: e.email || '', puesto: e.position || state.user.puesto || '',
+      area: e.area || state.user.area || '', direccion: e.direction || state.user.direccion || '', ciudad: ''
+    };
+  }
+  async function refreshBackendRead(force) {
+    if (!apiReadMode() || state.remote.loading || (state.remote.ready && !force)) return;
+    state.remote.loading = true; state.remote.error = null;
+    try {
+      try { await A.refreshProfileFromApi(); state.user = A.getAppUser(); } catch (e) { console.warn('EDD read v1: /auth/me profile refresh failed', e); }
+      const meResp = await global.EDDApi.authMe();
+      state.remote.me = apiData(meResp);
+      const mineResp = await global.EDDApi.evaluationsMine();
+      state.remote.mine = apiData(mineResp);
+      const mineEval = state.remote.mine && state.remote.mine.evaluation;
+      if (mineEval && (mineEval.evaluationId || mineEval.id)) {
+        try { state.remote.detail = apiData(await global.EDDApi.evaluationDetail(mineEval.evaluationId || mineEval.id)); } catch (e) { console.warn('EDD read v1: detalle propio no disponible', e); }
+      }
+      if (state.user && state.user.perfil === 'lider') state.remote.team = apiData(await global.EDDApi.leaderTeam());
+      if (state.user && state.user.perfil === 'administrador') state.remote.dashboard = apiData(await global.EDDApi.adminDashboard());
+      state.remote.ready = true; state.remote.lastSync = new Date().toISOString();
+    } catch (err) {
+      console.error('EDD Backend Integration v1', err);
+      state.remote.error = err; state.remote.ready = false;
+    } finally {
+      state.remote.loading = false;
+      render();
+    }
+  }
+  function viewBackendLoading() {
+    return `<main class="container backend-state-page"><div class="card backend-state-card"><div class="backend-spinner"></div><h2>Conectando con Evaluación de Desempeño</h2><p class="muted">Consultando tu sesión y datos del periodo activo…</p></div></main>`;
+  }
+  function viewBackendError(err) {
+    const msg = err && err.message ? err.message : 'No fue posible consultar la información del backend.';
+    return `<main class="container backend-state-page"><div class="card backend-state-card"><div class="backend-state-icon">!</div><h2>No pudimos cargar tus datos</h2><p class="muted">${esc(msg)}</p><button class="btn btn-primary" onclick="App.recargarBackend()">Reintentar</button><p class="backend-read-note">La información de producción no se sustituye por datos demo automáticamente.</p></div></main>`;
+  }
+  function backendStatusPill() {
+    if (!apiReadMode()) return '';
+    return `<span class="backend-live-pill" title="Lectura conectada a n8n + Airtable"><i></i> Backend conectado</span>`;
+  }
 
   // =========================================================================
   // SESIÓN (delegada en auth.js — ver EDDAuth). Este bloque solo resuelve la
@@ -572,6 +632,7 @@
     state.user = session ? A.getAppUser(session) : null;
 
     if (!state.user) {
+      state.remote = { ready: false, loading: false, error: null, me: null, mine: null, detail: null, team: null, dashboard: null, lastSync: null };
       // Si había sesión activa y ya no la hay (y no fue por un logout manual
       // que ya limpió el aviso), asumimos que expiró y lo mostramos en login.
       if (teniaUsuario && !state.login.sessionExpiredNotice) {
@@ -582,7 +643,13 @@
       translateDOM(root);
       return;
     }
-    state.periodo = S.getPeriodoActivo();
+    if (apiReadMode() && !state.remote.ready) {
+      if (!state.remote.loading && !state.remote.error) refreshBackendRead(false);
+      root.innerHTML = state.remote.error ? viewBackendError(state.remote.error) : viewBackendLoading();
+      translateDOM(root);
+      return;
+    }
+    state.periodo = apiReadMode() ? (periodoRemotoNormalizado(state.remote.mine && state.remote.mine.period) || S.getPeriodoActivo()) : S.getPeriodoActivo();
 
     const parts = parseHash();
     const areaEsperada = state.user.perfil === 'colaborador' ? 'colaborador' : state.user.perfil === 'lider' ? 'lider' : 'admin';
@@ -799,14 +866,16 @@
   // PORTAL COLABORADOR
   // =========================================================================
   function renderColaborador(page) {
-    const col = S.getColaborador(state.user.empleado);
+    const col = apiReadMode() ? empleadoRemoto() : S.getColaborador(state.user.empleado);
     const periodoId = state.periodo.id;
-    const estado = S.estadoProceso(col.empleado, periodoId);
+    const mineEval = apiReadMode() && state.remote.mine ? state.remote.mine.evaluation : null;
+    const estado = apiReadMode() ? (mineEval ? (mineEval.processState || mineEval.state || mineEval.selfState || 'En progreso') : D.ESTADOS.NO_INICIADA) : S.estadoProceso(col.empleado, periodoId);
 
     if (page === 'bienvenida') return viewBienvenidaEvaluacion(col, periodoId, estado);
     if (page === 'autoevaluacion' && !introVista() && (estado === D.ESTADOS.NO_INICIADA || estado === D.ESTADOS.EN_PROGRESO)) {
       return viewBienvenidaEvaluacion(col, periodoId, estado);
     }
+    if (page === 'autoevaluacion' && apiReadMode() && !global.APP_CONFIG.writeApiEnabled) return viewReadOnlyEvaluationIntegration(col, estado);
     if (page === 'autoevaluacion') return viewAutoevaluacion(col, periodoId, estado);
     if (page === 'retroalimentacion') return viewRetroalimentacion(col, periodoId, estado);
     if (page === 'enviado') return viewEnvioExitoso(col);
@@ -907,6 +976,12 @@
         <div class="welcome-important">◈ &nbsp;Tu evaluación es importante</div>
       </div>
     </section>`;
+  }
+
+  function viewReadOnlyEvaluationIntegration(col, estado) {
+    const mine = state.remote.mine || {};
+    const ev = mine.evaluation;
+    return `<section class="card backend-integration-card"><span class="admin-section-kicker">BACKEND INTEGRATION V1</span><h2>${esc(col.nombre)}</h2><p>La lectura de tu evaluación ya está conectada a n8n + Airtable.</p><div class="info-grid"><div><span class="label">Periodo</span><span class="value">${esc(state.periodo.nombre)}</span></div><div><span class="label">Estado backend</span>${badge(estado)}</div><div><span class="label">ID evaluación</span><span class="value">${esc(ev ? (ev.evaluationId || ev.id || '—') : 'Aún no creada')}</span></div><div><span class="label">Sincronización</span><span class="value">${state.remote.lastSync ? new Date(state.remote.lastSync).toLocaleString('es-MX') : '—'}</span></div></div><div class="alert alert-info"><strong>Lectura real activa.</strong> La captura/guardado todavía no se enviará al backend hasta conectar los endpoints de escritura en la siguiente fase.</div><button class="btn btn-outline" onclick="App.recargarBackend()">Actualizar desde backend</button></section>`;
   }
 
   function viewEnvioExitoso(col, yaEnviada) {
@@ -1709,9 +1784,25 @@
     if (page === 'mi-enviado') return renderColaborador('enviado');
     if (page === 'evaluar' && param) return viewLiderEvaluar(lider, param, periodoId);
     if (page === 'comparacion' && param) return viewComparacion(lider, param, periodoId);
+    if (apiReadMode()) {
+      if (page === 'pendientes') return viewLiderDashboardApi(true, false);
+      if (page === 'firmas') return viewLiderDashboardApi(false, true);
+      if (page === 'dashboard') return viewLiderDashboardApi(false, false);
+    }
     if (page === 'pendientes') return viewLiderDashboard(lider, periodoId, true, false);
     if (page === 'firmas') return viewLiderDashboard(lider, periodoId, false, true);
     return viewLiderDashboard(lider, periodoId, false, false);
+  }
+
+  function viewLiderDashboardApi(soloPendientes, soloFirmas) {
+    const data = state.remote.team || {};
+    let team = Array.isArray(data.team) ? data.team.slice() : [];
+    if (soloPendientes) team = team.filter(x => /pendiente|no iniciada|en progreso/i.test(String(x.leaderStatus || x.processState || '')));
+    if (soloFirmas) team = team.filter(x => !!x.leaderSignaturePending);
+    const pendingEval = team.filter(x => /pendiente|no iniciada|en progreso/i.test(String(x.leaderStatus || x.processState || ''))).length;
+    const pendingLeaderSignature = team.filter(x => x.leaderSignaturePending).length;
+    const pendingEmployeeSignature = team.filter(x => x.employeeSignaturePending).length;
+    return `<section class="backend-live-section"><div class="kpi-grid">${kpi('Colaboradores',team.length)}${kpi('Pendientes por evaluar',pendingEval,pendingEval?'yellow':'gray')}${kpi('Por firmar líder',pendingLeaderSignature,pendingLeaderSignature?'red':'gray')}${kpi('Firma colaborador pendiente',pendingEmployeeSignature,pendingEmployeeSignature?'yellow':'gray')}</div><div class="card"><div class="admin-panel-head"><div><span class="admin-section-kicker">DATOS EN VIVO</span><h2>${soloFirmas?'Pendientes por firmar':soloPendientes?'Pendientes por evaluar':'Mi equipo'}</h2><p>Origen: n8n + Airtable · identidad y jerarquía validadas por sesión.</p></div><button class="btn btn-outline btn-sm" onclick="App.recargarBackend()">Actualizar</button></div><div class="admin-table-wrap"><table class="table"><thead><tr><th>Nombre</th><th>Puesto</th><th>Área</th><th>Autoevaluación</th><th>Evaluación líder</th><th>Proceso</th><th>Retroalimentación</th><th>Firma</th></tr></thead><tbody>${team.map(x=>`<tr><td><strong>${esc(x.name||x.employeeName||x.employeeId)}</strong><small>${esc(x.employeeId||'')}</small></td><td>${esc(x.position||'—')}</td><td>${esc(x.area||'—')}</td><td>${badge(x.selfStatus||'—')}</td><td>${badge(x.leaderStatus||'—')}</td><td>${badge(x.processState||'—')}</td><td>${badge(x.feedbackState||'—')}</td><td>${x.leaderSignaturePending?badge('Pendiente líder','red'):x.employeeSignaturePending?badge('Pendiente colaborador','yellow'):'—'}</td></tr>`).join('')||`<tr><td colspan="8" class="muted">Sin registros para esta vista.</td></tr>`}</tbody></table></div><p class="backend-read-note">Las acciones de evaluación y firma se habilitarán al conectar la capa de escritura.</p></div></section>`;
   }
 
   function viewLiderDashboard(lider, periodoId, soloPendientes, soloFirmas) {
@@ -2020,7 +2111,15 @@
     if (page === 'jerarquias') return viewAdminJerarquias(periodoId);
     if (page === 'auditoria') return viewAuditoria();
     if (page === 'config') return viewConfig();
-    return viewAdminDashboard(periodoId);
+    return apiReadMode() ? viewAdminDashboardApi() : viewAdminDashboard(periodoId);
+  }
+
+  function viewAdminDashboardApi() {
+    const d = state.remote.dashboard || {};
+    const p=d.progress||{}, c=d.calibration||{}, f=d.feedback||{}, a=d.alerts||{}, tlt=d.talent||{}, o=d.objectives||{};
+    const overdue=(a.overdueSelfEvaluations&&a.overdueSelfEvaluations.count)||0;
+    const nine=Array.isArray(tlt.nineBoxDistribution)?tlt.nineBoxDistribution:[];
+    return `<section class="admin-dashboard-premium backend-live-section"><div class="admin-hero"><div><span class="admin-eyebrow">DESARROLLO ORGANIZACIONAL · DATOS EN VIVO</span><h1>Evaluación de Desempeño</h1><p>Información agregada directamente desde n8n + Airtable.</p></div><div class="admin-hero-progress"><span>Avance del ciclo</span><strong>${Number(p.cycleProgressPercent||0).toFixed(0)}%</strong>${progressBar(p.cycleProgressPercent||0)}</div></div><div class="admin-kpi-strip"><div class="admin-kpi-card"><span>Personal a evaluar</span><strong>${p.totalEmployees??'—'}</strong><small>Universo del periodo</small></div><div class="admin-kpi-card success"><span>Autoevaluaciones</span><strong>${p.selfCompleted??'—'}</strong><small>${p.selfPending??'—'} pendientes</small></div><div class="admin-kpi-card"><span>Evaluaciones líder</span><strong>${p.leaderCompleted??'—'}</strong><small>${p.leaderPending??'—'} pendientes</small></div><div class="admin-kpi-card attention"><span>Por calibrar</span><strong>${c.pending??'—'}</strong><small>${c.completed??'—'} calibradas</small></div><div class="admin-kpi-card"><span>Cierre</span><strong>${f.closurePercent??0}%</strong><small>${f.closed??0} cerradas</small></div><div class="admin-kpi-card attention"><span>Alertas vencidas</span><strong>${overdue}</strong><small>Autoevaluaciones</small></div></div><div class="admin-dashboard-grid"><article class="admin-panel"><div class="admin-panel-head"><div><span class="admin-section-kicker">OBJETIVOS</span><h2>Madurez de gestión</h2></div></div><div class="info-grid"><div><span class="label">Con objetivos</span><span class="value">${o.withObjectives??'—'}</span></div><div><span class="label">Sin objetivos</span><span class="value">${o.withoutObjectives??'—'}</span></div><div><span class="label">Cobertura</span><span class="value">${o.coveragePercent??'—'}%</span></div></div>${o.dataGapNote?`<p class="backend-read-note">${esc(o.dataGapNote)}</p>`:''}</article><article class="admin-panel"><div class="admin-panel-head"><div><span class="admin-section-kicker">TALENTO</span><h2>Distribución 9-Box</h2></div></div><div class="admin-nine-mini">${nine.map(x=>`<div><span>${esc(x.quadrant)}</span><b>${esc(x.count)}</b><small>${esc(x.name||'')}</small></div>`).join('')||'<p class="muted">Sin distribución disponible.</p>'}</div></article><article class="admin-panel admin-panel-wide"><div class="admin-panel-head"><div><span class="admin-section-kicker">RETROALIMENTACIÓN</span><h2>Cierre y firmas</h2></div><button class="btn btn-outline btn-sm" onclick="App.recargarBackend()">Actualizar</button></div><div class="kpi-grid">${kpi('Liberadas',f.released??0)}${kpi('Pendiente reunión',f.pendingMeeting??0,'yellow')}${kpi('Firma líder',f.pendingLeaderSignature??0,'yellow')}${kpi('Firma colaborador',f.pendingEmployeeSignature??0,'yellow')}${kpi('Cerradas',f.closed??0,'green')}</div></article></div><p class="backend-read-note">Backend Read API v1 activa. Calibración, firmas y otras escrituras continúan bloqueadas hasta conectar sus endpoints de escritura.</p></section>`;
   }
 
   // =========================================================================
@@ -2552,6 +2651,7 @@
 
   const Actions = {
     setLanguage(lang) { setLanguage(lang); },
+    recargarBackend() { state.remote.ready=false; state.remote.error=null; refreshBackendRead(true); render(); },
     logout,
     async solicitarCodigo(numeroEmpleado) {
       state.login.error = null; state.login.info = null;

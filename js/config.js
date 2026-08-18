@@ -38,11 +38,11 @@
 
   const APP_CONFIG = {
     // "demo" (por defecto, sin backend) | "api" (consume webhooks de n8n)
-    mode: 'demo',
+    mode: 'api',
 
     // Base de los webhooks de n8n. Sustituir por la URL real del entorno
     // cuando exista. No se usa en modo "demo".
-    apiBaseUrl: 'https://URL-N8N/webhook/evaluacion',
+    apiBaseUrl: 'https://jmejiaromero.app.n8n.cloud/webhook',
 
     // Clave usada en sessionStorage para guardar la sesión (token + usuario).
     // Ver auth.js. Se usa sessionStorage y no localStorage a propósito: el
@@ -66,7 +66,13 @@
     // Vigencia de la sesión/token en segundos (8 horas), usada por auth.js
     // tanto en modo demo como como valor por defecto si el backend no manda
     // "expiresIn".
-    defaultSessionSeconds: 28800
+    defaultSessionSeconds: 28800,
+
+    // Fase Backend Integration v1: la lectura ya usa API real. Las escrituras
+    // todavía se conectarán en la siguiente fase, por lo que no deben
+    // considerarse persistidas en backend hasta que exista su endpoint.
+    readApiEnabled: true,
+    writeApiEnabled: false
   };
 
   global.APP_CONFIG = APP_CONFIG;
