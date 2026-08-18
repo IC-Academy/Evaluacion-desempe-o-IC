@@ -323,9 +323,9 @@
     const auto = opts.autoevaluacion || {};
     const lider = opts.evaluacionLider || {};
     const ideal = opts.ideal || 5;
-    const size = opts.size || 430;
+    const size = opts.size || 520;
     const center = size / 2;
-    const maxR = size / 2 - 88;
+    const maxR = size / 2 - 118;
     const n = Math.max(1, dimensiones.length);
     const step = (Math.PI * 2) / n;
 
@@ -346,10 +346,23 @@
     dimensiones.forEach((d,i)=>{
       const p=xy(5,i);
       grid += `<line x1="${center}" y1="${center}" x2="${p[0].toFixed(1)}" y2="${p[1].toFixed(1)}" stroke="#d9e4ef" stroke-width="1"/>`;
-      const labelR=maxR+38; const angle=p[2];
+      const labelR=maxR+47; const angle=p[2];
       const lx=center+labelR*Math.cos(angle), ly=center+labelR*Math.sin(angle);
       const anchor=Math.abs(Math.cos(angle))<.2?'middle':(Math.cos(angle)>0?'start':'end');
-      grid += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="${anchor}" dominant-baseline="middle" class="performance-wheel-label">${esc(d.shortLabel || d.label)}</text>`;
+      const label=String(d.shortLabel || d.label || '').trim();
+      const words=label.split(/\s+/).filter(Boolean);
+      const lines=[]; let current='';
+      words.forEach((word)=>{
+        const next=current?`${current} ${word}`:word;
+        if(next.length>20 && current){ lines.push(current); current=word; }
+        else current=next;
+      });
+      if(current) lines.push(current);
+      const visible=lines.slice(0,3);
+      if(lines.length>3) visible[2]=visible[2].replace(/[.…]*$/,'')+'…';
+      const lineH=12;
+      const startY=ly-((visible.length-1)*lineH/2);
+      grid += `<text x="${lx.toFixed(1)}" y="${startY.toFixed(1)}" text-anchor="${anchor}" class="performance-wheel-label">${visible.map((line,idx)=>`<tspan x="${lx.toFixed(1)}" dy="${idx===0?0:lineH}">${esc(line)}</tspan>`).join('')}</text>`;
     });
 
     function series(values,color,opacity,dash){
@@ -373,7 +386,7 @@
       return `<div class="performance-dimension-row ${cls}"><div><strong>${esc(d.label)}</strong><small>${lOk?`Líder ${fmt(l)}/5 · Ideal ${fmt(ideal)}/5`:'Sin evaluación del líder'}</small></div><div class="performance-gap-values"><span>${gapIdeal===null?'—':`-${gapIdeal.toFixed(1)} ideal`}</span><b>${gapPerception===null?'—':`${gapPerception>0?'+':''}${gapPerception.toFixed(1)} percepción`}</b></div></div>`;
     }).join('');
 
-    return `<div class="performance-wheel-wrap"><div class="performance-wheel-main">${svg}<div class="performance-wheel-legend"><span><i class="pw-dot auto"></i>Autoevaluación</span><span><i class="pw-dot leader"></i>Evaluación del líder</span><span><i class="pw-line ideal"></i>Ideal esperado 5/5</span></div></div><div class="performance-wheel-side"><div class="performance-reading-note"><strong>Cómo leer este perfil</strong><p>La distancia al borde muestra qué tan cerca está cada dimensión del ideal. La separación entre azul y naranja muestra diferencias de percepción entre colaborador y líder.</p></div><div class="performance-dimensions">${details}</div></div></div>`;
+    return `<div class="performance-wheel-wrap"><div class="performance-wheel-main">${svg}<div class="performance-wheel-legend"><span><i class="pw-dot auto"></i>Autoevaluación</span><span><i class="pw-dot leader"></i>Evaluación del líder</span><span><i class="pw-line ideal"></i>Ideal esperado 5/5</span></div></div><div class="performance-wheel-side"><div class="performance-reading-note"><strong>Cómo leer este perfil</strong><p>La distancia al borde indica qué tan cerca está cada competencia del nivel ideal. La separación entre azul y naranja muestra la diferencia de percepción entre colaborador y líder.</p></div><div class="performance-dimensions">${details}</div></div></div>`;
   }
 
   // ===========================================================================

@@ -1342,3 +1342,36 @@ body{background:linear-gradient(180deg,#f6f9fd 0%,#eef4fa 100%);}
 .admin-metric-tab:hover{background:#fff;color:#0c2d59}.admin-metric-tab.active{background:#0f4fa8;color:#fff;box-shadow:0 7px 18px rgba(15,79,168,.18)}
 .admin-kpi-grid-focused{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));margin-bottom:18px}
 @media(max-width:800px){.admin-metric-switcher{width:100%;overflow-x:auto;flex-wrap:nowrap}.admin-metric-tab{white-space:nowrap;flex:0 0 auto}}
+
+/* 2026-08-18 — cierre visual del perfil multidimensional */
+.calibration-performance-profile{margin-top:20px;padding:26px 28px;background:#fff;border-color:#d8e4ef;box-shadow:0 12px 34px rgba(15,46,82,.06)}
+.calibration-performance-profile .performance-profile-head{padding-bottom:14px;border-bottom:1px solid #e7eef6}
+.calibration-performance-profile .performance-wheel-wrap{grid-template-columns:minmax(560px,1.25fr) minmax(360px,.75fr);align-items:start;gap:30px}
+.calibration-performance-profile .performance-wheel-svg{max-width:650px}
+.calibration-ninebox-card{margin-top:18px;padding:24px 26px}
+.panel-support-copy{margin:5px 0 0;color:#6c8299;font-size:.72rem;line-height:1.55}
+.performance-wheel-main{padding:10px 18px 2px}
+.performance-wheel-svg{max-width:620px;overflow:visible}
+.performance-wheel-label{font-size:11px;letter-spacing:-.12px;paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round;fill:#153756}
+.performance-dimensions{max-height:none;overflow:visible;padding-right:0}
+.performance-dimension-row{min-height:58px;padding:11px 12px;grid-template-columns:minmax(0,1fr) minmax(108px,auto)}
+.performance-dimension-row strong{font-size:.66rem;line-height:1.35;white-space:normal;overflow:visible;text-overflow:clip}
+.performance-dimension-row small{font-size:.58rem;line-height:1.35}
+.performance-gap-values span,.performance-gap-values b{font-size:.58rem;white-space:nowrap}
+.performance-reading-note{padding:15px 16px}
+.performance-reading-note p{font-size:.67rem}
+.performance-summary-card>span{font-size:.67rem;line-height:1.3}
+.performance-summary-card>strong{font-size:1.55rem}
+.performance-summary-card b,.performance-summary-card em{font-size:.6rem;line-height:1.35}
+@media(max-width:1180px){
+  .calibration-performance-profile .performance-wheel-wrap{grid-template-columns:1fr}
+  .calibration-performance-profile .performance-wheel-side{grid-template-columns:1fr 1fr}
+  .performance-dimensions{max-height:430px;overflow:auto;padding-right:6px}
+}
+@media(max-width:760px){
+  .calibration-performance-profile{padding:18px}
+  .calibration-performance-profile .performance-wheel-side{grid-template-columns:1fr}
+  .performance-wheel-main{padding:4px 2px}
+  .performance-wheel-label{font-size:9.5px}
+  .performance-dimensions{max-height:none;overflow:visible}
+}
