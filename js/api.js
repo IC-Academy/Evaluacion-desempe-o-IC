@@ -157,16 +157,16 @@
 
     // --- Capa de lectura real (Backend Integration v1) -----------------------
     evaluationsMine() { return apiRequest('/evaluations/mine', { method: 'GET' }); },
-    evaluationDetail(id) { return apiRequest('/evaluations/' + encodeURIComponent(id), { method: 'GET' }); },
+    evaluationDetail(id) { return apiRequest('/6f123813-cb2b-4698-af51-60fe95ca1b52/evaluations/' + encodeURIComponent(id), { method: 'GET' }); },
     leaderTeam() { return apiRequest('/leader/team', { method: 'GET' }); },
     adminDashboard() { return apiRequest('/admin/dashboard', { method: 'GET' }); },
 
     // --- Capa de escritura real (Write API v1) ----------------------------
     initializeMyEvaluation() { return apiRequest('/evaluations/mine/initialize', { method: 'POST' }); },
-    saveSelfDraft(id, payload) { return apiRequest('/evaluations/' + encodeURIComponent(id) + '/self-draft', { method: 'PUT', body: payload }); },
-    submitSelf(id) { return apiRequest('/evaluations/' + encodeURIComponent(id) + '/submit-self', { method: 'POST' }); },
-    saveLeaderDraft(id, payload) { return apiRequest('/evaluations/' + encodeURIComponent(id) + '/leader-draft', { method: 'PUT', body: payload }); },
-    submitLeader(id) { return apiRequest('/evaluations/' + encodeURIComponent(id) + '/submit-leader', { method: 'POST' }); },
+    saveSelfDraft(id, payload) { return apiRequest('/28e6125b-64c9-453c-a100-8c77f8ee68b9/evaluations/' + encodeURIComponent(id) + '/self-draft', { method: 'PUT', body: payload }); },
+    submitSelf(id) { return apiRequest('/0a235f4f-46c5-4a9c-bce0-dae3c0a0ab23/evaluations/' + encodeURIComponent(id) + '/submit-self', { method: 'POST' }); },
+    saveLeaderDraft(id, payload) { return apiRequest('/d4a332bd-8994-4b3d-aaba-28f2b99aca0a/evaluations/' + encodeURIComponent(id) + '/leader-draft', { method: 'PUT', body: payload }); },
+    submitLeader(id) { return apiRequest('/11eb53d4-a38a-4048-81e0-4705ebc57e56/evaluations/' + encodeURIComponent(id) + '/submit-leader', { method: 'POST' }); },
 
     // Alias en español conservados para compatibilidad con código previo.
     evaluacionesMias() { return this.evaluationsMine(); },
