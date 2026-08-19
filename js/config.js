@@ -74,8 +74,8 @@
     readApiEnabled: true,
     // Permite validar el formulario completo con la identidad real de /auth/me
     // mientras la escritura n8n/Airtable se termina. Nunca se presenta como dato persistido.
-    testCaptureEnabled: true,
-    writeApiEnabled: false
+    testCaptureEnabled: false,
+    writeApiEnabled: true
   };
 
   global.APP_CONFIG = APP_CONFIG;

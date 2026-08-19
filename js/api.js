@@ -161,6 +161,13 @@
     leaderTeam() { return apiRequest('/leader/team', { method: 'GET' }); },
     adminDashboard() { return apiRequest('/admin/dashboard', { method: 'GET' }); },
 
+    // --- Capa de escritura real (Write API v1) ----------------------------
+    initializeMyEvaluation() { return apiRequest('/evaluations/mine/initialize', { method: 'POST' }); },
+    saveSelfDraft(id, payload) { return apiRequest('/evaluations/' + encodeURIComponent(id) + '/self-draft', { method: 'PUT', body: payload }); },
+    submitSelf(id) { return apiRequest('/evaluations/' + encodeURIComponent(id) + '/submit-self', { method: 'POST' }); },
+    saveLeaderDraft(id, payload) { return apiRequest('/evaluations/' + encodeURIComponent(id) + '/leader-draft', { method: 'PUT', body: payload }); },
+    submitLeader(id) { return apiRequest('/evaluations/' + encodeURIComponent(id) + '/submit-leader', { method: 'POST' }); },
+
     // Alias en español conservados para compatibilidad con código previo.
     evaluacionesMias() { return this.evaluationsMine(); },
     evaluacionPorId(id) { return this.evaluationDetail(id); },

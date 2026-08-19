@@ -520,8 +520,104 @@
 
 
   function apiReadMode() { return global.APP_CONFIG && global.APP_CONFIG.mode === 'api' && global.APP_CONFIG.readApiEnabled !== false; }
+  function apiWriteMode() { return apiReadMode() && global.APP_CONFIG && global.APP_CONFIG.writeApiEnabled === true; }
   function apiTestCaptureMode() { return apiReadMode() && global.APP_CONFIG && global.APP_CONFIG.testCaptureEnabled === true && global.APP_CONFIG.writeApiEnabled !== true; }
   function apiData(resp) { return resp && Object.prototype.hasOwnProperty.call(resp, 'data') ? resp.data : resp; }
+
+  function estadoBackendAInterno(valor) {
+    const v = String(valor || '').toLowerCase();
+    if (/submitted|enviada|completada|leader_submitted/.test(v)) return D.ESTADOS.COMPLETADA;
+    if (/progreso|progress/.test(v)) return D.ESTADOS.EN_PROGRESO;
+    return D.ESTADOS.NO_INICIADA;
+  }
+  function upsertColaboradorRemoto(emp, liderId) {
+    if (!emp || !(emp.employeeId || emp.empleado)) return null;
+    const id = String(emp.employeeId || emp.empleado);
+    const db = S.load();
+    let col = db.colaboradores.find(c => String(c.empleado) === id);
+    const data = {
+      empleado: id,
+      nombre: emp.name || emp.nombre || id,
+      puesto: emp.position || emp.puesto || '',
+      area: emp.area || '', direccion: emp.direction || emp.direccion || '',
+      ciudad: emp.city || emp.ciudad || '', antiguedad: emp.seniority || emp.antiguedad || '',
+      liderId: String(liderId || emp.leaderId || emp.liderId || '')
+    };
+    if (col) Object.assign(col, data); else { col = data; db.colaboradores.push(col); }
+    S.persist();
+    return col;
+  }
+  function getOrCreateLocalEvaluation(colaboradorId, liderId, tipo, backendId, estado) {
+    const ev = S.getOrCreateEvaluacion(String(colaboradorId), String(liderId || ''), state.periodo.id, tipo);
+    const db = S.load(); const real = db.evaluaciones.find(e => e.id === ev.id);
+    if (real) { if (backendId) real.backendId = backendId; if (estado) real.estado = estadoBackendAInterno(estado); S.persist(); }
+    return real || ev;
+  }
+  function mapRemoteAnswerToLocal(localEvalId, ans) {
+    const cid = ans && (ans.competencyId || ans.competenciaId || ans.idCompetencia);
+    if (!cid) return;
+    const up = String(cid).toUpperCase();
+    const val = ans.value ?? ans.valor ?? ans.rating ?? '';
+    if (up === 'TOOL-EXCEL') return S.saveHerramientaEvaluacion(localEvalId, 'excel', val);
+    if (up === 'TOOL-POWERBI') return S.saveHerramientaEvaluacion(localEvalId, 'analisis', val);
+    if (up === 'TOOL-IA') return S.saveHerramientaEvaluacion(localEvalId, 'ia', val);
+    const sec = ans.section || ans.seccion || (up.startsWith('A') ? 'actitud' : 'habilidades');
+    S.saveRespuesta(localEvalId, sec, String(cid), val, ans.comment || ans.comentario || '');
+  }
+  function hydrateObjectives(localEvalId, objectives, leaderMode) {
+    if (!Array.isArray(objectives)) return;
+    objectives.forEach((o, i) => {
+      const idx = Number.isFinite(Number(o.index)) ? Number(o.index) : i;
+      const desc = o.description || o.descripcion || o.name || '';
+      const goal = o.goal ?? o.meta ?? '';
+      const result = o.actualResult ?? o.resultado ?? '';
+      const pctSelf = o.employeeCompletionPercent ?? o.completionPercent ?? o.cumplimiento ?? '';
+      const scoreSelf = o.employeeScore ?? o.calificacionColaborador ?? o.score ?? o.calificacion ?? '';
+      const pctLeader = o.leaderValidatedPercent ?? o.porcentajeValidadoLider ?? '';
+      const scoreLeader = o.leaderScore ?? o.calificacionLider ?? '';
+      S.saveObjetivo(localEvalId, idx, desc, result, leaderMode ? (scoreLeader || '') : (scoreSelf || ''), {
+        meta: goal,
+        cumplimiento: leaderMode ? (pctLeader === null ? '' : pctLeader) : (pctSelf === null ? '' : pctSelf),
+        cumplimientoAutomatico: pctSelf,
+        calificacionAutomatica: scoreSelf,
+        ajusteManualLider: leaderMode && pctLeader !== '' && Number(pctLeader) !== Number(pctSelf),
+        justificacionLider: o.leaderAdjustmentReason || o.justificacionAjusteLider || ''
+      });
+    });
+  }
+  function hydrateOwnRemoteDetail() {
+    if (!apiReadMode() || !state.remote.detail || !state.remote.mine || !state.remote.mine.evaluation) return;
+    const d = state.remote.detail; const me = empleadoRemoto();
+    const leader = d.leader || {};
+    const liderId = leader.employeeId || leader.empleado || state.remote.mine.evaluation.leaderId || '';
+    upsertColaboradorRemoto(me, liderId);
+    const backendId = state.remote.mine.evaluation.evaluationId || state.remote.mine.evaluation.id;
+    const local = getOrCreateLocalEvaluation(me.empleado, liderId, 'autoevaluacion', backendId, state.remote.mine.evaluation.state || state.remote.mine.evaluation.selfState);
+    (d.answers || []).filter(a => !/l[ií]der|leader/i.test(String(a.evaluator || a.evaluador || ''))).forEach(a => mapRemoteAnswerToLocal(local.id, a));
+    hydrateObjectives(local.id, d.objectives || [], false);
+  }
+  function selfDraftPayload(localEvalId, backendId) {
+    const answers = S.getRespuestas(localEvalId).filter(r => String(r.competenciaId).toUpperCase() !== 'B2').map(r => ({competencyId:r.competenciaId, value:r.valor, comment:r.comentario || ''}));
+    const h = S.getHerramientasEvaluacion(localEvalId) || {};
+    const objectives = S.getObjetivos(localEvalId).filter(o => (o.descripcion || '').trim()).map((o,i) => ({
+      objectiveId: o.backendObjectiveId || `${backendId}-OBJ-${Number(o.index ?? i)+1}`,
+      description:o.descripcion || '', goal:o.meta === '' ? '' : Number(o.meta), actualResult:o.resultado === '' ? '' : Number(o.resultado), evidenceSelf:o.evidenceSelf || ''
+    }));
+    return { answers, tools:{ excel:h.excel ?? '', powerBi:h.analisis ?? '', ia:h.ia ?? '' }, objectives };
+  }
+  function leaderDraftPayload(localEvalId, backendId) {
+    const answers = S.getRespuestas(localEvalId).filter(r => String(r.competenciaId).toUpperCase() !== 'B2').map(r => ({competencyId:r.competenciaId, value:r.valor, comment:r.comentario || ''}));
+    const h = S.getHerramientasEvaluacion(localEvalId) || {};
+    const objectives = S.getObjetivos(localEvalId).filter(o => (o.descripcion || '').trim()).map((o,i) => ({
+      objectiveId:o.backendObjectiveId || `${backendId}-OBJ-${Number(o.index ?? i)+1}`,
+      leaderValidatedPercent:o.cumplimiento === '' ? '' : Number(o.cumplimiento), leaderAdjustmentReason:o.justificacionLider || '', evidenceLeader:o.evidenceLeader || ''
+    }));
+    return { answers, tools:{ excel:h.excel ?? '', powerBi:h.analisis ?? '', ia:h.ia ?? '' }, objectives };
+  }
+  function backendIdForLocalEvaluation(localEvalId) {
+    const ev = S.load().evaluaciones.find(e => e.id === localEvalId);
+    return ev && ev.backendId ? ev.backendId : null;
+  }
   function periodoRemotoNormalizado(p) {
     if (!p) return null;
     return {
@@ -555,6 +651,7 @@
       if (mineEval && (mineEval.evaluationId || mineEval.id)) {
         try { state.remote.detail = apiData(await global.EDDApi.evaluationDetail(mineEval.evaluationId || mineEval.id)); } catch (e) { console.warn('EDD read v1: detalle propio no disponible', e); }
       }
+      try { hydrateOwnRemoteDetail(); } catch (e) { console.warn('EDD write v1: no fue posible hidratar borrador local desde backend', e); }
       if (state.user && state.user.perfil === 'lider') state.remote.team = apiData(await global.EDDApi.leaderTeam());
       if (state.user && state.user.perfil === 'administrador') state.remote.dashboard = apiData(await global.EDDApi.adminDashboard());
       state.remote.ready = true; state.remote.lastSync = new Date().toISOString();
@@ -1050,6 +1147,9 @@
 
   function ensureWizard(col, periodoId) {
     const ev = S.getOrCreateEvaluacion(col.empleado, col.liderId, periodoId, 'autoevaluacion');
+    if (apiWriteMode() && !ev.backendId && state.remote.mine && state.remote.mine.evaluation) {
+      const db=S.load(); const real=db.evaluaciones.find(e=>e.id===ev.id); if(real){ real.backendId=state.remote.mine.evaluation.evaluationId || state.remote.mine.evaluation.id || ''; S.persist(); }
+    }
     if (state.wizard.evaluacionId !== ev.id) { state.wizard = { seccionIdx: 0, evaluacionId: ev.id, tipo: 'autoevaluacion', colaboradorId: col.empleado, liderId: col.liderId }; }
     return ev;
   }
@@ -1089,7 +1189,7 @@
       </button>`).join('');
 
     return `
-    ${apiTestCaptureMode() ? `<div class="alert alert-info backend-test-capture-note"><strong>Modo de prueba funcional.</strong> Puedes completar y enviar esta evaluación para validar el flujo visual. La captura se guarda únicamente en este navegador y todavía no modifica Airtable.</div>` : ''}
+    ${apiWriteMode() ? `<div class="alert alert-success backend-test-capture-note"><strong>Guardado real activo.</strong> Tus avances se guardan mediante n8n en Airtable. Puedes salir y continuar después.</div>` : (apiTestCaptureMode() ? `<div class="alert alert-info backend-test-capture-note"><strong>Modo de prueba funcional.</strong> Puedes completar y enviar esta evaluación para validar el flujo visual. La captura se guarda únicamente en este navegador y todavía no modifica Airtable.</div>` : '')}
     <section class="premium-evaluation-page">
       <div class="premium-progress-head"><div><span>Progreso general</span><div class="progress"><div class="progress-bar" style="width:${progreso}%"></div></div></div><strong>${progreso}%</strong></div>
       <div class="premium-evaluation-layout">
@@ -1792,7 +1892,7 @@
   // PORTAL LÍDER
   // =========================================================================
   function renderLider(page, param) {
-    const lider = S.getLider(state.user.empleado);
+    const lider = S.getLider(state.user.empleado) || { empleado: state.user.empleado, nombre: state.user.nombre, puesto: state.user.puesto || '', area: state.user.area || '' };
     const periodoId = state.periodo.id;
     if (page === 'mi-inicio') return renderColaborador('inicio');
     if (page === 'mi-autoevaluacion') return renderColaborador('autoevaluacion');
@@ -1818,7 +1918,7 @@
     const pendingEval = team.filter(x => /pendiente|no iniciada|en progreso/i.test(String(x.leaderStatus || x.processState || ''))).length;
     const pendingLeaderSignature = team.filter(x => x.leaderSignaturePending).length;
     const pendingEmployeeSignature = team.filter(x => x.employeeSignaturePending).length;
-    return `<section class="backend-live-section"><div class="kpi-grid">${kpi('Colaboradores',team.length)}${kpi('Pendientes por evaluar',pendingEval,pendingEval?'yellow':'gray')}${kpi('Por firmar líder',pendingLeaderSignature,pendingLeaderSignature?'red':'gray')}${kpi('Firma colaborador pendiente',pendingEmployeeSignature,pendingEmployeeSignature?'yellow':'gray')}</div><div class="card"><div class="admin-panel-head"><div><span class="admin-section-kicker">DATOS EN VIVO</span><h2>${soloFirmas?'Pendientes por firmar':soloPendientes?'Pendientes por evaluar':'Mi equipo'}</h2><p>Origen: n8n + Airtable · identidad y jerarquía validadas por sesión.</p></div><button class="btn btn-outline btn-sm" onclick="App.recargarBackend()">Actualizar</button></div><div class="admin-table-wrap"><table class="table"><thead><tr><th>Nombre</th><th>Puesto</th><th>Área</th><th>Autoevaluación</th><th>Evaluación líder</th><th>Proceso</th><th>Retroalimentación</th><th>Firma</th></tr></thead><tbody>${team.map(x=>`<tr><td><div class="backend-person-cell"><strong>${esc(x.name||x.employeeName||x.employeeId)}</strong><small>${esc(x.employeeId||'')}</small></div></td><td>${esc(x.position||'—')}</td><td>${esc(x.area||'—')}</td><td>${badge(x.selfStatus||'—')}</td><td>${badge(x.leaderStatus||'—')}</td><td>${badge(x.processState||'—')}</td><td>${badge(x.feedbackState||'—')}</td><td>${x.leaderSignaturePending?badge('Pendiente líder','red'):x.employeeSignaturePending?badge('Pendiente colaborador','yellow'):'—'}</td></tr>`).join('')||`<tr><td colspan="8" class="muted">Sin registros para esta vista.</td></tr>`}</tbody></table></div><p class="backend-read-note">Las acciones de evaluación y firma se habilitarán al conectar la capa de escritura.</p></div></section>`;
+    return `<section class="backend-live-section"><div class="kpi-grid">${kpi('Colaboradores',team.length)}${kpi('Pendientes por evaluar',pendingEval,pendingEval?'yellow':'gray')}${kpi('Por firmar líder',pendingLeaderSignature,pendingLeaderSignature?'red':'gray')}${kpi('Firma colaborador pendiente',pendingEmployeeSignature,pendingEmployeeSignature?'yellow':'gray')}</div><div class="card"><div class="admin-panel-head"><div><span class="admin-section-kicker">DATOS EN VIVO</span><h2>${soloFirmas?'Pendientes por firmar':soloPendientes?'Pendientes por evaluar':'Mi equipo'}</h2><p>Origen: n8n + Airtable · identidad y jerarquía validadas por sesión.</p></div><button class="btn btn-outline btn-sm" onclick="App.recargarBackend()">Actualizar</button></div><div class="admin-table-wrap"><table class="table"><thead><tr><th>Nombre</th><th>Puesto</th><th>Área</th><th>Autoevaluación</th><th>Evaluación líder</th><th>Proceso</th><th>Retroalimentación</th><th>Firma</th><th></th></tr></thead><tbody>${team.map(x=>{const selfReady=/submitted|completada|enviada|pendiente.*l[ií]der/i.test(String(x.selfStatus||x.processState||''));const leaderDone=/submitted|completada|enviada/i.test(String(x.leaderStatus||''));return `<tr><td><div class="backend-person-cell"><strong>${esc(x.name||x.employeeName||x.employeeId)}</strong><small>${esc(x.employeeId||'')}</small></div></td><td>${esc(x.position||'—')}</td><td>${esc(x.area||'—')}</td><td>${badge(x.selfStatus||'—')}</td><td>${badge(x.leaderStatus||'—')}</td><td>${badge(x.processState||'—')}</td><td>${badge(x.feedbackState||'—')}</td><td>${x.leaderSignaturePending?badge('Pendiente líder','red'):x.employeeSignaturePending?badge('Pendiente colaborador','yellow'):'—'}</td><td>${selfReady&&!leaderDone&&x.evaluationId?`<button class="btn btn-primary btn-sm" onclick="App.abrirEvaluacionLider('${esc(x.employeeId)}','${esc(x.evaluationId)}')">Evaluar</button>`:leaderDone?'<span class="muted">Enviada</span>':'<span class="muted">Esperando autoevaluación</span>'}</td></tr>`}).join('')||`<tr><td colspan="9" class="muted">Sin registros para esta vista.</td></tr>`}</tbody></table></div><p class="backend-read-note">La evaluación del líder ya guarda borradores y envíos en n8n + Airtable. Calibración y firmas se conectarán en una fase posterior.</p></div></section>`;
   }
 
   function viewLiderDashboard(lider, periodoId, soloPendientes, soloFirmas) {
@@ -2727,6 +2827,30 @@
   const Actions = {
     setLanguage(lang) { setLanguage(lang); },
     recargarBackend() { state.remote.ready=false; state.remote.error=null; refreshBackendRead(true); render(); },
+    async abrirEvaluacionLider(employeeId, evaluationId) {
+      if (!apiWriteMode()) { navigate('#/lider/evaluar/' + employeeId); return; }
+      try {
+        showNotice('Cargando evaluación del colaborador…','info');
+        const detail = apiData(await global.EDDApi.evaluationDetail(evaluationId));
+        const team = (state.remote.team && state.remote.team.team) || [];
+        const row = team.find(x => String(x.employeeId) === String(employeeId)) || {};
+        const emp = detail.employee || {employeeId, name:row.name, position:row.position, area:row.area};
+        const col = upsertColaboradorRemoto(emp, state.user.empleado);
+        const evInfo = detail.evaluation || {};
+        const selfBackendId = evInfo.selfEvaluationId || evInfo.evaluationId || evaluationId;
+        const leaderBackendId = evInfo.leaderEvaluationId || evInfo.managerEvaluationId || row.leaderEvaluationId || evaluationId;
+        const auto = getOrCreateLocalEvaluation(employeeId, state.user.empleado, 'autoevaluacion', selfBackendId, evInfo.selfState || row.selfStatus || 'Completada');
+        const lev = getOrCreateLocalEvaluation(employeeId, state.user.empleado, 'lider', leaderBackendId, evInfo.leaderState || row.leaderStatus || 'En progreso');
+        (detail.answers || []).forEach(a => {
+          const who=String(a.evaluator||a.evaluador||a.role||'').toLowerCase();
+          mapRemoteAnswerToLocal(/l[ií]der|leader/.test(who)?lev.id:auto.id,a);
+        });
+        hydrateObjectives(auto.id, detail.objectives || [], false);
+        hydrateObjectives(lev.id, detail.objectives || [], true);
+        state.wizard={seccionIdx:0,evaluacionId:lev.id,tipo:'lider',colaboradorId:String(employeeId),liderId:String(state.user.empleado)};
+        navigate('#/lider/evaluar/' + employeeId);
+      } catch (err) { showNotice(err.message || 'No fue posible cargar la evaluación.','warning'); }
+    },
     logout,
     async solicitarCodigo(numeroEmpleado) {
       state.login.error = null; state.login.info = null;
@@ -2791,8 +2915,18 @@
         render();
       }
     },
-    comenzarEvaluacion() {
+    async comenzarEvaluacion() {
       marcarIntroVista();
+      if (apiWriteMode()) {
+        try {
+          const mine = state.remote.mine && state.remote.mine.evaluation;
+          if (!mine) {
+            showNotice('Preparando tu evaluación…','info');
+            await global.EDDApi.initializeMyEvaluation();
+            state.remote.ready = false; await refreshBackendRead(true);
+          }
+        } catch (err) { showNotice(err.message || 'No fue posible iniciar la evaluación.','warning'); return; }
+      }
       navigate(personalRoute('autoevaluacion'));
     },
     wizardNext(seccionActual) {
@@ -2822,7 +2956,27 @@
       requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' })));
     },
     comprenderObjetivos(evaluacionId) { sessionStorage.setItem(objectivesAckKey(evaluacionId), '1'); render(); },
-    guardarProgresoVisual() { const btn = document.querySelector('.premium-save-btn'); if (!btn) return; const original = btn.textContent; btn.textContent = '✓ Guardado'; btn.classList.add('saved'); setTimeout(() => { btn.textContent = original; btn.classList.remove('saved'); }, 1400); },
+    async guardarProgresoVisual() {
+      const btn = document.querySelector('.premium-save-btn'); const original = btn ? btn.textContent : 'Guardar progreso';
+      if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
+      try {
+        if (apiWriteMode()) {
+          const localId = state.wizard.evaluacionId; let backendId = backendIdForLocalEvaluation(localId);
+          if (!backendId && state.wizard.tipo === 'autoevaluacion') {
+            const init = apiData(await global.EDDApi.initializeMyEvaluation()); backendId = init && init.evaluationId;
+            const db=S.load(); const ev=db.evaluaciones.find(e=>e.id===localId); if(ev){ev.backendId=backendId;S.persist();}
+          }
+          if (!backendId) throw new Error('No se encontró el identificador de backend de la evaluación.');
+          if (state.wizard.tipo === 'lider') await global.EDDApi.saveLeaderDraft(backendId, leaderDraftPayload(localId, backendId));
+          else await global.EDDApi.saveSelfDraft(backendId, selfDraftPayload(localId, backendId));
+          showNotice('Progreso guardado en Airtable.','success');
+        }
+        if (btn) { btn.textContent = '✓ Guardado'; btn.classList.add('saved'); setTimeout(() => { btn.textContent = original; btn.classList.remove('saved'); btn.disabled=false; }, 1400); }
+      } catch (err) {
+        if (btn) { btn.textContent=original; btn.disabled=false; }
+        showNotice(err.message || 'No fue posible guardar el progreso.','warning');
+      }
+    },
     rate(evaluacionId, seccion, competenciaId, valor) {
       const existentes = S.getRespuestas(evaluacionId);
       const actual = existentes.find((r) => r.competenciaId === competenciaId);
@@ -2991,7 +3145,7 @@
       renderAiSmartModal();
       render();
     },
-    enviarAutoevaluacion() {
+    async enviarAutoevaluacion() {
       if (!$('#confirmEnvioAuto').checked) { showNotice(t('Confirma que la información es correcta antes de enviar.'),'warning'); return; }
       const evaluacionId = state.wizard.evaluacionId;
       for (let i = 0; i < SECCIONES_WIZARD.length - 1; i++) {
@@ -3016,9 +3170,24 @@
         setTimeout(() => showNotice('Más de la mitad de una sección está marcada como N/A. Agrega una justificación en Comentarios u observaciones antes de enviar.','warning'), 0);
         return;
       }
-      S.completarEvaluacion(evaluacionId, state.user.nombre);
-      if (apiTestCaptureMode()) showNotice('Prueba completada localmente. Aún no se envió a Airtable porque la capa de escritura sigue pendiente.','info');
-      navigate(personalRoute('enviado'));
+      try {
+        if (apiWriteMode()) {
+          let backendId = backendIdForLocalEvaluation(evaluacionId);
+          if (!backendId) { const init=apiData(await global.EDDApi.initializeMyEvaluation()); backendId=init&&init.evaluationId; const db=S.load(); const local=db.evaluaciones.find(e=>e.id===evaluacionId); if(local){local.backendId=backendId;S.persist();} }
+          if (!backendId) throw new Error('No se encontró la evaluación en backend.');
+          await global.EDDApi.saveSelfDraft(backendId, selfDraftPayload(evaluacionId, backendId));
+          await global.EDDApi.submitSelf(backendId);
+        }
+        S.completarEvaluacion(evaluacionId, state.user.nombre);
+        if (apiTestCaptureMode()) showNotice('Prueba completada localmente. Aún no se envió a Airtable porque la capa de escritura sigue pendiente.','info');
+        if (apiWriteMode()) { state.remote.ready=false; await refreshBackendRead(true); }
+        navigate(personalRoute('enviado'));
+      } catch (err) {
+        const detalle = err && err.detalle;
+        const code = detalle && (detalle.code || (detalle.error && detalle.error.code));
+        const msg = (detalle && ((detalle.error&&detalle.error.message)||detalle.message)) || err.message || 'No fue posible enviar la evaluación.';
+        showNotice(msg + (code ? ` (${code})` : ''),'warning');
+      }
     },
     editarObjetivoLider(evaluacionId, index, calificacion) {
       return Actions.calificarObjetivoLider(evaluacionId, index, calificacion);
@@ -3047,7 +3216,7 @@
     ocultarNuevoPlan(colaboradorId){ const el=document.getElementById('nuevoPlan-'+colaboradorId); if(el) el.classList.add('hidden'); },
     guardarNuevoPlan(colaboradorId,liderId){ const c=document.getElementById('competenciaNueva-'+colaboradorId),a=document.getElementById('accionNueva-'+colaboradorId),f=document.getElementById('fechaNueva-'+colaboradorId); if(!c||!a||!c.value.trim()||!a.value.trim()){showNotice('Completa la competencia y la acción de desarrollo.','warning');return;} S.addPlanDesarrollo(colaboradorId,state.periodo.id,{competencia:c.value.trim(),accion:a.value.trim(),responsable:liderId,fechaCompromiso:f&&f.value?f.value:'2026-09-01'},state.user.nombre); render(); },
     quitarPlanDesarrollo(id) { S.removePlanDesarrollo(id, state.user.nombre); render(); },
-    enviarEvaluacionLider(colaboradorId) {
+    async enviarEvaluacionLider(colaboradorId) {
       if (!$('#confirmEnvioLider').checked) { showNotice(t('Confirma que la evaluación está completa antes de enviar.'),'warning'); return; }
       const evaluacionId = state.wizard.evaluacionId;
       for (let i = 0; i < SECCIONES_WIZARD.length - 1; i++) {
@@ -3084,8 +3253,20 @@
         setTimeout(() => showNotice('Más de la mitad de una sección está marcada como N/A. Justifica el uso de N/A en Comentarios generales antes de enviar.','warning'), 0);
         return;
       }
-      S.completarEvaluacion(evaluacionId, state.user.nombre);
-      navigate('#/lider/comparacion/' + colaboradorId);
+      try {
+        if (apiWriteMode()) {
+          const backendId = backendIdForLocalEvaluation(evaluacionId);
+          if (!backendId) throw new Error('No se encontró el identificador backend de la evaluación del líder.');
+          await global.EDDApi.saveLeaderDraft(backendId, leaderDraftPayload(evaluacionId, backendId));
+          await global.EDDApi.submitLeader(backendId);
+        }
+        S.completarEvaluacion(evaluacionId, state.user.nombre);
+        if (apiWriteMode()) { state.remote.ready=false; await refreshBackendRead(true); }
+        navigate('#/lider/comparacion/' + colaboradorId);
+      } catch (err) {
+        const d=err&&err.detalle; const code=d&&(d.code||(d.error&&d.error.code)); const msg=(d&&((d.error&&d.error.message)||d.message))||err.message||'No fue posible enviar la evaluación del líder.';
+        showNotice(msg + (code?` (${code})`:''),'warning');
+      }
     },
     limpiarFirma(canvasId){ const c=document.getElementById(canvasId); if(!c)return; const ctx=c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height); },
     firmarRetroalimentacion(role,colaboradorId,periodoId,canvasId){
