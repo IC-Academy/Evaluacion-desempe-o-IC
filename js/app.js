@@ -2969,7 +2969,7 @@
           if (!backendId) throw new Error('No se encontró el identificador de backend de la evaluación.');
           if (state.wizard.tipo === 'lider') await global.EDDApi.saveLeaderDraft(backendId, leaderDraftPayload(localId, backendId));
           else await global.EDDApi.saveSelfDraft(backendId, selfDraftPayload(localId, backendId));
-          showNotice('Progreso guardado en Airtable.','success');
+          showNotice('Progreso guardado correctamente.','success');
         }
         if (btn) { btn.textContent = '✓ Guardado'; btn.classList.add('saved'); setTimeout(() => { btn.textContent = original; btn.classList.remove('saved'); btn.disabled=false; }, 1400); }
       } catch (err) {
@@ -3170,6 +3170,14 @@
         setTimeout(() => showNotice('Más de la mitad de una sección está marcada como N/A. Agrega una justificación en Comentarios u observaciones antes de enviar.','warning'), 0);
         return;
       }
+      const submitBtn = document.querySelector('button[onclick="App.enviarAutoevaluacion()"]');
+      const submitBtnOriginal = submitBtn ? submitBtn.textContent : 'Finalizar y enviar ✓';
+      if (submitBtn) {
+        if (submitBtn.disabled) return;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Enviando…';
+        submitBtn.setAttribute('aria-busy', 'true');
+      }
       try {
         if (apiWriteMode()) {
           let backendId = backendIdForLocalEvaluation(evaluacionId);
@@ -3183,9 +3191,17 @@
         if (apiWriteMode()) { state.remote.ready=false; await refreshBackendRead(true); }
         navigate(personalRoute('enviado'));
       } catch (err) {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = submitBtnOriginal;
+          submitBtn.removeAttribute('aria-busy');
+        }
         const detalle = err && err.detalle;
         const code = detalle && (detalle.code || (detalle.error && detalle.error.code));
-        const msg = (detalle && ((detalle.error&&detalle.error.message)||detalle.message)) || err.message || 'No fue posible enviar la evaluación.';
+        let msg = (detalle && ((detalle.error&&detalle.error.message)||detalle.message)) || err.message || 'No fue posible enviar la evaluación.';
+        if (code === 'objective_required') {
+          msg = 'Registra al menos un objetivo con meta y resultado antes de enviar.';
+        }
         showNotice(msg + (code ? ` (${code})` : ''),'warning');
       }
     },
