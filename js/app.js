@@ -472,7 +472,7 @@
     jerarquiasFiltros: {},
     nineboxSel: null,
     nineboxSelEmpleado: null,
-    remote: { ready: false, loading: false, error: null, me: null, mine: null, detail: null, team: null, dashboard: null, lastSync: null },
+    remote: { ready: false, loading: false, error: null, me: null, mine: null, detail: null, detailLoading: false, team: null, dashboard: null, lastSync: null },
     // --- Estado del login de dos pasos (beta 3) ---
     login: {
       paso: 'solicitar',   // 'solicitar' | 'validar'
@@ -642,24 +642,46 @@
     if (!apiReadMode() || state.remote.loading || (state.remote.ready && !force)) return;
     state.remote.loading = true; state.remote.error = null;
     try {
-      try { await A.refreshProfileFromApi(); state.user = A.getAppUser(); } catch (e) { console.warn('EDD read v1: /auth/me profile refresh failed', e); }
-      const meResp = await global.EDDApi.authMe();
-      state.remote.me = apiData(meResp);
-      const mineResp = await global.EDDApi.evaluationsMine();
-      state.remote.mine = apiData(mineResp);
-      const mineEval = state.remote.mine && state.remote.mine.evaluation;
-      if (mineEval && (mineEval.evaluationId || mineEval.id)) {
-        try { state.remote.detail = apiData(await global.EDDApi.evaluationDetail(mineEval.evaluationId || mineEval.id)); } catch (e) { console.warn('EDD read v1: detalle propio no disponible', e); }
-      }
-      try { hydrateOwnRemoteDetail(); } catch (e) { console.warn('EDD write v1: no fue posible hidratar borrador local desde backend', e); }
-      if (state.user && state.user.perfil === 'lider') state.remote.team = apiData(await global.EDDApi.leaderTeam());
-      if (state.user && state.user.perfil === 'administrador') state.remote.dashboard = apiData(await global.EDDApi.adminDashboard());
+      // /auth/me hidrata la sesión una sola vez. api.js deduplica/cachea este GET
+      // para evitar la segunda llamada que hacía la integración v1.
+      try { await A.refreshProfileFromApi(); state.user = A.getAppUser(); } catch (e) { console.warn('EDD read: /auth/me profile refresh failed', e); }
+      try { state.remote.me = apiData(await global.EDDApi.authMe(false)); } catch (e) { console.warn('EDD read: /auth/me state refresh failed', e); }
+
+      // Mine + equipo/dashboard son webhooks independientes: el navegador sí
+      // puede ejecutarlos concurrentemente aunque n8n no paralelice nodos dentro
+      // de un workflow. Esto reduce el tiempo de entrada al portal del líder/DO.
+      const jobs = [global.EDDApi.evaluationsMine(!!force).then(r => { state.remote.mine = apiData(r); })];
+      if (state.user && state.user.perfil === 'lider') jobs.push(global.EDDApi.leaderTeam(!!force).then(r => { state.remote.team = apiData(r); }));
+      if (state.user && state.user.perfil === 'administrador') jobs.push(global.EDDApi.adminDashboard(!!force).then(r => { state.remote.dashboard = apiData(r); }));
+      await Promise.all(jobs);
+
+      // El detalle completo cuesta ~10s en n8n/Airtable. Ya no se carga en el
+      // dashboard de líder ni en Inicio: se solicita de forma lazy solo al abrir
+      // la autoevaluación o una evaluación de colaborador.
       state.remote.ready = true; state.remote.lastSync = new Date().toISOString();
     } catch (err) {
-      console.error('EDD Backend Integration v1', err);
+      console.error('EDD Backend Integration performance', err);
       state.remote.error = err; state.remote.ready = false;
     } finally {
       state.remote.loading = false;
+      render();
+    }
+  }
+
+  async function ensureOwnRemoteDetail(force) {
+    if (!apiReadMode() || state.remote.detailLoading) return;
+    const mineEval = state.remote.mine && state.remote.mine.evaluation;
+    const id = mineEval && (mineEval.evaluationId || mineEval.id);
+    if (!id || (state.remote.detail && !force)) return;
+    state.remote.detailLoading = true;
+    try {
+      state.remote.detail = apiData(await global.EDDApi.evaluationDetail(id, !!force));
+      try { hydrateOwnRemoteDetail(); } catch (e) { console.warn('EDD read: no fue posible hidratar detalle propio', e); }
+    } catch (e) {
+      console.warn('EDD read: detalle propio no disponible', e);
+      showNotice(e && e.message ? e.message : 'No fue posible cargar el detalle de la evaluación.', 'warning');
+    } finally {
+      state.remote.detailLoading = false;
       render();
     }
   }
@@ -730,7 +752,7 @@
     state.user = session ? A.getAppUser(session) : null;
 
     if (!state.user) {
-      state.remote = { ready: false, loading: false, error: null, me: null, mine: null, detail: null, team: null, dashboard: null, lastSync: null };
+      state.remote = { ready: false, loading: false, error: null, me: null, mine: null, detail: null, detailLoading: false, team: null, dashboard: null, lastSync: null };
       // Si había sesión activa y ya no la hay (y no fue por un logout manual
       // que ya limpió el aviso), asumimos que expiró y lo mostramos en login.
       if (teniaUsuario && !state.login.sessionExpiredNotice) {
@@ -754,6 +776,16 @@
     const area = parts[0] || areaEsperada;
     const page = parts[1] || (areaEsperada === 'colaborador' ? 'inicio' : 'dashboard');
     const param = parts[2];
+
+    // Carga lazy del detalle propio: evita pagar ~10s al entrar al dashboard.
+    const necesitaDetallePropio = (area === 'colaborador' && page === 'autoevaluacion') || (area === 'lider' && page === 'mi-autoevaluacion');
+    const mineEvalParaDetalle = state.remote.mine && state.remote.mine.evaluation;
+    if (apiReadMode() && necesitaDetallePropio && mineEvalParaDetalle && !state.remote.detail) {
+      if (!state.remote.detailLoading) ensureOwnRemoteDetail(false);
+      root.innerHTML = viewBackendLoading().replace('Conectando con Evaluación de Desempeño','Cargando tu evaluación').replace('Consultando tu sesión y datos del periodo activo…','Recuperando respuestas y objetivos guardados…');
+      translateDOM(root);
+      return;
+    }
 
     // Seguridad de navegación: el rol de la URL nunca puede sustituir al rol
     // de la sesión. Si el usuario modifica manualmente el hash, vuelve a su portal.
@@ -2826,9 +2858,11 @@
 
   const Actions = {
     setLanguage(lang) { setLanguage(lang); },
-    recargarBackend() { state.remote.ready=false; state.remote.error=null; refreshBackendRead(true); render(); },
+    recargarBackend() { if(global.EDDApi&&global.EDDApi.clearReadCache) global.EDDApi.clearReadCache(); state.remote.ready=false; state.remote.error=null; state.remote.detail=null; refreshBackendRead(true); render(); },
     async abrirEvaluacionLider(employeeId, evaluationId) {
       if (!apiWriteMode()) { navigate('#/lider/evaluar/' + employeeId); return; }
+      if (state.remote.loadingEvaluationId) return;
+      state.remote.loadingEvaluationId = String(evaluationId);
       try {
         showNotice('Cargando evaluación del colaborador…','info');
         const detail = apiData(await global.EDDApi.evaluationDetail(evaluationId));
@@ -2849,7 +2883,7 @@
         hydrateObjectives(lev.id, detail.objectives || [], true);
         state.wizard={seccionIdx:0,evaluacionId:lev.id,tipo:'lider',colaboradorId:String(employeeId),liderId:String(state.user.empleado)};
         navigate('#/lider/evaluar/' + employeeId);
-      } catch (err) { showNotice(err.message || 'No fue posible cargar la evaluación.','warning'); }
+      } catch (err) { showNotice(err.message || 'No fue posible cargar la evaluación.','warning'); } finally { state.remote.loadingEvaluationId = null; }
     },
     logout,
     async solicitarCodigo(numeroEmpleado) {
