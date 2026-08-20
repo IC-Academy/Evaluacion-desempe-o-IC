@@ -585,6 +585,31 @@
       });
     });
   }
+
+  function ensureLocalResultForEvaluation(ev) {
+    if (!ev || !ev.id) return null;
+    const existing = S.getResultado(ev.id);
+    if (existing && existing.promedios && existing.puntajes) return existing;
+    try {
+      const resultado = C.calcularResultado(S.getRespuestasPorSeccion(ev.id), S.getObjetivos(ev.id));
+      if (!resultado) return null;
+      const db = S.load();
+      db.resultados = Array.isArray(db.resultados) ? db.resultados : [];
+      db.resultados = db.resultados.filter(r => r.evaluacionId !== ev.id);
+      db.resultados.push({
+        id: `RES-SYNC-${ev.id}`, evaluacionId: ev.id, colaboradorId: String(ev.colaboradorId),
+        periodoId: ev.periodoId, origen: ev.tipo, puntajes: resultado.puntajes || {},
+        promedios: resultado.promedios || {}, nivel: resultado.nivel || null,
+        fecha: new Date().toISOString().slice(0,10), sincronizadoDesdeBackend: true
+      });
+      S.persist();
+      return db.resultados[db.resultados.length - 1];
+    } catch (e) {
+      console.warn('No fue posible reconstruir resultado local sincronizado', e);
+      return null;
+    }
+  }
+
   function hydrateOwnRemoteDetail() {
     if (!apiReadMode() || !state.remote.detail || !state.remote.mine || !state.remote.mine.evaluation) return;
     const d = state.remote.detail; const me = empleadoRemoto();
@@ -1729,7 +1754,7 @@
     if(!col||!cal) return null;
     const total=cal.resultadoCalibrado!==undefined?cal.resultadoCalibrado:(resLider?.puntajes?.total??'—');
     const nivel=total==='—'?{nivel:'—'}:C.clasificarNivel(total);
-    const cuad=resLider?C.asignarCuadrante(resLider.promedios.actitud,resLider.promedios.desempeno):null;
+    const cuad=resLider?C.asignarCuadrante(resLider?.promedios?.actitud,resLider?.promedios?.desempeno):null;
     const areas=S.getAreasOportunidad(colaboradorId,periodoId), planes=S.getPlanesDesarrollo(colaboradorId,periodoId);
     const rowsAreas=areas.length?areas.map(a=>`<tr><td>${esc(a.area)}</td><td>${esc(a.planMejora)}</td></tr>`).join(''):'<tr><td colspan="2">No aplica.</td></tr>';
     const rowsPlanes=planes.length?planes.map(a=>`<tr><td>${esc(a.competencia)}</td><td>${esc(a.accion)}</td><td>${esc(a.fechaCompromiso||'—')}</td></tr>`).join(''):'<tr><td colspan="3">No aplica.</td></tr>';
@@ -1773,7 +1798,7 @@
     if(!resAuto||!resLider) return '';
     const sections=[['actitud','Valores y actitud'],['habilidades','Técnica funcional'],['objetivos','Objetivos']];
     return `<div class="performance-summary-strip">${sections.map(([k,label])=>{
-      const a=Number(resAuto.promedios?.[k]), l=Number(resLider.promedios?.[k]);
+      const a=Number(resAuto?.promedios || {}?.[k]), l=Number(resLider?.promedios || {}?.[k]);
       const lOk=Number.isFinite(l), aOk=Number.isFinite(a);
       const idealGap=lOk?5-l:null, perception=(aOk&&lOk)?a-l:null;
       const cls=idealGap===null?'neutral':idealGap<=.5?'good':idealGap<=1.25?'mid':'attention';
@@ -1795,27 +1820,27 @@
     const liderEval = S.getEvaluacion(col.empleado, periodoId, 'lider');
     const resAuto = S.getUltimoResultadoPorOrigen(col.empleado, periodoId, 'autoevaluacion');
     const resLider = S.getUltimoResultadoPorOrigen(col.empleado, periodoId, 'lider');
-    const totalFinal = cal ? cal.resultadoCalibrado : (resLider ? resLider.puntajes.total : null);
+    const totalFinal = cal ? cal.resultadoCalibrado : (resLider ? resLider?.puntajes?.total : null);
     const nivel = C.clasificarNivel(totalFinal);
-    const cuad = C.asignarCuadrante(resLider ? resLider.promedios.actitud : null, resLider ? resLider.promedios.desempeno : null);
+    const cuad = C.asignarCuadrante(resLider?.promedios?.actitud ?? null, resLider?.promedios?.desempeno ?? null);
     const areas = S.getAreasOportunidad(col.empleado, periodoId);
     const planes = S.getPlanesDesarrollo(col.empleado, periodoId);
     const evidencias = S.getEvidencias(col.empleado, periodoId);
     const acciones = S.getAcciones(col.empleado, periodoId);
     const liderDirecto = S.getLider(col.liderId);
-    const diferenciaGlobal = (resAuto && resLider) ? C.round1(resAuto.puntajes.total - resLider.puntajes.total) : null;
+    const diferenciaGlobal = (resAuto && resLider) ? C.round1(resAuto?.puntajes?.total - resLider?.puntajes?.total) : null;
     const brechaGlobal = diferenciaGlobal !== null ? C.clasificarBrecha(diferenciaGlobal) : null;
-    const promedios = resLider ? resLider.promedios : {};
+    const promedios = resLider?.promedios || {};
     const puntajes = resLider ? resLider.puntajes : {};
 
     const radarHtml = global.EDDCharts.renderRadarChart({
-      autoevaluacion: resAuto ? resAuto.promedios : null,
-      evaluacionLider: resLider ? resLider.promedios : null,
-      calibracion: (cal && cal.resultadoCalibrado !== undefined && resLider) ? { resultadoLider: resLider.puntajes.total, resultadoCalibrado: cal.resultadoCalibrado } : null
+      autoevaluacion: resAuto?.promedios || null,
+      evaluacionLider: resLider?.promedios || null,
+      calibracion: (cal && cal.resultadoCalibrado !== undefined && resLider) ? { resultadoLider: resLider?.puntajes?.total, resultadoCalibrado: cal.resultadoCalibrado } : null
     });
     const ninaBoxHtml = global.EDDCharts.renderNineBoxIndividual({
-      actitudProm: resLider ? resLider.promedios.actitud : null,
-      desempenoProm: resLider ? resLider.promedios.desempeno : null,
+      actitudProm: resLider?.promedios?.actitud ?? null,
+      desempenoProm: resLider?.promedios?.desempeno ?? null,
       nombreColaborador: col.nombre
     });
     const performanceProfile = buildPerformanceProfile(col.empleado, periodoId);
@@ -2192,20 +2217,23 @@
     filas.push({ nombre: 'C. Cumplimiento de Objetivos (promedio)', auto: avgObjAuto !== null ? C.round1(avgObjAuto) : 'N/A', lider: avgObjLider !== null ? C.round1(avgObjLider) : 'N/A', comentarioLider: '', comentarioAuto: '' });
     const ajustesObjetivos = objLider.filter((o) => o.ajusteManualLider).map((ol) => { const oa = objAuto.find((x) => Number(x.index) === Number(ol.index)); return { objetivo: oa?.descripcion || ol.descripcion || 'Objetivo', automatica: ol.calificacionAutomatica ?? oa?.calificacion ?? '—', lider: ol.calificacion, justificacion: ol.justificacionLider || '' }; });
 
-    const resAuto = S.getUltimoResultadoPorOrigen(colaboradorId, periodoId, 'autoevaluacion');
-    const resLider = S.getUltimoResultadoPorOrigen(colaboradorId, periodoId, 'lider');
-    const cuad = C.asignarCuadrante(resLider.promedios.actitud, resLider.promedios.desempeno);
+    let resAuto = S.getUltimoResultadoPorOrigen(colaboradorId, periodoId, 'autoevaluacion');
+    let resLider = S.getUltimoResultadoPorOrigen(colaboradorId, periodoId, 'lider');
+    if (!resAuto) resAuto = ensureLocalResultForEvaluation(autoEval);
+    if (!resLider) resLider = ensureLocalResultForEvaluation(liderEval);
+    if (!resAuto || !resLider) return `<div class="card"><h2>Comparación</h2><p class="muted">Las evaluaciones están completas, pero todavía no hay resultados calculados disponibles. Actualiza e intenta de nuevo.</p></div>`;
+    const cuad = C.asignarCuadrante(resLider?.promedios?.actitud, resLider?.promedios?.desempeno);
     const estado = S.estadoProceso(colaboradorId, periodoId);
     const cal = S.getCalibracion(colaboradorId, periodoId);
-    const brechaGeneral = C.clasificarBrecha(resAuto.puntajes.total - resLider.puntajes.total);
+    const brechaGeneral = C.clasificarBrecha(resAuto?.puntajes?.total - resLider?.puntajes?.total);
 
     const radarHtml = global.EDDCharts.renderRadarChart({
-      autoevaluacion: resAuto.promedios,
-      evaluacionLider: resLider.promedios,
-      calibracion: (cal && cal.resultadoCalibrado !== undefined) ? { resultadoLider: resLider.puntajes.total, resultadoCalibrado: cal.resultadoCalibrado } : null
+      autoevaluacion: resAuto?.promedios || {},
+      evaluacionLider: resLider?.promedios || {},
+      calibracion: (cal && cal.resultadoCalibrado !== undefined) ? { resultadoLider: resLider?.puntajes?.total, resultadoCalibrado: cal.resultadoCalibrado } : null
     });
     const ninaBoxHtml = global.EDDCharts.renderNineBoxIndividual({
-      actitudProm: resLider.promedios.actitud, desempenoProm: resLider.promedios.desempeno, nombreColaborador: col.nombre
+      actitudProm: resLider?.promedios?.actitud, desempenoProm: resLider?.promedios?.desempeno, nombreColaborador: col.nombre
     });
     const performanceProfile = buildPerformanceProfile(colaboradorId, periodoId);
     const performanceWheelHtml = performanceProfile ? global.EDDCharts.renderPerformanceWheel(performanceProfile) : '';
@@ -2214,9 +2242,9 @@
     <div class="card">
       <h2>Comparación — ${esc(col.nombre)}</h2>
       <div class="kpi-grid kpi-grid-3">
-        ${kpi('Puntaje autoevaluación', f1(resAuto.puntajes.total))}
-        ${kpi('Puntaje evaluación líder', f1(resLider.puntajes.total))}
-        ${kpi('Diferencia global', (resAuto.puntajes.total - resLider.puntajes.total > 0 ? '+' : '') + f1(resAuto.puntajes.total - resLider.puntajes.total))}
+        ${kpi('Puntaje autoevaluación', f1(resAuto?.puntajes?.total))}
+        ${kpi('Puntaje evaluación líder', f1(resLider?.puntajes?.total))}
+        ${kpi('Diferencia global', (resAuto?.puntajes?.total - resLider?.puntajes?.total > 0 ? '+' : '') + f1(resAuto?.puntajes?.total - resLider?.puntajes?.total))}
       </div>
       <p>Brecha general: ${badge(brechaGeneral.etiqueta, brechaGeneral.etiqueta === 'Alineada' ? 'green' : (brechaGeneral.etiqueta === 'Revisar' ? 'yellow' : 'red'))}</p>
       <section class="performance-profile-section leader-performance-profile">
@@ -2451,10 +2479,10 @@
       const estado = S.estadoProceso(c.empleado, periodoId);
       const resLider = S.getUltimoResultadoPorOrigen(c.empleado, periodoId, 'lider');
       const cal = S.getCalibracion(c.empleado, periodoId);
-      const totalFinal = cal ? cal.resultadoCalibrado : (resLider ? resLider.puntajes.total : null);
+      const totalFinal = cal ? cal.resultadoCalibrado : (resLider ? resLider?.puntajes?.total : null);
       const nivel = C.clasificarNivel(totalFinal);
-      const cuad = resLider ? C.asignarCuadrante(resLider.promedios.actitud, resLider.promedios.desempeno) : { cuadrante: null, info: null };
-      return { c, estado, totalFinal, nivel, cuad, promedios: resLider ? resLider.promedios : null };
+      const cuad = resLider ? C.asignarCuadrante(resLider?.promedios?.actitud, resLider?.promedios?.desempeno) : { cuadrante: null, info: null };
+      return { c, estado, totalFinal, nivel, cuad, promedios: resLider?.promedios || null };
     });
   }
 
@@ -2627,16 +2655,16 @@
     const resLider = S.getUltimoResultadoPorOrigen(colaboradorId, periodoId, 'lider');
     if (!resAuto || !resLider) return `<div class="card"><h2>${esc(col.nombre)}</h2><p class="muted">Aún no existen ambas evaluaciones completas para calibrar.</p></div>`;
     const cal = S.getCalibracion(colaboradorId, periodoId) || { ajuste: 0, justificacion: '', actas: 0, nom035: '', observacionesRH: '', retroHabilitada: false, aceptacionColaborador: false, historial: [] };
-    const diferencia = C.round1(resAuto.puntajes.total - resLider.puntajes.total);
+    const diferencia = C.round1(resAuto?.puntajes?.total - resLider?.puntajes?.total);
     const brechaGeneral = C.clasificarBrecha(diferencia);
     const planes = S.getPlanesDesarrollo(colaboradorId, periodoId);
     const liderDirecto = S.getLider(col.liderId);
-    const radarHtml = global.EDDCharts.renderRadarChart({autoevaluacion: resAuto.promedios,evaluacionLider: resLider.promedios,calibracion: (cal.resultadoCalibrado !== undefined) ? { resultadoLider: resLider.puntajes.total, resultadoCalibrado: cal.resultadoCalibrado } : null});
+    const radarHtml = global.EDDCharts.renderRadarChart({autoevaluacion: resAuto?.promedios || {},evaluacionLider: resLider?.promedios || {},calibracion: (cal.resultadoCalibrado !== undefined) ? { resultadoLider: resLider?.puntajes?.total, resultadoCalibrado: cal.resultadoCalibrado } : null});
     const performanceProfile = buildPerformanceProfile(colaboradorId, periodoId);
     const performanceWheelHtml = performanceProfile ? global.EDDCharts.renderPerformanceWheel(performanceProfile) : '';
-    const ninaBoxHtml = global.EDDCharts.renderNineBoxIndividual({actitudProm: resLider.promedios.actitud, desempenoProm: resLider.promedios.desempeno, nombreColaborador: col.nombre});
+    const ninaBoxHtml = global.EDDCharts.renderNineBoxIndividual({actitudProm: resLider?.promedios?.actitud, desempenoProm: resLider?.promedios?.desempeno, nombreColaborador: col.nombre});
     const iniciales = esc(col.nombre).split(' ').slice(0,2).map(x=>x[0]).join('');
-    const resultadoActual = cal.resultadoCalibrado !== undefined ? cal.resultadoCalibrado : resLider.puntajes.total;
+    const resultadoActual = cal.resultadoCalibrado !== undefined ? cal.resultadoCalibrado : resLider?.puntajes?.total;
 
     return `<section class="calibration-shell calibration-detail-shell">
       <a href="#/admin/calibracion" class="calibration-back">← Volver a calibración</a>
@@ -2647,8 +2675,8 @@
       </div>
 
       <div class="calibration-score-grid">
-        <div class="calibration-score-card"><span>Autoevaluación</span><strong>${f1(resAuto.puntajes.total)}</strong><small>Percepción del colaborador</small></div>
-        <div class="calibration-score-card"><span>Evaluación líder</span><strong>${f1(resLider.puntajes.total)}</strong><small>Resultado base de calibración</small></div>
+        <div class="calibration-score-card"><span>Autoevaluación</span><strong>${f1(resAuto?.puntajes?.total)}</strong><small>Percepción del colaborador</small></div>
+        <div class="calibration-score-card"><span>Evaluación líder</span><strong>${f1(resLider?.puntajes?.total)}</strong><small>Resultado base de calibración</small></div>
         <div class="calibration-score-card ${Math.abs(diferencia)>=10?'attention':''}"><span>Brecha auto vs líder</span><strong>${diferencia>0?'+':''}${f1(diferencia)}</strong><small>${esc(brechaGeneral.etiqueta)}</small></div>
         <div class="calibration-score-card success"><span>Resultado calibrado</span><strong>${f1(resultadoActual)}</strong><small>${cal.resultadoCalibrado!==undefined?'Guardado por DO':'Sin ajuste aún'}</small></div>
       </div>
@@ -2674,9 +2702,9 @@
 
         <article class="admin-panel calibration-decision-card">
           <div class="admin-panel-head"><div><span class="admin-section-kicker">DECISIÓN</span><h2>Ajuste de calibración</h2></div><span class="calibration-live-result" id="calLiveBadge">${f1(resultadoActual)}</span></div>
-          <div class="calibration-adjust-row"><label><span>Ajuste en puntos</span><input type="number" step="0.1" id="calAjuste" value="${cal.ajuste || 0}" oninput="App.previewCalibracion(${resLider.puntajes.total})"/></label><label><span>Resultado calibrado</span><input type="text" id="calResultadoPreview" value="${f1(resultadoActual)}" disabled/></label></div>
+          <div class="calibration-adjust-row"><label><span>Ajuste en puntos</span><input type="number" step="0.1" id="calAjuste" value="${cal.ajuste || 0}" oninput="App.previewCalibracion(${resLider?.puntajes?.total})"/></label><label><span>Resultado calibrado</span><input type="text" id="calResultadoPreview" value="${f1(resultadoActual)}" disabled/></label></div>
           <label class="calibration-field"><span>Justificación <em>obligatoria cuando exista ajuste</em></span><textarea id="calJustificacion" placeholder="Explica la razón del ajuste y la evidencia utilizada...">${esc(cal.justificacion || '')}</textarea></label>
-          <div class="calibration-actions"><button class="btn btn-primary" onclick="App.guardarCalibracion('${colaboradorId}','${periodoId}',${resLider.puntajes.total})">Guardar calibración</button><button class="btn btn-outline" ${cal.resultadoCalibrado === undefined ? 'disabled' : ''} onclick="App.habilitarRetro('${colaboradorId}','${periodoId}')">${cal.retroHabilitada ? '✓ Retroalimentación habilitada' : 'Habilitar retroalimentación'}</button></div>
+          <div class="calibration-actions"><button class="btn btn-primary" onclick="App.guardarCalibracion('${colaboradorId}','${periodoId}',${resLider?.puntajes?.total})">Guardar calibración</button><button class="btn btn-outline" ${cal.resultadoCalibrado === undefined ? 'disabled' : ''} onclick="App.habilitarRetro('${colaboradorId}','${periodoId}')">${cal.retroHabilitada ? '✓ Retroalimentación habilitada' : 'Habilitar retroalimentación'}</button></div>
           ${planes.length < 1 ? '<div class="calibration-warning-note">Si el resultado calibrado es menor a 80, se requerirá al menos un plan de desarrollo antes de liberar la retroalimentación.</div>' : ''}
         </article>
       </div>
@@ -2881,6 +2909,7 @@
         });
         hydrateObjectives(auto.id, detail.objectives || [], false);
         hydrateObjectives(lev.id, detail.objectives || [], true);
+        if (auto.estado === D.ESTADOS.COMPLETADA) ensureLocalResultForEvaluation(auto);
         state.wizard={seccionIdx:0,evaluacionId:lev.id,tipo:'lider',colaboradorId:String(employeeId),liderId:String(state.user.empleado)};
         navigate('#/lider/evaluar/' + employeeId);
       } catch (err) { showNotice(err.message || 'No fue posible cargar la evaluación.','warning'); } finally { state.remote.loadingEvaluationId = null; }
@@ -3381,8 +3410,8 @@
       const resultadoCalibrado = C.round1(Math.max(0, Math.min(100, totalLider + ajuste)));
       const resAuto = S.getUltimoResultadoPorOrigen(colaboradorId, periodoId, 'autoevaluacion');
       S.crearOActualizarCalibracion(colaboradorId, periodoId, {
-        resultadoAuto: resAuto.puntajes.total, resultadoLider: totalLider,
-        diferenciaGeneral: C.round1(resAuto.puntajes.total - totalLider),
+        resultadoAuto: resAuto?.puntajes?.total, resultadoLider: totalLider,
+        diferenciaGeneral: C.round1(resAuto?.puntajes?.total - totalLider),
         ajuste, justificacion, resultadoCalibrado,
         actas: parseInt($('#calActas').value, 10) || 0,
         nom035: $('#calNom035').value,
@@ -3409,7 +3438,7 @@
       const col = S.getColaborador(empleado);
       const periodoId = state.periodo.id;
       const resLider = S.getUltimoResultadoPorOrigen(empleado, periodoId, 'lider');
-      const cuad = resLider ? C.asignarCuadrante(resLider.promedios.actitud, resLider.promedios.desempeno) : null;
+      const cuad = resLider ? C.asignarCuadrante(resLider?.promedios?.actitud, resLider?.promedios?.desempeno) : null;
       state.nineboxSelEmpleado = empleado;
       state.nineboxSel = cuad ? cuad.cuadrante : state.nineboxSel;
       render();
