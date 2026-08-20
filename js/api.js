@@ -119,7 +119,9 @@
       } catch (err) {
         if (timeoutId) clearTimeout(timeoutId);
         console.error('EDDApi: error de red llamando a', endpoint, err);
-        if (err && err.name === 'AbortError') {
+        const aborted = !!(controller && controller.signal && controller.signal.aborted);
+        const abortLike = aborted || (err && (err.name === 'AbortError' || err.code === 20 || /aborted|abort/i.test(String(err.message || ''))));
+        if (abortLike) {
           throw new ApiError('timeout', 'La solicitud tardó demasiado. Intenta de nuevo.', null, err);
         }
         throw new ApiError('network', 'No fue posible conectar con el servidor. Verifica tu conexión e intenta de nuevo.', null, err);
@@ -186,7 +188,7 @@
 
     // --- Capa de lectura real (Backend Integration v1) -----------------------
     evaluationsMine(forceRefresh) { return apiRequest('/evaluations/mine', { method: 'GET', cacheMs: 15000, forceRefresh: !!forceRefresh, timeoutMs: 12000 }); },
-    evaluationDetail(id, forceRefresh) { return apiRequest('/6f123813-cb2b-4698-af51-60fe95ca1b52/evaluations/' + encodeURIComponent(id), { method: 'GET', cacheMs: 30000, forceRefresh: !!forceRefresh, timeoutMs: 20000 }); },
+    evaluationDetail(id, forceRefresh) { return apiRequest('/6f123813-cb2b-4698-af51-60fe95ca1b52/evaluations/' + encodeURIComponent(id), { method: 'GET', cacheMs: 30000, forceRefresh: !!forceRefresh, timeoutMs: 30000 }); },
     leaderTeam(forceRefresh) { return apiRequest('/leader/team', { method: 'GET', cacheMs: 20000, forceRefresh: !!forceRefresh, timeoutMs: 12000 }); },
     adminDashboard(forceRefresh) { return apiRequest('/admin/dashboard', { method: 'GET', cacheMs: 20000, forceRefresh: !!forceRefresh, timeoutMs: 15000 }); },
 
@@ -194,8 +196,8 @@
     async initializeMyEvaluation() { const r=await apiRequest('/evaluations/mine/initialize', { method: 'POST' }); clearReadCache('/evaluations/'); return r; },
     async saveSelfDraft(id, payload) { const r=await apiRequest('/28e6125b-64c9-453c-a100-8c77f8ee68b9/evaluations/' + encodeURIComponent(id) + '/self-draft', { method: 'PUT', body: payload, timeoutMs: 12000 }); clearReadCache('/evaluations/'); return r; },
     async submitSelf(id) { const r=await apiRequest('/0a235f4f-46c5-4a9c-bce0-dae3c0a0ab23/evaluations/' + encodeURIComponent(id) + '/submit-self', { method: 'POST', timeoutMs: 12000 }); clearReadCache(); return r; },
-    async saveLeaderDraft(id, payload) { const r=await apiRequest('/d4a332bd-8994-4b3d-aaba-28f2b99aca0a/evaluations/' + encodeURIComponent(id) + '/leader-draft', { method: 'PUT', body: payload, timeoutMs: 15000 }); clearReadCache(); return r; },
-    async submitLeader(id) { const r=await apiRequest('/11eb53d4-a38a-4048-81e0-4705ebc57e56/evaluations/' + encodeURIComponent(id) + '/submit-leader', { method: 'POST', timeoutMs: 15000 }); clearReadCache(); return r; },
+    async saveLeaderDraft(id, payload) { const r=await apiRequest('/d4a332bd-8994-4b3d-aaba-28f2b99aca0a/evaluations/' + encodeURIComponent(id) + '/leader-draft', { method: 'PUT', body: payload, timeoutMs: 30000 }); clearReadCache(); return r; },
+    async submitLeader(id) { const r=await apiRequest('/11eb53d4-a38a-4048-81e0-4705ebc57e56/evaluations/' + encodeURIComponent(id) + '/submit-leader', { method: 'POST', timeoutMs: 30000 }); clearReadCache(); return r; },
 
     // Alias en español conservados para compatibilidad con código previo.
     evaluacionesMias() { return this.evaluationsMine(); },

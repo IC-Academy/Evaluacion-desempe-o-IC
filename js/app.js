@@ -472,7 +472,7 @@
     jerarquiasFiltros: {},
     nineboxSel: null,
     nineboxSelEmpleado: null,
-    remote: { ready: false, loading: false, error: null, me: null, mine: null, detail: null, detailLoading: false, team: null, dashboard: null, lastSync: null },
+    remote: { ready: false, loading: false, error: null, me: null, mine: null, detail: null, detailLoading: false, team: null, dashboard: null, lastSync: null, leaderSubmitting: false },
     // --- Estado del login de dos pasos (beta 3) ---
     login: {
       paso: 'solicitar',   // 'solicitar' | 'validar'
@@ -2098,7 +2098,7 @@
             <button class="btn btn-outline" ${idx === 0 ? 'disabled' : ''} onclick="App.wizardPrev()">← Anterior</button>
             <button class="btn btn-outline premium-save-btn" onclick="App.guardarProgresoVisual()">Guardar progreso</button>
             ${seccion === 'resumen'
-              ? `<label class="confirm-check premium-confirm premium-confirm-large"><input type="checkbox" id="confirmEnvioLider"/> Confirmo que la evaluación está completa.</label><button class="btn btn-primary premium-next-btn" onclick="App.enviarEvaluacionLider('${colaboradorId}')">Enviar evaluación ✓</button>`
+              ? `<label class="confirm-check premium-confirm premium-confirm-large"><input type="checkbox" id="confirmEnvioLider"/> Confirmo que la evaluación está completa.</label><button id="btnEnviarEvaluacionLider" class="btn btn-primary premium-next-btn" onclick="App.enviarEvaluacionLider('${colaboradorId}')">Enviar evaluación ✓</button>`
               : `<button class="btn btn-primary premium-next-btn" onclick="App.wizardNext('${seccion}')">Siguiente →</button>`}
           </div>
         </div>
@@ -3296,6 +3296,7 @@
     guardarNuevoPlan(colaboradorId,liderId){ const c=document.getElementById('competenciaNueva-'+colaboradorId),a=document.getElementById('accionNueva-'+colaboradorId),f=document.getElementById('fechaNueva-'+colaboradorId); if(!c||!a||!c.value.trim()||!a.value.trim()){showNotice('Completa la competencia y la acción de desarrollo.','warning');return;} S.addPlanDesarrollo(colaboradorId,state.periodo.id,{competencia:c.value.trim(),accion:a.value.trim(),responsable:liderId,fechaCompromiso:f&&f.value?f.value:'2026-09-01'},state.user.nombre); render(); },
     quitarPlanDesarrollo(id) { S.removePlanDesarrollo(id, state.user.nombre); render(); },
     async enviarEvaluacionLider(colaboradorId) {
+      if (state.remote.leaderSubmitting) return;
       if (!$('#confirmEnvioLider').checked) { showNotice(t('Confirma que la evaluación está completa antes de enviar.'),'warning'); return; }
       const evaluacionId = state.wizard.evaluacionId;
       for (let i = 0; i < SECCIONES_WIZARD.length - 1; i++) {
@@ -3332,19 +3333,42 @@
         setTimeout(() => showNotice('Más de la mitad de una sección está marcada como N/A. Justifica el uso de N/A en Comentarios generales antes de enviar.','warning'), 0);
         return;
       }
+      const submitBtn = document.getElementById('btnEnviarEvaluacionLider');
+      const submitBtnOriginal = submitBtn ? submitBtn.textContent : 'Enviar evaluación ✓';
+      state.remote.leaderSubmitting = true;
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Enviando…';
+        submitBtn.setAttribute('aria-busy', 'true');
+        submitBtn.classList.add('is-submitting');
+      }
       try {
         if (apiWriteMode()) {
           const backendId = backendIdForLocalEvaluation(evaluacionId);
           if (!backendId) throw new Error('No se encontró el identificador backend de la evaluación del líder.');
+          showNotice('Guardando y enviando la evaluación…', 'info');
           await global.EDDApi.saveLeaderDraft(backendId, leaderDraftPayload(evaluacionId, backendId));
           await global.EDDApi.submitLeader(backendId);
         }
         S.completarEvaluacion(evaluacionId, state.user.nombre);
+        showNotice('Evaluación enviada correctamente.', 'success');
         if (apiWriteMode()) { state.remote.ready=false; await refreshBackendRead(true); }
         navigate('#/lider/comparacion/' + colaboradorId);
       } catch (err) {
-        const d=err&&err.detalle; const code=d&&(d.code||(d.error&&d.error.code)); const msg=(d&&((d.error&&d.error.message)||d.message))||err.message||'No fue posible enviar la evaluación del líder.';
+        const d=err&&err.detalle;
+        const code=(err && (err.tipo === 'timeout' || err.tipo === 'network')) ? null : (d&&(d.code||(d.error&&d.error.code)));
+        const msg=(err && (err.tipo === 'timeout' || err.tipo === 'network'))
+          ? (err.message || 'No fue posible conectar con el servidor.')
+          : ((d&&((d.error&&d.error.message)||d.message))||err.message||'No fue posible enviar la evaluación del líder.');
         showNotice(msg + (code?` (${code})`:''),'warning');
+      } finally {
+        state.remote.leaderSubmitting = false;
+        if (submitBtn && document.body.contains(submitBtn)) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = submitBtnOriginal;
+          submitBtn.removeAttribute('aria-busy');
+          submitBtn.classList.remove('is-submitting');
+        }
       }
     },
     limpiarFirma(canvasId){ const c=document.getElementById(canvasId); if(!c)return; const ctx=c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height); },
