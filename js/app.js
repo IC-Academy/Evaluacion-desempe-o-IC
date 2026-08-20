@@ -586,6 +586,63 @@
     });
   }
 
+  function pickMetric(obj, keys) {
+    if (!obj || typeof obj !== 'object') return null;
+    for (const key of keys) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        const raw = obj[key];
+        if (raw === '' || raw === null || raw === undefined) continue;
+        const n = Number(raw);
+        if (Number.isFinite(n)) return n;
+      }
+    }
+    return null;
+  }
+  function backendMetricsFromDetail(detail, role) {
+    if (!detail || typeof detail !== 'object') return null;
+    const ev = detail.evaluation || {};
+    const roleKey = role === 'lider' ? 'leader' : 'self';
+    const candidates = [
+      detail[roleKey + 'Result'], detail[roleKey + 'Metrics'], detail.results && detail.results[roleKey],
+      ev[roleKey + 'Result'], ev[roleKey + 'Metrics'], ev[roleKey], ev
+    ].filter(Boolean);
+    for (const src of candidates) {
+      const globalScore = pickMetric(src, ['resultadoGlobalBackend','resultadoGlobal','globalResult','globalScore','score','Resultado global (backend)','Resultado Global Backend']);
+      const attitude = pickMetric(src, ['actitudBackend','attitudeBackend','attitude','actitud','Actitud (backend)','Actitud Backend']);
+      const performance = pickMetric(src, ['desempenoBackend','performanceBackend','performance','desempeno','Desempeño (backend)','Desempeno (backend)','Desempeño Backend']);
+      if (globalScore !== null || attitude !== null || performance !== null) return { globalScore, attitude, performance, source:'backend' };
+    }
+    return null;
+  }
+  function persistBackendResult(ev, metrics) {
+    if (!ev || !ev.id || !metrics) return null;
+    const existing = S.getResultado(ev.id);
+    const localFallback = existing || (() => {
+      try { return C.calcularResultado(S.getRespuestasPorSeccion(ev.id), S.getObjetivos(ev.id)); } catch (_) { return null; }
+    })();
+    const promedios = Object.assign({}, (localFallback && localFallback.promedios) || {});
+    const puntajes = Object.assign({}, (localFallback && localFallback.puntajes) || {});
+    if (metrics.attitude !== null) promedios.actitud = metrics.attitude / 20;
+    if (metrics.performance !== null) promedios.desempeno = metrics.performance / 20;
+    if (metrics.globalScore !== null) puntajes.total = metrics.globalScore;
+    const db = S.load();
+    db.resultados = Array.isArray(db.resultados) ? db.resultados : [];
+    db.resultados = db.resultados.filter(r => r.evaluacionId !== ev.id);
+    const item = {
+      id:`RES-BACKEND-${ev.id}`, evaluacionId:ev.id, colaboradorId:String(ev.colaboradorId), periodoId:ev.periodoId,
+      origen:ev.tipo, puntajes, promedios, nivel: metrics.globalScore !== null ? C.clasificarNivel(metrics.globalScore) : ((localFallback&&localFallback.nivel)||null),
+      fecha:new Date().toISOString().slice(0,10), sincronizadoDesdeBackend:true, fuenteResultado:'backend'
+    };
+    db.resultados.push(item); S.persist(); return item;
+  }
+  function syncBackendResultsFromDetail(detail, autoEv, leaderEv) {
+    const selfMetrics = backendMetricsFromDetail(detail, 'self');
+    const leaderMetrics = backendMetricsFromDetail(detail, 'lider');
+    if (selfMetrics && autoEv) persistBackendResult(autoEv, selfMetrics);
+    if (leaderMetrics && leaderEv) persistBackendResult(leaderEv, leaderMetrics);
+    return { selfMetrics, leaderMetrics };
+  }
+
   function ensureLocalResultForEvaluation(ev) {
     if (!ev || !ev.id) return null;
     const existing = S.getResultado(ev.id);
@@ -620,24 +677,42 @@
     const local = getOrCreateLocalEvaluation(me.empleado, liderId, 'autoevaluacion', backendId, state.remote.mine.evaluation.state || state.remote.mine.evaluation.selfState);
     (d.answers || []).filter(a => !/l[ií]der|leader/i.test(String(a.evaluator || a.evaluador || ''))).forEach(a => mapRemoteAnswerToLocal(local.id, a));
     hydrateObjectives(local.id, d.objectives || [], false);
+    syncBackendResultsFromDetail(d, local, null);
   }
   function selfDraftPayload(localEvalId, backendId) {
+    const ev = S.load().evaluaciones.find(e => e.id === localEvalId) || {};
     const answers = S.getRespuestas(localEvalId).filter(r => String(r.competenciaId).toUpperCase() !== 'B2').map(r => ({competencyId:r.competenciaId, value:r.valor, comment:r.comentario || ''}));
     const h = S.getHerramientasEvaluacion(localEvalId) || {};
-    const objectives = S.getObjetivos(localEvalId).filter(o => (o.descripcion || '').trim()).map((o,i) => ({
+    const noObjectives = !!ev.objetivosNoAplican;
+    const objectives = noObjectives ? [] : S.getObjetivos(localEvalId).filter(o => (o.descripcion || '').trim()).map((o,i) => ({
       objectiveId: o.backendObjectiveId || `${backendId}-OBJ-${Number(o.index ?? i)+1}`,
       description:o.descripcion || '', goal:o.meta === '' ? '' : Number(o.meta), actualResult:o.resultado === '' ? '' : Number(o.resultado), evidenceSelf:o.evidenceSelf || ''
     }));
-    return { answers, tools:{ excel:h.excel ?? '', powerBi:h.analisis ?? '', ia:h.ia ?? '' }, objectives };
+    return {
+      answers,
+      tools:{ excel:h.excel ?? '', powerBi:h.analisis ?? '', ia:h.ia ?? '' },
+      objectives,
+      noObjectives,
+      noObjectivesReason: noObjectives ? (ev.objetivosNoAplicanMotivo || '') : '',
+      noObjectivesDetail: noObjectives ? (ev.objetivosNoAplicanDetalle || '') : ''
+    };
   }
   function leaderDraftPayload(localEvalId, backendId) {
+    const ev = S.load().evaluaciones.find(e => e.id === localEvalId) || {};
     const answers = S.getRespuestas(localEvalId).filter(r => String(r.competenciaId).toUpperCase() !== 'B2').map(r => ({competencyId:r.competenciaId, value:r.valor, comment:r.comentario || ''}));
     const h = S.getHerramientasEvaluacion(localEvalId) || {};
-    const objectives = S.getObjetivos(localEvalId).filter(o => (o.descripcion || '').trim()).map((o,i) => ({
+    const decision = ev.objetivosNoAplicanDecision || (ev.objetivosNoAplicanConfirmados ? 'confirmado' : '');
+    const objectives = decision === 'confirmado' ? [] : S.getObjetivos(localEvalId).filter(o => (o.descripcion || '').trim()).map((o,i) => ({
       objectiveId:o.backendObjectiveId || `${backendId}-OBJ-${Number(o.index ?? i)+1}`,
       leaderValidatedPercent:o.cumplimiento === '' ? '' : Number(o.cumplimiento), leaderAdjustmentReason:o.justificacionLider || '', evidenceLeader:o.evidenceLeader || ''
     }));
-    return { answers, tools:{ excel:h.excel ?? '', powerBi:h.analisis ?? '', ia:h.ia ?? '' }, objectives };
+    return {
+      answers,
+      tools:{ excel:h.excel ?? '', powerBi:h.analisis ?? '', ia:h.ia ?? '' },
+      objectives,
+      noObjectivesDecision: decision || '',
+      noObjectivesLeaderComment: ev.objetivosNoAplicanComentarioLider || ''
+    };
   }
   function backendIdForLocalEvaluation(localEvalId) {
     const ev = S.load().evaluaciones.find(e => e.id === localEvalId);
@@ -2909,7 +2984,9 @@
         });
         hydrateObjectives(auto.id, detail.objectives || [], false);
         hydrateObjectives(lev.id, detail.objectives || [], true);
-        if (auto.estado === D.ESTADOS.COMPLETADA) ensureLocalResultForEvaluation(auto);
+        const backendMetrics = syncBackendResultsFromDetail(detail, auto, lev);
+        if (auto.estado === D.ESTADOS.COMPLETADA && !(backendMetrics && backendMetrics.selfMetrics)) ensureLocalResultForEvaluation(auto);
+        if (lev.estado === D.ESTADOS.COMPLETADA && !(backendMetrics && backendMetrics.leaderMetrics)) ensureLocalResultForEvaluation(lev);
         state.wizard={seccionIdx:0,evaluacionId:lev.id,tipo:'lider',colaboradorId:String(employeeId),liderId:String(state.user.empleado)};
         navigate('#/lider/evaluar/' + employeeId);
       } catch (err) { showNotice(err.message || 'No fue posible cargar la evaluación.','warning'); } finally { state.remote.loadingEvaluationId = null; }
@@ -3058,13 +3135,16 @@
       if (!ev) return;
       ev.objetivosNoAplican = !!checked;
       ev.updatedAt = new Date().toISOString();
-      if (checked) db.objetivos = db.objetivos.filter((o) => o.evaluacionId !== evaluacionId); else { ev.objetivosNoAplicanMotivo=''; ev.objetivosNoAplicanDetalle=''; }
+      // No eliminamos objetivos al marcar N/A. Se conservan ocultos para que la
+      // decisión sea reversible durante el borrador; si el usuario desmarca la
+      // opción, recupera lo que ya había capturado sin perder información.
+      if (!checked) { ev.objetivosNoAplicanMotivo=''; ev.objetivosNoAplicanDetalle=''; }
       S.persist();
       render();
     },
     setObjetivosNoAplicanMotivo(evaluacionId, valor) { const ev=S.load().evaluaciones.find(e=>e.id===evaluacionId); if(!ev)return; ev.objetivosNoAplicanMotivo=valor||''; ev.updatedAt=new Date().toISOString(); S.persist(); },
     setObjetivosNoAplicanDetalle(evaluacionId, valor) { const ev=S.load().evaluaciones.find(e=>e.id===evaluacionId); if(!ev)return; ev.objetivosNoAplicanDetalle=valor||''; ev.updatedAt=new Date().toISOString(); S.persist(); },
-    decisionObjetivosNoAplicanLider(evaluacionId, decision) { const ev=S.load().evaluaciones.find(e=>e.id===evaluacionId); if(!ev)return; ev.objetivosNoAplicanDecision=decision; ev.objetivosNoAplicanConfirmados=decision==='confirmado'; ev.objetivosNoAplican=decision==='confirmado'; ev.updatedAt=new Date().toISOString(); if(decision==='confirmado'){ const db=S.load(); db.objetivos=db.objetivos.filter(o=>o.evaluacionId!==evaluacionId); S.persist(); } else S.persist(); render(); },
+    decisionObjetivosNoAplicanLider(evaluacionId, decision) { const ev=S.load().evaluaciones.find(e=>e.id===evaluacionId); if(!ev)return; ev.objetivosNoAplicanDecision=decision; ev.objetivosNoAplicanConfirmados=decision==='confirmado'; ev.objetivosNoAplican=decision==='confirmado'; ev.updatedAt=new Date().toISOString(); S.persist(); render(); },
     setObjetivosNoAplicanComentarioLider(evaluacionId, valor) { const ev=S.load().evaluaciones.find(e=>e.id===evaluacionId); if(!ev)return; ev.objetivosNoAplicanComentarioLider=valor||''; ev.updatedAt=new Date().toISOString(); S.persist(); },
     confirmarObjetivosNoAplicanLider(evaluacionId, checked) {
       const db = S.load(); const ev = db.evaluaciones.find((e) => e.id === evaluacionId); if (!ev) return;
@@ -3248,6 +3328,12 @@
           if (!backendId) throw new Error('No se encontró la evaluación en backend.');
           await global.EDDApi.saveSelfDraft(backendId, selfDraftPayload(evaluacionId, backendId));
           await global.EDDApi.submitSelf(backendId);
+          try {
+            const fresh = apiData(await global.EDDApi.evaluationDetail(backendId, { force:true }));
+            state.remote.detail = fresh;
+            const localEv = S.load().evaluaciones.find(e=>e.id===evaluacionId);
+            if (localEv) syncBackendResultsFromDetail(fresh, localEv, null);
+          } catch (e) { console.warn('No fue posible refrescar resultado backend tras submit-self', e); }
         }
         S.completarEvaluacion(evaluacionId, state.user.nombre);
         if (apiTestCaptureMode()) showNotice('Prueba completada localmente. Aún no se envió a Airtable porque la capa de escritura sigue pendiente.','info');
@@ -3346,14 +3432,29 @@
         if (apiWriteMode()) {
           const backendId = backendIdForLocalEvaluation(evaluacionId);
           if (!backendId) throw new Error('No se encontró el identificador backend de la evaluación del líder.');
-          showNotice('Guardando y enviando la evaluación…', 'info');
+          showNotice('Guardando los últimos cambios…', 'info');
+          if (submitBtn) submitBtn.textContent = 'Guardando…';
           await global.EDDApi.saveLeaderDraft(backendId, leaderDraftPayload(evaluacionId, backendId));
+          showNotice('Cambios guardados. Enviando evaluación…', 'info');
+          if (submitBtn) submitBtn.textContent = 'Enviando…';
           await global.EDDApi.submitLeader(backendId);
+          try {
+            const fresh = apiData(await global.EDDApi.evaluationDetail(backendId, { force:true }));
+            state.remote.detail = fresh;
+            const autoEv = S.getEvaluacion(colaboradorId, state.periodo.id, 'autoevaluacion');
+            const leaderEv = S.load().evaluaciones.find(e=>e.id===evaluacionId);
+            syncBackendResultsFromDetail(fresh, autoEv, leaderEv);
+          } catch (e) { console.warn('No fue posible refrescar resultado backend tras submit-leader', e); }
         }
         S.completarEvaluacion(evaluacionId, state.user.nombre);
         showNotice('Evaluación enviada correctamente.', 'success');
-        if (apiWriteMode()) { state.remote.ready=false; await refreshBackendRead(true); }
         navigate('#/lider/comparacion/' + colaboradorId);
+        // La actualización de dashboard/equipo se hace después y en segundo plano.
+        // No bloqueamos la confirmación del envío esperando otros GET de n8n.
+        if (apiWriteMode()) {
+          state.remote.ready=false;
+          setTimeout(() => refreshBackendRead(true).catch(e => console.warn('Refresh post-submit líder', e)), 0);
+        }
       } catch (err) {
         const d=err&&err.detalle;
         const code=(err && (err.tipo === 'timeout' || err.tipo === 'network')) ? null : (d&&(d.code||(d.error&&d.error.code)));
