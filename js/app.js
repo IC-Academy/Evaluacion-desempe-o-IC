@@ -472,7 +472,7 @@
     jerarquiasFiltros: {},
     nineboxSel: null,
     nineboxSelEmpleado: null,
-    remote: { ready: false, loading: false, error: null, me: null, mine: null, detail: null, detailLoading: false, team: null, dashboard: null, lastSync: null, leaderSubmitting: false },
+    remote: { ready: false, loading: false, error: null, me: null, mine: null, detail: null, detailLoading: false, team: null, dashboard: null, calibration: null, lastSync: null, leaderSubmitting: false },
     // --- Estado del login de dos pasos (beta 3) ---
     login: {
       paso: 'solicitar',   // 'solicitar' | 'validar'
@@ -752,7 +752,10 @@
       // de un workflow. Esto reduce el tiempo de entrada al portal del líder/DO.
       const jobs = [global.EDDApi.evaluationsMine(!!force).then(r => { state.remote.mine = apiData(r); })];
       if (state.user && state.user.perfil === 'lider') jobs.push(global.EDDApi.leaderTeam(!!force).then(r => { state.remote.team = apiData(r); }));
-      if (state.user && state.user.perfil === 'administrador') jobs.push(global.EDDApi.adminDashboard(!!force).then(r => { state.remote.dashboard = apiData(r); }));
+      if (state.user && state.user.perfil === 'administrador') {
+        jobs.push(global.EDDApi.adminDashboard(!!force).then(r => { state.remote.dashboard = apiData(r); }));
+        jobs.push(global.EDDApi.adminCalibration(!!force).then(r => { state.remote.calibration = apiData(r); }));
+      }
       await Promise.all(jobs);
 
       // El detalle completo cuesta ~10s en n8n/Airtable. Ya no se carga en el
@@ -2713,18 +2716,41 @@
   }
 
   function viewCalibracionLista(periodoId) {
+    if (apiReadMode()) {
+      const queue = state.remote.calibration || {};
+      const pending = Array.isArray(queue.pending) ? queue.pending : [];
+      const calibrated = Array.isArray(queue.calibrated) ? queue.calibrated : [];
+      const closed = Array.isArray(queue.closed) ? queue.closed : [];
+      const rows = [...pending, ...calibrated, ...closed];
+      const statusLabel = (x) => x.status === 'pending_calibration' ? 'Pendiente de calibración' : (x.status === 'closed' ? 'Cerrada' : 'Calibrada');
+      return `<section class="calibration-shell">
+        <div class="calibration-list-hero"><div><span class="admin-kicker">CALIBRACIÓN DO · DATOS EN VIVO</span><h1>Revisión y calibración</h1><p>Cola real derivada de Evaluaciones en n8n + Airtable. Solo aparecen colaboradores cuya evaluación de líder ya fue enviada.</p></div><div class="calibration-list-stats"><div><strong>${pending.length}</strong><span>Por revisar</span></div><div><strong>${calibrated.length}</strong><span>Calibradas</span></div></div></div>
+        <div class="calibration-card-list">
+        ${rows.map((x) => `<article class="calibration-person-card"><div class="calibration-avatar">${esc(x.name||'').split(' ').slice(0,2).map(v=>v[0]).join('')}</div><div class="calibration-person-main"><div class="calibration-person-title"><strong>${esc(x.name||x.employeeId)}</strong>${badge(statusLabel(x))}</div><span>${esc(x.position||'')} · ${esc(x.area||'')}</span><small>Líder: ${esc(x.leaderName||'—')}</small></div><div class="calibration-score"><span>Resultado</span><strong>${f1(x.calibratedResult ?? x.leaderResult)}</strong><small>${x.calibratedResult!=null?'Calibrado':'Líder'}</small></div><a class="btn btn-primary btn-sm" href="#/admin/calibracion/${esc(x.employeeId)}">${x.status==='pending_calibration'?'Calibrar':'Revisar'}</a></article>`).join('') || '<div class="admin-empty-state">No hay evaluaciones disponibles para calibración.</div>'}
+        </div>
+        <p class="backend-read-note">Lectura real activa. La cola ya no usa colaboradores demo.</p>
+      </section>`;
+    }
     const datos = datosGlobales(periodoId).filter((d) => [D.ESTADOS.PENDIENTE_CALIBRACION, D.ESTADOS.CALIBRADA, D.ESTADOS.RETRO_PENDIENTE, D.ESTADOS.CERRADA].includes(d.estado));
     const porCalibrar = datos.filter((d) => d.estado === D.ESTADOS.PENDIENTE_CALIBRACION).length;
     const calibradas = datos.filter((d) => S.getCalibracion(d.c.empleado, periodoId)).length;
-    return `<section class="calibration-shell">
-      <div class="calibration-list-hero"><div><span class="admin-kicker">CALIBRACIÓN DO</span><h1>Revisión y calibración</h1><p>Contrasta autoevaluación, evaluación del líder y contexto del colaborador antes de liberar resultados.</p></div><div class="calibration-list-stats"><div><strong>${porCalibrar}</strong><span>Por revisar</span></div><div><strong>${calibradas}</strong><span>Calibradas</span></div></div></div>
-      <div class="calibration-card-list">
-      ${datos.map((d) => { const lider=S.getLider(d.c.liderId); const cal=S.getCalibracion(d.c.empleado,periodoId); return `<article class="calibration-person-card"><div class="calibration-avatar">${esc(d.c.nombre).split(' ').slice(0,2).map(x=>x[0]).join('')}</div><div class="calibration-person-main"><div class="calibration-person-title"><strong>${esc(d.c.nombre)}</strong>${badge(d.estado)}</div><span>${esc(d.c.puesto||'')} · ${esc(d.c.area)}</span><small>Líder: ${esc(lider?lider.nombre:'—')}</small></div><div class="calibration-score"><span>Resultado</span><strong>${f1(d.totalFinal)}</strong><small>${cal&&cal.resultadoCalibrado!==undefined?'Calibrado':'Líder'}</small></div><a class="btn btn-primary btn-sm" href="#/admin/calibracion/${d.c.empleado}">${cal?'Revisar':'Calibrar'}</a></article>`; }).join('') || '<div class="admin-empty-state">No hay evaluaciones disponibles para calibración.</div>'}
-      </div>
-    </section>`;
+    return `<section class="calibration-shell"><div class="calibration-list-hero"><div><span class="admin-kicker">CALIBRACIÓN DO</span><h1>Revisión y calibración</h1></div><div class="calibration-list-stats"><div><strong>${porCalibrar}</strong><span>Por revisar</span></div><div><strong>${calibradas}</strong><span>Calibradas</span></div></div></div></section>`;
   }
 
   function viewCalibracionDetalle(colaboradorId, periodoId) {
+    if (apiReadMode() && state.remote.calibration) {
+      const q = state.remote.calibration;
+      const item = [...(q.pending||[]), ...(q.calibrated||[]), ...(q.closed||[])].find(x => String(x.employeeId) === String(colaboradorId));
+      if (item) {
+        const gap = (item.selfResult!=null && item.leaderResult!=null) ? Number(item.selfResult)-Number(item.leaderResult) : null;
+        return `<section class="calibration-shell calibration-detail-shell">
+          <a href="#/admin/calibracion" class="calibration-back">← Volver a calibración</a>
+          <div class="calibration-profile-hero"><div class="calibration-avatar large">${esc(item.name||'').split(' ').slice(0,2).map(v=>v[0]).join('')}</div><div class="calibration-profile-copy"><span class="admin-kicker">EXPEDIENTE DE CALIBRACIÓN · BACKEND</span><h1>${esc(item.name||item.employeeId)}</h1><p>${esc(item.position||'')} · ${esc(item.area||'')}</p><div class="calibration-meta"><span>Líder: <b>${esc(item.leaderName||'—')}</b></span><span>Periodo: <b>${esc(item.periodId||periodoId)}</b></span></div></div><div class="calibration-final-score"><span>Resultado líder</span><strong>${f1(item.leaderResult)}</strong>${badge(item.status==='pending_calibration'?'Pendiente de calibración':'Calibrada','yellow')}</div></div>
+          <div class="calibration-score-grid"><div class="calibration-score-card"><span>Autoevaluación</span><strong>${f1(item.selfResult)}</strong><small>Resultado backend</small></div><div class="calibration-score-card"><span>Evaluación líder</span><strong>${f1(item.leaderResult)}</strong><small>Base de calibración</small></div><div class="calibration-score-card"><span>Brecha auto vs líder</span><strong>${gap==null?'—':(gap>0?'+':'')+f1(gap)}</strong><small>Diferencia global</small></div><div class="calibration-score-card success"><span>Resultado calibrado</span><strong>${f1(item.calibratedResult)}</strong><small>${item.calibratedResult==null?'Pendiente':'Guardado por DO'}</small></div></div>
+          <div class="admin-dashboard-grid backend-admin-grid"><article class="admin-panel"><span class="admin-section-kicker">9-BOX · EJES BACKEND</span><h2>Lectura base</h2><div class="backend-objective-summary"><div><span>Actitud</span><strong>${f1(item.leaderAttitude)}</strong></div><div><span>Desempeño</span><strong>${f1(item.leaderPerformance)}</strong></div></div></article><article class="admin-panel"><span class="admin-section-kicker">SIGUIENTE CAPA</span><h2>Acciones de calibración</h2><p>La lectura de la cola ya está conectada. Guardar ajustes, liberar resultados y retroalimentación requieren los endpoints de escritura de calibración.</p></article></div>
+        </section>`;
+      }
+    }
     const col = S.getColaborador(colaboradorId);
     const resAuto = S.getUltimoResultadoPorOrigen(colaboradorId, periodoId, 'autoevaluacion');
     const resLider = S.getUltimoResultadoPorOrigen(colaboradorId, periodoId, 'lider');
