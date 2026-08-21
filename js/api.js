@@ -192,6 +192,8 @@
     leaderTeam(forceRefresh) { return apiRequest('/leader/team', { method: 'GET', cacheMs: 20000, forceRefresh: !!forceRefresh, timeoutMs: 12000 }); },
     adminDashboard(forceRefresh) { return apiRequest('/admin/dashboard', { method: 'GET', cacheMs: 20000, forceRefresh: !!forceRefresh, timeoutMs: 15000 }); },
     adminCalibration(forceRefresh) { return apiRequest('/admin/calibration', { method: 'GET', cacheMs: 15000, forceRefresh: !!forceRefresh, timeoutMs: 15000 }); },
+    async saveAdminCalibration(evaluationId, payload) { const r=await apiRequest('/admin/calibration/' + encodeURIComponent(evaluationId), { method: 'PUT', body: payload, timeoutMs: 30000 }); clearReadCache('/admin/calibration'); return r; },
+    async completeAdminCalibration(evaluationId) { const r=await apiRequest('/admin/calibration/' + encodeURIComponent(evaluationId) + '/complete', { method: 'POST', timeoutMs: 30000 }); clearReadCache('/admin/calibration'); clearReadCache('/admin/dashboard'); return r; },
 
     // --- Capa de escritura real (Write API v1) ----------------------------
     async initializeMyEvaluation() { const r=await apiRequest('/evaluations/mine/initialize', { method: 'POST' }); clearReadCache('/evaluations/'); return r; },

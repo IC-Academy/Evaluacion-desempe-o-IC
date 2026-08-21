@@ -472,7 +472,7 @@
     jerarquiasFiltros: {},
     nineboxSel: null,
     nineboxSelEmpleado: null,
-    remote: { ready: false, loading: false, error: null, me: null, mine: null, detail: null, detailLoading: false, team: null, dashboard: null, calibration: null, lastSync: null, leaderSubmitting: false },
+    remote: { ready: false, loading: false, error: null, me: null, mine: null, detail: null, detailLoading: false, team: null, dashboard: null, calibration: null, lastSync: null, leaderSubmitting: false, calibrationSaving: false, calibrationCompleting: false },
     // --- Estado del login de dos pasos (beta 3) ---
     login: {
       paso: 'solicitar',   // 'solicitar' | 'validar'
@@ -2743,11 +2743,22 @@
       const item = [...(q.pending||[]), ...(q.calibrated||[]), ...(q.closed||[])].find(x => String(x.employeeId) === String(colaboradorId));
       if (item) {
         const gap = (item.selfResult!=null && item.leaderResult!=null) ? Number(item.selfResult)-Number(item.leaderResult) : null;
+        const calibrationDone = item.calibrationStatus === 'calibration_completed';
+        const calibrationDraft = item.calibrationStatus === 'calibration_draft';
+        const currentCalibrated = item.calibratedResult != null ? Number(item.calibratedResult) : Number(item.leaderResult);
+        const reason = item.adjustmentReason || '';
         return `<section class="calibration-shell calibration-detail-shell">
           <a href="#/admin/calibracion" class="calibration-back">← Volver a calibración</a>
-          <div class="calibration-profile-hero"><div class="calibration-avatar large">${esc(item.name||'').split(' ').slice(0,2).map(v=>v[0]).join('')}</div><div class="calibration-profile-copy"><span class="admin-kicker">EXPEDIENTE DE CALIBRACIÓN · BACKEND</span><h1>${esc(item.name||item.employeeId)}</h1><p>${esc(item.position||'')} · ${esc(item.area||'')}</p><div class="calibration-meta"><span>Líder: <b>${esc(item.leaderName||'—')}</b></span><span>Periodo: <b>${esc(item.periodId||periodoId)}</b></span></div></div><div class="calibration-final-score"><span>Resultado líder</span><strong>${f1(item.leaderResult)}</strong>${badge(item.status==='pending_calibration'?'Pendiente de calibración':'Calibrada','yellow')}</div></div>
-          <div class="calibration-score-grid"><div class="calibration-score-card"><span>Autoevaluación</span><strong>${f1(item.selfResult)}</strong><small>Resultado backend</small></div><div class="calibration-score-card"><span>Evaluación líder</span><strong>${f1(item.leaderResult)}</strong><small>Base de calibración</small></div><div class="calibration-score-card"><span>Brecha auto vs líder</span><strong>${gap==null?'—':(gap>0?'+':'')+f1(gap)}</strong><small>Diferencia global</small></div><div class="calibration-score-card success"><span>Resultado calibrado</span><strong>${f1(item.calibratedResult)}</strong><small>${item.calibratedResult==null?'Pendiente':'Guardado por DO'}</small></div></div>
-          <div class="admin-dashboard-grid backend-admin-grid"><article class="admin-panel"><span class="admin-section-kicker">9-BOX · EJES BACKEND</span><h2>Lectura base</h2><div class="backend-objective-summary"><div><span>Actitud</span><strong>${f1(item.leaderAttitude)}</strong></div><div><span>Desempeño</span><strong>${f1(item.leaderPerformance)}</strong></div></div></article><article class="admin-panel"><span class="admin-section-kicker">SIGUIENTE CAPA</span><h2>Acciones de calibración</h2><p>La lectura de la cola ya está conectada. Guardar ajustes, liberar resultados y retroalimentación requieren los endpoints de escritura de calibración.</p></article></div>
+          <div class="calibration-profile-hero"><div class="calibration-avatar large">${esc(item.name||'').split(' ').slice(0,2).map(v=>v[0]).join('')}</div><div class="calibration-profile-copy"><span class="admin-kicker">EXPEDIENTE DE CALIBRACIÓN · BACKEND</span><h1>${esc(item.name||item.employeeId)}</h1><p>${esc(item.position||'')} · ${esc(item.area||'')}</p><div class="calibration-meta"><span>Líder: <b>${esc(item.leaderName||'—')}</b></span><span>Periodo: <b>${esc(item.periodId||periodoId)}</b></span></div></div><div class="calibration-final-score"><span>Resultado líder</span><strong>${f1(item.leaderResult)}</strong>${badge(calibrationDone?'Calibrada':calibrationDraft?'Calibración en borrador':'Pendiente de calibración', calibrationDone?'green':calibrationDraft?'blue':'yellow')}</div></div>
+          <div class="calibration-score-grid"><div class="calibration-score-card"><span>Autoevaluación</span><strong>${f1(item.selfResult)}</strong><small>Resultado backend</small></div><div class="calibration-score-card"><span>Evaluación líder</span><strong>${f1(item.leaderResult)}</strong><small>Base de calibración</small></div><div class="calibration-score-card"><span>Brecha auto vs líder</span><strong>${gap==null?'—':(gap>0?'+':'')+f1(gap)}</strong><small>Diferencia global</small></div><div class="calibration-score-card success"><span>Resultado calibrado</span><strong>${f1(item.calibratedResult)}</strong><small>${calibrationDone?'Calibración completada':calibrationDraft?'Borrador guardado':'Pendiente'}</small></div></div>
+          <div class="admin-dashboard-grid backend-admin-grid"><article class="admin-panel"><span class="admin-section-kicker">9-BOX · EJES BACKEND</span><h2>Lectura base</h2><div class="backend-objective-summary"><div><span>Actitud</span><strong>${f1(item.leaderAttitude)}</strong></div><div><span>Desempeño</span><strong>${f1(item.leaderPerformance)}</strong></div></div><p class="panel-support-copy">Estos ejes son referencia para la revisión humana de DO; la calibración no toma decisiones de talento automáticamente.</p></article>
+          <article class="admin-panel calibration-write-panel"><div class="admin-panel-head"><div><span class="admin-section-kicker">DECISIÓN DO</span><h2>Calibrar resultado</h2><p class="panel-support-copy">Mantén el resultado del líder o ajusta el valor con evidencia y justificación.</p></div><span class="calibration-live-result" id="calRemoteLiveBadge">${f1(currentCalibrated)}</span></div>
+            <div class="calibration-adjust-row"><label><span>Resultado calibrado</span><input type="number" id="calRemoteResult" min="1" max="5" step="0.01" value="${esc(currentCalibrated)}" ${calibrationDone?'disabled':''} oninput="App.previewRemoteCalibracion()"/></label><div class="calibration-reference-box"><span>Resultado líder original</span><strong>${f1(item.leaderResult)}</strong><small>Fuente de verdad del backend</small></div></div>
+            <label class="calibration-field"><span>Justificación del ajuste <em>${Math.abs(currentCalibrated-Number(item.leaderResult))>0.0001?'obligatoria':'si modificas el resultado'}</em></span><textarea id="calRemoteReason" ${calibrationDone?'disabled':''} placeholder="Describe la evidencia y el criterio utilizado para el ajuste...">${esc(reason)}</textarea></label>
+            <label class="calibration-field"><span>Notas de DO <em>opcional</em></span><textarea id="calRemoteNotes" ${calibrationDone?'disabled':''} placeholder="Contexto adicional de la revisión..."></textarea></label>
+            <div class="calibration-state-note ${calibrationDone?'is-complete':calibrationDraft?'is-draft':''}">${calibrationDone?'✓ Calibración completada. El resultado quedó bloqueado para esta etapa.':calibrationDraft?'Borrador guardado. Puedes seguir ajustando o completar la calibración.':'Aún no existe una calibración guardada.'}</div>
+            <div class="calibration-actions"><button class="btn btn-outline" id="calRemoteSaveBtn" ${calibrationDone?'disabled':''} onclick="App.guardarCalibracionRemota('${esc(item.evaluationId)}')">${state.remote.calibrationSaving?'Guardando…':'Guardar borrador'}</button><button class="btn btn-primary" id="calRemoteCompleteBtn" ${calibrationDone||state.remote.calibrationCompleting?'disabled':''} onclick="App.completarCalibracionRemota('${esc(item.evaluationId)}')">${calibrationDone?'✓ Calibración completada':state.remote.calibrationCompleting?'Completando…':'Completar calibración'}</button></div>
+          </article></div>
         </section>`;
       }
     }
@@ -3544,6 +3555,51 @@
     toggleAdminAlert(tipo){ state.adminAlertOpen=state.adminAlertOpen===tipo?null:tipo; render(); },
     setFiltroAdmin(campo, valor) { state.adminFiltros[campo] = valor || undefined; render(); },
     limpiarFiltrosAdmin() { state.adminFiltros = {}; render(); },
+    previewRemoteCalibracion() {
+      const input = document.getElementById('calRemoteResult');
+      const badge = document.getElementById('calRemoteLiveBadge');
+      if (!input || !badge) return;
+      let value = Number(input.value);
+      if (!Number.isFinite(value)) value = 0;
+      badge.textContent = value >= 1 && value <= 5 ? value.toFixed(2) : '—';
+    },
+    async guardarCalibracionRemota(evaluationId) {
+      if (state.remote.calibrationSaving || state.remote.calibrationCompleting) return;
+      const resultEl = document.getElementById('calRemoteResult');
+      const reasonEl = document.getElementById('calRemoteReason');
+      const notesEl = document.getElementById('calRemoteNotes');
+      const calibratedResult = Number(resultEl && resultEl.value);
+      const adjustmentReason = String(reasonEl && reasonEl.value || '').trim();
+      const notes = String(notesEl && notesEl.value || '').trim();
+      if (!Number.isFinite(calibratedResult) || calibratedResult < 1 || calibratedResult > 5) { showNotice('Captura un resultado calibrado válido entre 1 y 5.','warning'); return; }
+      state.remote.calibrationSaving = true; render();
+      try {
+        await global.EDDApi.saveAdminCalibration(evaluationId,{ calibratedResult, adjustmentReason, notes });
+        state.remote.calibration = apiData(await global.EDDApi.adminCalibration(true));
+        showNotice('Borrador de calibración guardado.','success');
+      } catch(e) { showNotice(e && e.message ? e.message : 'No fue posible guardar la calibración.','warning'); }
+      finally { state.remote.calibrationSaving = false; render(); }
+    },
+    async completarCalibracionRemota(evaluationId) {
+      if (state.remote.calibrationSaving || state.remote.calibrationCompleting) return;
+      const resultEl = document.getElementById('calRemoteResult');
+      const reasonEl = document.getElementById('calRemoteReason');
+      const notesEl = document.getElementById('calRemoteNotes');
+      const calibratedResult = Number(resultEl && resultEl.value);
+      const adjustmentReason = String(reasonEl && reasonEl.value || '').trim();
+      const notes = String(notesEl && notesEl.value || '').trim();
+      if (!Number.isFinite(calibratedResult) || calibratedResult < 1 || calibratedResult > 5) { showNotice('Captura un resultado calibrado válido entre 1 y 5.','warning'); return; }
+      state.remote.calibrationCompleting = true; render();
+      try {
+        // Persistimos primero el valor visible para evitar completar un borrador anterior por accidente.
+        await global.EDDApi.saveAdminCalibration(evaluationId,{ calibratedResult, adjustmentReason, notes });
+        await global.EDDApi.completeAdminCalibration(evaluationId);
+        state.remote.calibration = apiData(await global.EDDApi.adminCalibration(true));
+        if (global.EDDApi.adminDashboard) state.remote.dashboard = apiData(await global.EDDApi.adminDashboard(true));
+        showNotice('Calibración completada correctamente.','success');
+      } catch(e) { showNotice(e && e.message ? e.message : 'No fue posible completar la calibración.','warning'); }
+      finally { state.remote.calibrationCompleting = false; render(); }
+    },
     previewCalibracion(totalLider) {
       const ajusteEl = document.getElementById('calAjuste');
       const previewEl = document.getElementById('calResultadoPreview');

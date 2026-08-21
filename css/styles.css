@@ -1459,3 +1459,13 @@ body{background:linear-gradient(180deg,#f6f9fd 0%,#eef4fa 100%);}
   filter: grayscale(.25);
   pointer-events: none;
 }
+
+/* Calibración DO conectada a backend · v10 */
+.calibration-write-panel{min-height:100%}
+.calibration-reference-box{border:1px solid #d8e4f2;border-radius:14px;padding:14px 16px;background:#f7faff;display:flex;flex-direction:column;justify-content:center;gap:3px}
+.calibration-reference-box span{font-size:12px;color:#607590}.calibration-reference-box strong{font-size:26px;color:#082f63}.calibration-reference-box small{font-size:11px;color:#7d8da3}
+.calibration-state-note{margin-top:14px;padding:12px 14px;border-radius:12px;border:1px solid #d7e2ee;background:#f7f9fc;color:#5c6d82;font-size:13px}
+.calibration-state-note.is-draft{border-color:#b9d4ff;background:#eef6ff;color:#174b87}.calibration-state-note.is-complete{border-color:#b7e1c5;background:#effaf2;color:#176b38}
+.calibration-write-panel .calibration-actions{margin-top:16px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.calibration-write-panel input:disabled,.calibration-write-panel textarea:disabled{background:#f4f6f9;color:#6f7d90;cursor:not-allowed}
+@media(max-width:800px){.calibration-write-panel .calibration-adjust-row{grid-template-columns:1fr}.calibration-write-panel .calibration-actions .btn{width:100%}}
