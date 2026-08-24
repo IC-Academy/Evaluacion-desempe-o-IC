@@ -3912,8 +3912,29 @@
       try{
         if(apiWriteMode()){
           if(!cal.feedbackId) throw new Error('No se encontró el identificador de retroalimentación. Actualiza la pantalla.');
-          await global.EDDApi.saveFeedbackAgreements(cal.feedbackId,{agreements:txt});
+          // v13.4: el backend de acuerdos ha usado nombres distintos durante la integración.
+          // Enviamos las claves compatibles y, antes de liberar, verificamos que Airtable ya
+          // devuelva los acuerdos por Evaluation Detail. Así evitamos liberar contra una escritura
+          // todavía no visible o contra un contrato de payload desfasado.
+          await global.EDDApi.saveFeedbackAgreements(cal.feedbackId,{agreements:txt,finalAgreements:txt,acuerdosFinales:txt});
+          S.crearOActualizarCalibracion(colaboradorId,periodoId,{acuerdosFinales:txt,_motivo:'Acuerdos guardados antes de liberar'},state.user.nombre);
+          const autoEv=S.getEvaluacion(colaboradorId,periodoId,'autoevaluacion');
+          const backendEvalId=autoEv&&(autoEv.backendId||autoEv.id);
+          let persisted=false;
+          if(backendEvalId){
+            for(let i=0;i<3;i++){
+              if(i) await new Promise(r=>setTimeout(r,500));
+              const fresh=await refreshFeedbackDetail(backendEvalId,colaboradorId,S.getEvaluacion(colaboradorId,periodoId,'lider'));
+              const fb=fresh&&fresh.feedback;
+              const saved=String((fb&&(fb.finalAgreements||fb.agreements||fb.acuerdosFinales))||'').trim();
+              if(saved){ persisted=true; break; }
+            }
+          }
+          // Si el GET no expone aún el campo, dejamos que el propio gate del backend valide;
+          // pero nunca llamamos release antes de terminar el guardado anterior.
           await global.EDDApi.releaseFeedbackForSignature(cal.feedbackId);
+          if(!persisted) console.warn('EDD v13.4: acuerdos liberados; Evaluation Detail no expuso acuerdos antes del release.');
+          try{ if(backendEvalId) await refreshFeedbackDetail(backendEvalId,colaboradorId,S.getEvaluacion(colaboradorId,periodoId,'lider')); }catch(_){ }
         }
         S.crearOActualizarCalibracion(colaboradorId,periodoId,{acuerdosFinales:txt,acuerdosLiberados:true,fechaLiberacionAcuerdos:new Date().toISOString(),_motivo:'Líder libera acuerdos finales para firma'},state.user.nombre);
         showNotice('Acuerdos guardados y liberados para firma.','success'); render();
