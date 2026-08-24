@@ -2431,7 +2431,18 @@
         ${state.adminKpiGroup==='talento'?`<div class="admin-kpi-card"><span>Actitud promedio</span><strong>${avgAtt==null?'—':f1(avgAtt)}</strong><small>Base disponible</small></div><div class="admin-kpi-card"><span>Desempeño promedio</span><strong>${avgPerf==null?'—':f1(avgPerf)}</strong><small>Base disponible</small></div><div class="admin-kpi-card"><span>Cuadrantes con datos</span><strong>${nine.filter(x=>Number(x.count||0)>0).length}</strong><small>Distribución 9-Box</small></div>`:''}
       </div>
       ${detalle}
-      <div class="backend-live-footer"><span><i></i> Lectura backend activa</span><small>Las acciones de escritura se habilitarán en la siguiente fase.</small><button class="btn btn-outline btn-sm" onclick="App.recargarBackend()">Actualizar</button></div>
+      ${(()=>{
+        const areaData = Array.isArray(p.byArea)?p.byArea:(Array.isArray(p.areas)?p.areas:(Array.isArray(d.areas)?d.areas:[]));
+        const calRows=[...((state.remote.calibration&&state.remote.calibration.pending)||[]),...((state.remote.calibration&&state.remote.calibration.calibrated)||[]),...((state.remote.calibration&&state.remote.calibration.closed)||[])];
+        const peopleMap=new Map();
+        overdueEmployees.forEach(x=>peopleMap.set(String(x.employeeId||x.id||x.name),Object.assign({attention:'Autoevaluación vencida'},x)));
+        calRows.forEach(x=>peopleMap.set(String(x.employeeId||x.id||x.name),Object.assign({attention:x.status==='pending_calibration'?'Pendiente de calibración':x.status==='closed'?'Cerrada':'Calibración'},x)));
+        const people=[...peopleMap.values()];
+        const areaHtml=areaData.length?areaData.map(a=>{const name=a.area||a.name||'Área';const done=Number(a.completed??a.closed??a.evaluated??0);const at=Number(a.total??a.employees??0);const per=a.percentage??a.progressPercent??(at?done/at*100:0);return `<div class="admin-area-progress-row"><div><strong>${esc(name)}</strong><small>${done}/${at} completadas</small></div>${progressBar(per)}<b>${Math.round(Number(per)||0)}%</b></div>`}).join(''):`<div class="backend-data-gap compact"><strong>Desglose por área pendiente del endpoint</strong><span>La estructura visual está lista; se poblará cuando /admin/dashboard exponga avance por área.</span></div>`;
+        const peopleHtml=people.length?`<div class="admin-table-wrap"><table class="table admin-table"><thead><tr><th>Colaborador</th><th>Área</th><th>Etapa / atención</th><th>Resultado</th><th></th></tr></thead><tbody>${people.slice(0,30).map(x=>`<tr><td><strong>${esc(x.name||x.employeeName||x.employeeId||'—')}</strong><small>${esc(x.position||'')}</small></td><td>${esc(x.area||'—')}</td><td>${badge(x.attention||x.status||'Seguimiento')}</td><td>${x.leaderResult!=null?f1(x.leaderResult):'—'}</td><td>${x.evaluationId?`<button class="btn btn-outline btn-sm" onclick="App.abrirCalibracionDO('${esc(x.employeeId)}','${esc(x.evaluationId)}')">Revisar</button>`:''}</td></tr>`).join('')}</tbody></table></div>`:'<div class="admin-empty-state">Sin personas con alertas o actividad disponible en los endpoints actuales.</div>';
+        return `<div class="admin-dashboard-grid do-restored-grid"><article class="admin-panel"><div class="admin-panel-head"><div><span class="admin-section-kicker">COBERTURA POR ÁREA</span><h2>Avance de evaluación</h2><p>Recuperamos la lectura ejecutiva por área sin mezclar información demo.</p></div></div><div class="admin-area-progress-list">${areaHtml}</div></article><article class="admin-panel"><div class="admin-panel-head"><div><span class="admin-section-kicker">TALENTO</span><h2>Resumen 9-Box</h2></div><a class="btn btn-outline btn-sm" href="#/admin/9box">Abrir matriz</a></div><div class="backend-ninebox-grid compact">${nine.length?nine.map(x=>`<article><span>${esc(x.quadrant??'—')}</span><strong>${esc(x.count??0)}</strong><small>${esc(x.name||'')}</small></article>`).join(''):'<div class="backend-empty-wide">Sin distribución disponible todavía.</div>'}</div></article></div><article class="admin-panel admin-people-summary-restored"><div class="admin-panel-head"><div><span class="admin-section-kicker">OPERACIÓN DO</span><h2>Resumen de empleados y seguimiento</h2><p>Personas visibles actualmente por alertas, calibración o cierre.</p></div><span class="admin-panel-note">${people.length} visibles</span></div>${peopleHtml}</article><div class="admin-dashboard-grid do-alerts-restored"><article class="admin-panel"><span class="admin-section-kicker">VENCIMIENTOS</span><h2>Evaluaciones fuera de fecha</h2><div class="backend-objective-summary"><div><span>Autoevaluación</span><strong>${overdueSelf}</strong></div><div><span>Evaluación líder</span><strong>${overdueLeader}</strong></div><div><span>Retroalimentación</span><strong>${overdueFeedback}</strong></div></div></article><article class="admin-panel"><span class="admin-section-kicker">CIERRE</span><h2>Firmas y retroalimentación</h2><div class="backend-objective-summary"><div><span>Liberadas</span><strong>${f.released??0}</strong></div><div><span>Firma líder</span><strong>${f.pendingLeaderSignature??0}</strong></div><div><span>Firma colaborador</span><strong>${f.pendingEmployeeSignature??0}</strong></div></div></article></div>`;
+      })()}
+      <div class="backend-live-footer"><span><i></i> Lectura backend activa</span><small>Datos reales; los módulos sin información muestran el gap en lugar de datos demo.</small><button class="btn btn-outline btn-sm" onclick="App.recargarBackend()">Actualizar</button></div>
     </section>`;
   }
 
@@ -2726,7 +2737,7 @@
       return `<section class="calibration-shell">
         <div class="calibration-list-hero"><div><span class="admin-kicker">CALIBRACIÓN DO · DATOS EN VIVO</span><h1>Revisión y calibración</h1><p>Cola real derivada de Evaluaciones en n8n + Airtable. Solo aparecen colaboradores cuya evaluación de líder ya fue enviada.</p></div><div class="calibration-list-stats"><div><strong>${pending.length}</strong><span>Por revisar</span></div><div><strong>${calibrated.length}</strong><span>Calibradas</span></div></div></div>
         <div class="calibration-card-list">
-        ${rows.map((x) => `<article class="calibration-person-card"><div class="calibration-avatar">${esc(x.name||'').split(' ').slice(0,2).map(v=>v[0]).join('')}</div><div class="calibration-person-main"><div class="calibration-person-title"><strong>${esc(x.name||x.employeeId)}</strong>${badge(statusLabel(x))}</div><span>${esc(x.position||'')} · ${esc(x.area||'')}</span><small>Líder: ${esc(x.leaderName||'—')}</small></div><div class="calibration-score"><span>Resultado</span><strong>${f1(x.calibratedResult ?? x.leaderResult)}</strong><small>${x.calibratedResult!=null?'Calibrado':'Líder'}</small></div><a class="btn btn-primary btn-sm" href="#/admin/calibracion/${esc(x.employeeId)}">${x.status==='pending_calibration'?'Calibrar':'Revisar'}</a></article>`).join('') || '<div class="admin-empty-state">No hay evaluaciones disponibles para calibración.</div>'}
+        ${rows.map((x) => `<article class="calibration-person-card"><div class="calibration-avatar">${esc(x.name||'').split(' ').slice(0,2).map(v=>v[0]).join('')}</div><div class="calibration-person-main"><div class="calibration-person-title"><strong>${esc(x.name||x.employeeId)}</strong>${badge(statusLabel(x))}</div><span>${esc(x.position||'')} · ${esc(x.area||'')}</span><small>Líder: ${esc(x.leaderName||'—')}</small></div><div class="calibration-score"><span>Resultado</span><strong>${f1(x.calibratedResult ?? x.leaderResult)}</strong><small>${x.calibratedResult!=null?'Calibrado':'Líder'}</small></div><button class="btn btn-primary btn-sm" onclick="App.abrirCalibracionDO('${esc(x.employeeId)}','${esc(x.evaluationId||'')}')">${x.status==='pending_calibration'?'Calibrar':'Revisar'}</button></article>`).join('') || '<div class="admin-empty-state">No hay evaluaciones disponibles para calibración.</div>'}
         </div>
         <p class="backend-read-note">Lectura real activa. La cola ya no usa colaboradores demo.</p>
       </section>`;
@@ -2742,23 +2753,86 @@
       const q = state.remote.calibration;
       const item = [...(q.pending||[]), ...(q.calibrated||[]), ...(q.closed||[])].find(x => String(x.employeeId) === String(colaboradorId));
       if (item) {
+        const detail = state.remote.detail || null;
+        const evInfo = detail && detail.evaluation || {};
+        const detailEmployee = detail && detail.employee && (detail.employee.employeeId || detail.employee.id);
+        const detailReady = detail && (!detailEmployee || String(detailEmployee)===String(colaboradorId)) && Array.isArray(detail.answers);
+        if (!detailReady && !state.remote.detailLoading) setTimeout(()=>Actions.cargarDetalleCalibracionDO(String(colaboradorId), String(item.evaluationId||'')), 0);
+
         const gap = (item.selfResult!=null && item.leaderResult!=null) ? Number(item.selfResult)-Number(item.leaderResult) : null;
         const calibrationDone = item.calibrationStatus === 'calibration_completed';
         const calibrationDraft = item.calibrationStatus === 'calibration_draft';
         const currentCalibrated = item.calibratedResult != null ? Number(item.calibratedResult) : Number(item.leaderResult);
         const reason = item.adjustmentReason || '';
-        return `<section class="calibration-shell calibration-detail-shell">
+        const answers = detailReady ? (detail.answers||[]) : [];
+        const objectives = detailReady ? (detail.objectives||[]) : [];
+        const feedback = detailReady ? (detail.feedback||{}) : {};
+
+        const roleOf = a => String(a.evaluator||a.evaluador||a.role||a.evaluatorRole||a['Evaluador (rol)']||'').toLowerCase();
+        const valOf = a => a.value ?? a.valor ?? a.score ?? a.rating ?? a.calificacion ?? null;
+        const commentOf = a => a.comment ?? a.comentario ?? a.comments ?? '';
+        const cidOf = a => String(a.competencyId||a.competenciaId||a.questionId||a.preguntaId||'');
+        const findAns = (cid, leader) => answers.find(a => cidOf(a)===cid && (leader ? /l[ií]der|leader/.test(roleOf(a)) : !/l[ií]der|leader/.test(roleOf(a))));
+        const cat = [...(D.COMPETENCIAS.actitud||[]), ...(D.COMPETENCIAS.habilidades||[])];
+        const competencyRows = cat.map(c=>{ const aa=findAns(c.id,false), ll=findAns(c.id,true); const av=valOf(aa), lv=valOf(ll); const diff=(typeof av==='number'&&typeof lv==='number')?Number(lv)-Number(av):null; return `<tr class="${diff!=null&&Math.abs(diff)>=2?'cal-gap-row':''}"><td><strong>${esc(c.nombre)}</strong><small>${esc(c.id)} · ${c.peso}%</small></td><td>${av==null?'—':esc(av)}</td><td>${lv==null?'—':esc(lv)}</td><td>${diff==null?'—':(diff>0?'+':'')+f1(diff)}</td><td>${esc(commentOf(ll)||commentOf(aa)||'—')}</td></tr>`; }).join('');
+        const toolDefs=[['TOOL-EXCEL','Excel'],['TOOL-POWERBI','Power BI'],['TOOL-IA','Manejo de IA']];
+        const toolRows=toolDefs.map(([id,label])=>{const aa=findAns(id,false),ll=findAns(id,true);return `<tr><td><strong>${label}</strong></td><td>${valOf(aa)??'—'}</td><td>${valOf(ll)??'—'}</td></tr>`}).join('');
+
+        const objRows = objectives.length ? objectives.map((o,i)=>{
+          const desc=o.description??o.descripcion??o.objective??o.objetivo??`Objetivo ${i+1}`;
+          const meta=o.target??o.meta??o.metaAcordada??'—';
+          const result=o.result??o.resultado??o.resultadoAlcanzado??'—';
+          let selfPct=o.compliancePercent??o.cumplimiento??o.selfPercent??o.cumplimientoObjetivo??null;
+          if (typeof selfPct==='number' && selfPct>=0 && selfPct<=1.2) selfPct*=100;
+          const leaderPct=o.leaderValidatedPercent??o.porcentajeValidadoLider??o.leaderPercent??null;
+          const selfScore=o.selfScore??o.calificacionColaborador??o.automaticScore??o.calificacionAutomatica??null;
+          const leaderScore=o.leaderScore??o.calificacionLider??null;
+          const adj=o.leaderAdjustmentReason??o.justificacionAjusteLider??o.justificacionLider??'';
+          return `<tr><td><strong>${esc(desc)}</strong>${adj?`<small>Ajuste líder: ${esc(adj)}</small>`:''}</td><td>${esc(meta)}</td><td>${esc(result)}</td><td>${selfPct==null?'—':f1(selfPct)+'%'}</td><td>${leaderPct==null?'—':f1(leaderPct)+'%'}</td><td>${selfScore??'—'} → ${leaderScore??'—'}</td></tr>`;
+        }).join('') : '';
+
+        const secAvg=(prefix,leader)=>{const xs=answers.filter(a=>cidOf(a).startsWith(prefix)&&(leader?/l[ií]der|leader/.test(roleOf(a)):!/l[ií]der|leader/.test(roleOf(a)))).map(valOf).filter(v=>typeof v==='number');return xs.length?xs.reduce((a,b)=>a+b,0)/xs.length:null};
+        const objScore=(leader)=>{const xs=objectives.map(o=>leader?(o.leaderScore??o.calificacionLider):(o.selfScore??o.calificacionColaborador??o.automaticScore??o.calificacionAutomatica)).filter(v=>typeof v==='number');return xs.length?xs.reduce((a,b)=>a+b,0)/xs.length:null};
+        const autoProm={actitud:secAvg('A',false),habilidades:secAvg('B',false),objetivos:objScore(false)};
+        const leaderProm={actitud:secAvg('A',true),habilidades:secAvg('B',true),objetivos:objScore(true)};
+        const radar = detailReady ? global.EDDCharts.renderRadarChart({autoevaluacion:autoProm,evaluacionLider:leaderProm,calibracion:item.calibratedResult!=null?{resultadoLider:item.leaderResult,resultadoCalibrado:item.calibratedResult}:null,size:340}) : '';
+        const nine = global.EDDCharts.renderNineBoxIndividual({actitudProm:Number(item.leaderAttitude)/20, desempenoProm:Number(item.leaderPerformance)/20, nombreColaborador:item.name});
+        const fget=(...keys)=>{for(const k of keys){if(feedback&&feedback[k]!=null&&feedback[k]!=='')return feedback[k];}return ''};
+        const strengths=fget('strengths','fortalezas','Fortalezas');
+        const opp=fget('developmentOpportunities','oportunidadesDesarrollo','areasOfOpportunity','Áreas de oportunidad');
+        const gaps=fget('gaps','brechas','debilidadesBrechas','Brechas a atender');
+        const risks=fget('risks','riesgosAtencion','Riesgos y factores de atención');
+        const summary=fget('leaderSummary','sintesisLider','comments','comentariosLider','Comentarios del líder');
+        const areas=fget('improvementPlan','planMejora','planDeMejora','Plan de mejora');
+        const dev=fget('developmentPlan','planDesarrollo','planDeDesarrollo','Plan de desarrollo');
+
+        return `<section class="calibration-shell calibration-detail-shell calibration-rich-remote">
           <a href="#/admin/calibracion" class="calibration-back">← Volver a calibración</a>
-          <div class="calibration-profile-hero"><div class="calibration-avatar large">${esc(item.name||'').split(' ').slice(0,2).map(v=>v[0]).join('')}</div><div class="calibration-profile-copy"><span class="admin-kicker">EXPEDIENTE DE CALIBRACIÓN · BACKEND</span><h1>${esc(item.name||item.employeeId)}</h1><p>${esc(item.position||'')} · ${esc(item.area||'')}</p><div class="calibration-meta"><span>Líder: <b>${esc(item.leaderName||'—')}</b></span><span>Periodo: <b>${esc(item.periodId||periodoId)}</b></span></div></div><div class="calibration-final-score"><span>Resultado líder</span><strong>${f1(item.leaderResult)}</strong>${badge(calibrationDone?'Calibrada':calibrationDraft?'Calibración en borrador':'Pendiente de calibración', calibrationDone?'green':calibrationDraft?'blue':'yellow')}</div></div>
-          <div class="calibration-score-grid"><div class="calibration-score-card"><span>Autoevaluación</span><strong>${f1(item.selfResult)}</strong><small>Resultado backend</small></div><div class="calibration-score-card"><span>Evaluación líder</span><strong>${f1(item.leaderResult)}</strong><small>Base de calibración</small></div><div class="calibration-score-card"><span>Brecha auto vs líder</span><strong>${gap==null?'—':(gap>0?'+':'')+f1(gap)}</strong><small>Diferencia global</small></div><div class="calibration-score-card success"><span>Resultado calibrado</span><strong>${f1(item.calibratedResult)}</strong><small>${calibrationDone?'Calibración completada':calibrationDraft?'Borrador guardado':'Pendiente'}</small></div></div>
-          <div class="admin-dashboard-grid backend-admin-grid"><article class="admin-panel"><span class="admin-section-kicker">9-BOX · EJES BACKEND</span><h2>Lectura base</h2><div class="backend-objective-summary"><div><span>Actitud</span><strong>${f1(item.leaderAttitude)}</strong></div><div><span>Desempeño</span><strong>${f1(item.leaderPerformance)}</strong></div></div><p class="panel-support-copy">Estos ejes son referencia para la revisión humana de DO; la calibración no toma decisiones de talento automáticamente.</p></article>
-          <article class="admin-panel calibration-write-panel"><div class="admin-panel-head"><div><span class="admin-section-kicker">DECISIÓN DO</span><h2>Calibrar resultado</h2><p class="panel-support-copy">Mantén el resultado del líder o ajusta el valor con evidencia y justificación.</p></div><span class="calibration-live-result" id="calRemoteLiveBadge">${f1(currentCalibrated)}</span></div>
+          <div class="calibration-profile-hero"><div class="calibration-avatar large">${esc(item.name||'').split(' ').slice(0,2).map(v=>v[0]).join('')}</div><div class="calibration-profile-copy"><span class="admin-kicker">EXPEDIENTE EJECUTIVO DE CALIBRACIÓN · DATOS EN VIVO</span><h1>${esc(item.name||item.employeeId)}</h1><p>${esc(item.position||'')} · ${esc(item.area||'')}</p><div class="calibration-meta"><span>Líder: <b>${esc(item.leaderName||'—')}</b></span><span>Periodo: <b>${esc(item.periodId||periodoId)}</b></span><span>ID: <b>${esc(item.employeeId)}</b></span></div></div><div class="calibration-final-score"><span>Resultado líder</span><strong>${f1(item.leaderResult)}</strong>${badge(calibrationDone?'Calibrada':calibrationDraft?'Calibración en borrador':'Pendiente de calibración', calibrationDone?'green':calibrationDraft?'blue':'yellow')}</div></div>
+
+          <div class="calibration-score-grid"><div class="calibration-score-card"><span>Autoevaluación</span><strong>${f1(item.selfResult)}</strong><small>Percepción colaborador</small></div><div class="calibration-score-card"><span>Evaluación líder</span><strong>${f1(item.leaderResult)}</strong><small>Base de calibración</small></div><div class="calibration-score-card ${gap!=null&&Math.abs(gap)>=1?'attention':''}"><span>Brecha auto vs líder</span><strong>${gap==null?'—':(gap>0?'+':'')+f1(gap)}</strong><small>Diferencia global</small></div><div class="calibration-score-card success"><span>Resultado calibrado</span><strong>${item.calibratedResult==null?'—':f1(item.calibratedResult)}</strong><small>${calibrationDone?'Completada':calibrationDraft?'Borrador':'Pendiente'}</small></div></div>
+
+          ${!detailReady?`<article class="admin-panel calibration-loading-detail"><div class="backend-spinner"></div><div><span class="admin-section-kicker">CARGANDO EXPEDIENTE</span><h2>Recuperando respuestas, objetivos y contexto del líder…</h2><p>La calibración puede continuar cuando termine esta lectura. No se usan datos demo.</p></div></article>`:`
+          <div class="admin-dashboard-grid calibration-executive-grid">
+            <article class="admin-panel"><span class="admin-section-kicker">LECTURA POR SECCIÓN</span><h2>Autoevaluación vs. líder</h2>${radar}</article>
+            <article class="admin-panel"><span class="admin-section-kicker">9-BOX · EJES BACKEND</span><h2>Ubicación de talento</h2><div class="backend-objective-summary"><div><span>Actitud</span><strong>${f1(item.leaderAttitude)}</strong></div><div><span>Desempeño</span><strong>${f1(item.leaderPerformance)}</strong></div></div>${nine}<p class="panel-support-copy">Referencia para revisión humana de DO. No genera decisiones laborales automáticas.</p></article>
+          </div>
+
+          <article class="admin-panel calibration-detail-table"><div class="admin-panel-head"><div><span class="admin-section-kicker">COMPETENCIAS</span><h2>Detalle de la evaluación</h2><p>Contrasta la percepción del colaborador con la valoración del líder y enfoca la revisión donde exista brecha.</p></div></div><div class="admin-table-wrap"><table class="table admin-table"><thead><tr><th>Competencia</th><th>Auto</th><th>Líder</th><th>Brecha</th><th>Comentario</th></tr></thead><tbody>${competencyRows}</tbody></table></div></article>
+
+          <div class="admin-dashboard-grid calibration-context-two"><article class="admin-panel"><span class="admin-section-kicker">HERRAMIENTAS B.2</span><h2>Dominio de herramientas</h2><table class="table table-compact"><thead><tr><th>Herramienta</th><th>Auto</th><th>Líder</th></tr></thead><tbody>${toolRows}</tbody></table></article><article class="admin-panel"><span class="admin-section-kicker">LECTURA CUALITATIVA</span><h2>Contexto del líder</h2><div class="leader-context-grid"><div><h4>Fortalezas</h4><p>${esc(strengths)||'<span class="muted">Sin dato backend.</span>'}</p></div><div><h4>Oportunidades</h4><p>${esc(opp)||'<span class="muted">Sin dato backend.</span>'}</p></div><div><h4>Brechas</h4><p>${esc(gaps)||'<span class="muted">Sin dato backend.</span>'}</p></div><div><h4>Factores de atención</h4><p>${esc(risks)||'<span class="muted">Sin dato backend.</span>'}</p></div><div class="span-2"><h4>Síntesis del líder</h4><p>${esc(summary)||'<span class="muted">Sin dato backend.</span>'}</p></div></div></article></div>
+
+          <article class="admin-panel calibration-objectives-rich"><div class="admin-panel-head"><div><span class="admin-section-kicker">OBJETIVOS</span><h2>Cumplimiento y validación del líder</h2></div></div>${objRows?`<div class="admin-table-wrap"><table class="table admin-table"><thead><tr><th>Objetivo</th><th>Meta</th><th>Resultado</th><th>% colaborador</th><th>% líder</th><th>Calificación</th></tr></thead><tbody>${objRows}</tbody></table></div>`:'<div class="admin-empty-state">Sin objetivos aplicables o sin datos disponibles.</div>'}</article>
+
+          <div class="admin-dashboard-grid calibration-context-two"><article class="admin-panel"><span class="admin-section-kicker">ACUERDOS</span><h2>Plan de mejora</h2><p>${esc(areas)||'<span class="muted">Sin dato backend disponible.</span>'}</p></article><article class="admin-panel"><span class="admin-section-kicker">DESARROLLO</span><h2>Plan de desarrollo</h2><p>${esc(dev)||'<span class="muted">Sin dato backend disponible.</span>'}</p></article></div>`}
+
+          <article class="admin-panel calibration-write-panel calibration-write-wide"><div class="admin-panel-head"><div><span class="admin-section-kicker">DECISIÓN DO</span><h2>Calibrar resultado</h2><p class="panel-support-copy">Mantén el resultado del líder o ajusta el valor con evidencia y justificación. El resultado original siempre queda visible.</p></div><span class="calibration-live-result" id="calRemoteLiveBadge">${f1(currentCalibrated)}</span></div>
             <div class="calibration-adjust-row"><label><span>Resultado calibrado</span><input type="number" id="calRemoteResult" min="1" max="5" step="0.01" value="${esc(currentCalibrated)}" ${calibrationDone?'disabled':''} oninput="App.previewRemoteCalibracion()"/></label><div class="calibration-reference-box"><span>Resultado líder original</span><strong>${f1(item.leaderResult)}</strong><small>Fuente de verdad del backend</small></div></div>
             <label class="calibration-field"><span>Justificación del ajuste <em>${Math.abs(currentCalibrated-Number(item.leaderResult))>0.0001?'obligatoria':'si modificas el resultado'}</em></span><textarea id="calRemoteReason" ${calibrationDone?'disabled':''} placeholder="Describe la evidencia y el criterio utilizado para el ajuste...">${esc(reason)}</textarea></label>
             <label class="calibration-field"><span>Notas de DO <em>opcional</em></span><textarea id="calRemoteNotes" ${calibrationDone?'disabled':''} placeholder="Contexto adicional de la revisión..."></textarea></label>
             <div class="calibration-state-note ${calibrationDone?'is-complete':calibrationDraft?'is-draft':''}">${calibrationDone?'✓ Calibración completada. El resultado quedó bloqueado para esta etapa.':calibrationDraft?'Borrador guardado. Puedes seguir ajustando o completar la calibración.':'Aún no existe una calibración guardada.'}</div>
             <div class="calibration-actions"><button class="btn btn-outline" id="calRemoteSaveBtn" ${calibrationDone?'disabled':''} onclick="App.guardarCalibracionRemota('${esc(item.evaluationId)}')">${state.remote.calibrationSaving?'Guardando…':'Guardar borrador'}</button><button class="btn btn-primary" id="calRemoteCompleteBtn" ${calibrationDone||state.remote.calibrationCompleting?'disabled':''} onclick="App.completarCalibracionRemota('${esc(item.evaluationId)}')">${calibrationDone?'✓ Calibración completada':state.remote.calibrationCompleting?'Completando…':'Completar calibración'}</button></div>
-          </article></div>
+          </article>
         </section>`;
       }
     }
@@ -3027,6 +3101,33 @@
         state.wizard={seccionIdx:0,evaluacionId:lev.id,tipo:'lider',colaboradorId:String(employeeId),liderId:String(state.user.empleado)};
         navigate('#/lider/evaluar/' + employeeId);
       } catch (err) { showNotice(err.message || 'No fue posible cargar la evaluación.','warning'); } finally { state.remote.loadingEvaluationId = null; }
+    },
+    async abrirCalibracionDO(employeeId, evaluationId) {
+      if (!apiReadMode()) { navigate('#/admin/calibracion/' + employeeId); return; }
+      state.remote.detail = null;
+      navigate('#/admin/calibracion/' + employeeId);
+      await Actions.cargarDetalleCalibracionDO(employeeId, evaluationId);
+    },
+    async cargarDetalleCalibracionDO(employeeId, evaluationId) {
+      if (!apiReadMode() || state.remote.detailLoading || !evaluationId) return;
+      state.remote.detailLoading = true;
+      try {
+        const detail = apiData(await global.EDDApi.evaluationDetail(evaluationId, true));
+        state.remote.detail = detail;
+        // Hidrata una copia local únicamente para reutilizar componentes visuales históricos;
+        // la fuente de verdad sigue siendo backend y no se sustituye con datos demo.
+        try {
+          const emp = detail.employee || { employeeId, name:'', position:'', area:'' };
+          upsertColaboradorRemoto(emp, (detail.leader&&detail.leader.employeeId)||'');
+          const info = detail.evaluation || {};
+          const auto = getOrCreateLocalEvaluation(employeeId, (detail.leader&&detail.leader.employeeId)||'', 'autoevaluacion', info.selfEvaluationId||evaluationId, info.selfState||'Completada');
+          const lev = getOrCreateLocalEvaluation(employeeId, (detail.leader&&detail.leader.employeeId)||'', 'lider', info.leaderEvaluationId||info.managerEvaluationId||(evaluationId+'-LIDER'), info.leaderState||'Completada');
+          (detail.answers||[]).forEach(a=>{ const who=String(a.evaluator||a.evaluador||a.role||a.evaluatorRole||'').toLowerCase(); mapRemoteAnswerToLocal(/l[ií]der|leader/.test(who)?lev.id:auto.id,a); });
+          hydrateObjectives(auto.id, detail.objectives||[], false); hydrateObjectives(lev.id, detail.objectives||[], true);
+          syncBackendResultsFromDetail(detail, auto, lev);
+        } catch(e) { console.warn('EDD DO: hidratación visual parcial',e); }
+      } catch(e) { showNotice(e.message||'No fue posible cargar el expediente completo.','warning'); }
+      finally { state.remote.detailLoading=false; render(); }
     },
     logout,
     async solicitarCodigo(numeroEmpleado) {
