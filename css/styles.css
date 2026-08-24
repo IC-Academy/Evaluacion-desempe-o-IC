@@ -1506,3 +1506,36 @@ body{background:linear-gradient(180deg,#f6f9fd 0%,#eef4fa 100%);}
 .calibration-release-panel h3{margin:3px 0 4px;color:#002a5c;font-size:1.05rem}.calibration-release-panel p{margin:0;color:#667085;max-width:680px}
 .demo-readiness-panel{margin-top:24px}.demo-flow-strip{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.demo-flow-strip span{padding:13px 12px;border-radius:14px;background:#f4f6f8;border:1px solid #e7ebef;color:#7a8492;font-size:.85rem;font-weight:700;text-align:center}.demo-flow-strip span.done{background:#f0f8f4;border-color:#cce8d8;color:#236b48}
 @media(max-width:900px){.calibration-release-panel{align-items:flex-start;flex-direction:column}.demo-flow-strip{grid-template-columns:1fr 1fr}.demo-flow-strip span:last-child{grid-column:1/-1}}
+
+
+/* V14 · Production polish — feedback inmediato y carga percibida */
+.btn, button { transition: background-color .16s ease, border-color .16s ease, color .16s ease, opacity .16s ease, transform .08s ease, box-shadow .16s ease; }
+.btn.ui-pressed, button.ui-pressed {
+  background:#8f9aa8 !important;
+  border-color:#8f9aa8 !important;
+  color:#fff !important;
+  box-shadow:none !important;
+  transform:translateY(1px);
+  opacity:.94;
+  pointer-events:none;
+}
+.btn:disabled, button:disabled {
+  background:#aab3bf !important;
+  border-color:#aab3bf !important;
+  color:#f8fafc !important;
+  opacity:.82 !important;
+  cursor:wait !important;
+  box-shadow:none !important;
+}
+body.edd-request-active::before {
+  content:"";
+  position:fixed;
+  z-index:99999;
+  left:0; top:0;
+  width:34%; height:3px;
+  background:linear-gradient(90deg, transparent, #1d73d4 35%, #0b4f9c 70%, transparent);
+  animation:eddRequestProgress 1.05s ease-in-out infinite;
+  pointer-events:none;
+}
+@keyframes eddRequestProgress { from { transform:translateX(-110%); } to { transform:translateX(315%); } }
+.backend-read-note { color:#617086; }

@@ -1,7 +1,7 @@
 /**
  * config.js
  * ---------------------------------------------------------------------------
- * Configuración central de la Plataforma EDD Inter-Con (Beta 3).
+ * Configuración central de la Plataforma EDD Inter-Con.
  *
  * ÚNICO lugar donde vive el modo de ejecución y los parámetros de conexión a
  * la futura API (n8n -> Airtable). Ningún otro archivo debe declarar su
@@ -37,7 +37,6 @@
   'use strict';
 
   const APP_CONFIG = {
-    // "demo" (por defecto, sin backend) | "api" (consume webhooks de n8n)
     mode: 'api',
 
     // Base de los webhooks de n8n. Sustituir por la URL real del entorno
@@ -53,12 +52,6 @@
     // petición y mostrar "Error de conexión".
     requestTimeout: 15000,
 
-    // Código temporal fijo SOLO para el modo demo (ver auth.js y README,
-    // sección "Modo demo vs. modo API"). En modo "api" este valor se ignora
-    // por completo: la validación real la hace n8n contra el código enviado
-    // por correo.
-    demoCode: '123456',
-
     // Vigencia informativa del código temporal (minutos). La validación
     // definitiva de vigencia la debe hacer siempre el backend (n8n).
     codeValidityMinutes: 10,
@@ -67,13 +60,7 @@
     // tanto en modo demo como como valor por defecto si el backend no manda
     // "expiresIn".
     defaultSessionSeconds: 28800,
-
-    // Fase Backend Integration v1: la lectura ya usa API real. Las escrituras
-    // todavía se conectarán en la siguiente fase, por lo que no deben
-    // considerarse persistidas en backend hasta que exista su endpoint.
     readApiEnabled: true,
-    // Permite validar el formulario completo con la identidad real de /auth/me
-    // mientras la escritura n8n/Airtable se termina. Nunca se presenta como dato persistido.
     testCaptureEnabled: false,
     writeApiEnabled: true,
 

@@ -1,7 +1,7 @@
 /**
  * api.js
  * ---------------------------------------------------------------------------
- * Cliente HTTP centralizado de la Plataforma EDD Inter-Con (Beta 3).
+ * Cliente HTTP centralizado de la Plataforma EDD Inter-Con.
  *
  * TODAS las peticiones al backend (n8n) deben pasar por apiRequest() /
  * las funciones EDDApi.* de este archivo. Ninguna otra pantalla debe hacer
@@ -48,6 +48,15 @@
   // casi al mismo tiempo. Nunca cachea escrituras.
   const readCache = new Map();
   const inflight = new Map();
+  let pendingRequests = 0;
+  function setRequestActivity(delta) {
+    pendingRequests = Math.max(0, pendingRequests + delta);
+    try {
+      if (global.document && global.document.body) {
+        global.document.body.classList.toggle('edd-request-active', pendingRequests > 0);
+      }
+    } catch (e) { /* indicador visual no crítico */ }
+  }
   function cacheKey(endpoint) { return String(endpoint || ''); }
   function clearReadCache(prefix) {
     if (!prefix) { readCache.clear(); return; }
@@ -109,6 +118,7 @@
 
     const execute = async () => {
       let response;
+      setRequestActivity(1);
       try {
         response = await fetch(url, {
           method,
@@ -118,6 +128,7 @@
         });
       } catch (err) {
         if (timeoutId) clearTimeout(timeoutId);
+        setRequestActivity(-1);
         console.error('EDDApi: error de red llamando a', endpoint, err);
         const aborted = !!(controller && controller.signal && controller.signal.aborted);
         const abortLike = aborted || (err && (err.name === 'AbortError' || err.code === 20 || /aborted|abort/i.test(String(err.message || ''))));
@@ -127,6 +138,7 @@
         throw new ApiError('network', 'No fue posible conectar con el servidor. Verifica tu conexión e intenta de nuevo.', null, err);
       }
       if (timeoutId) clearTimeout(timeoutId);
+      setRequestActivity(-1);
 
       if (response.status === 401) {
         try { global.dispatchEvent(new CustomEvent(EVENTO_SESION_EXPIRADA)); } catch (e) { /* entornos sin CustomEvent */ }

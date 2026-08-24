@@ -278,7 +278,7 @@
 
     // Auditoría de la carga inicial
     db.auditoria.push({
-      id: nextId('AUD'), usuario: 'Sistema', accion: 'Carga de datos de demostración', entidad: 'sistema', entidadId: '-',
+      id: nextId('AUD'), usuario: 'Sistema', accion: 'Inicialización de datos locales', entidad: 'sistema', entidadId: '-',
       fecha: '2026-06-01', hora: '08:00', valorAnterior: null, valorNuevo: 'Base de datos inicial cargada'
     });
 
