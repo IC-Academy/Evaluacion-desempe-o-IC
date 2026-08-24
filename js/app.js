@@ -1167,11 +1167,61 @@
   // =========================================================================
   // PORTAL COLABORADOR
   // =========================================================================
+  function normalizeBackendProcessState(value) {
+    const raw = String(value || '').trim();
+    const key = raw.toLowerCase().replace(/[\s-]+/g, '_');
+    const map = {
+      'draft': D.ESTADOS.EN_PROGRESO,
+      'in_progress': D.ESTADOS.EN_PROGRESO,
+      'en_progreso': D.ESTADOS.EN_PROGRESO,
+      'submitted': D.ESTADOS.PENDIENTE_LIDER,
+      'self_submitted': D.ESTADOS.PENDIENTE_LIDER,
+      'leader_submitted': D.ESTADOS.PENDIENTE_CALIBRACION,
+      'pending_calibration': D.ESTADOS.PENDIENTE_CALIBRACION,
+      'calibration': D.ESTADOS.CALIBRADA,
+      'calibrated': D.ESTADOS.CALIBRADA,
+      'released': D.ESTADOS.RETRO_PENDIENTE,
+      'feedback': D.ESTADOS.RETRO_PENDIENTE,
+      'closed': D.ESTADOS.CERRADA
+    };
+    return map[key] || raw || D.ESTADOS.NO_INICIADA;
+  }
+
+  function ownRemoteProcessState(mineEval) {
+    const d = state.remote && state.remote.detail;
+    // Para vistas que cargan Evaluation Detail (p. ej. Retroalimentación),
+    // el detalle es la fuente más fresca. /evaluations/mine puede conservar
+    // selfState='submitted' aunque DO ya haya liberado el proceso.
+    const candidates = [
+      d && d.processState,
+      d && d.generalProcessState,
+      d && d.evaluation && d.evaluation.processState,
+      d && d.evaluation && d.evaluation.generalProcessState,
+      d && d.status && d.status.processState,
+      mineEval && mineEval.processState,
+      mineEval && mineEval.generalProcessState,
+      mineEval && mineEval.state,
+      mineEval && mineEval.selfState
+    ];
+    let raw = candidates.find(v => v !== undefined && v !== null && String(v).trim() !== '');
+
+    // Contrato E2E: después de release debe existir feedback. Si el endpoint
+    // mine llega stale pero el detalle ya trae feedback, nunca regresamos a
+    // 'submitted' en la pantalla del colaborador.
+    if (d && d.feedback && d.feedback.feedbackId) {
+      const signatureState = String(d.feedback.signatureState || '').toLowerCase();
+      const closed = d.feedback.closedAt || d.feedback.employeeSigned || signatureState === 'cerrada' || signatureState === 'closed';
+      if (closed) raw = 'closed';
+      else if (!raw || /^(submitted|self_submitted|leader_submitted|calibration|calibrated)$/i.test(String(raw))) raw = 'released';
+    }
+    return normalizeBackendProcessState(raw);
+  }
+
   function renderColaborador(page) {
     const col = apiReadMode() ? empleadoRemoto() : S.getColaborador(state.user.empleado);
     const periodoId = state.periodo.id;
     const mineEval = apiReadMode() && state.remote.mine ? state.remote.mine.evaluation : null;
-    const estado = apiReadMode() ? (mineEval ? (mineEval.processState || mineEval.state || mineEval.selfState || 'En progreso') : D.ESTADOS.NO_INICIADA) : S.estadoProceso(col.empleado, periodoId);
+    const estado = apiReadMode() ? (mineEval ? ownRemoteProcessState(mineEval) : D.ESTADOS.NO_INICIADA) : S.estadoProceso(col.empleado, periodoId);
 
     if (page === 'bienvenida') return viewBienvenidaEvaluacion(col, periodoId, estado);
     if (page === 'autoevaluacion' && !introVista() && (estado === D.ESTADOS.NO_INICIADA || estado === D.ESTADOS.EN_PROGRESO)) {
