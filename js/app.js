@@ -2017,7 +2017,13 @@
     const liderEval = S.getEvaluacion(col.empleado, periodoId, 'lider');
     const resAuto = S.getUltimoResultadoPorOrigen(col.empleado, periodoId, 'autoevaluacion');
     const resLider = S.getUltimoResultadoPorOrigen(col.empleado, periodoId, 'lider');
-    const totalFinal = cal ? cal.resultadoCalibrado : (resLider ? resLider?.puntajes?.total : null);
+    const totalFinalRaw = cal ? cal.resultadoCalibrado : (resLider ? resLider?.puntajes?.total : null);
+    // El backend devuelve el resultado global en escala 1-5. La ficha ejecutiva
+    // y sus bandas de desempeño trabajan en 0-100; normalizamos aquí para no
+    // mostrar 4.4 como si fuera 4.4%.
+    const totalFinal = (totalFinalRaw !== null && totalFinalRaw !== undefined && Number(totalFinalRaw) <= 5)
+      ? Number(totalFinalRaw) * 20
+      : totalFinalRaw;
     const nivel = C.clasificarNivel(totalFinal);
     const cuad = C.asignarCuadrante(resLider?.promedios?.actitud ?? null, resLider?.promedios?.desempeno ?? null);
     const areas = S.getAreasOportunidad(col.empleado, periodoId);
@@ -2043,8 +2049,16 @@
     const performanceProfile = buildPerformanceProfile(col.empleado, periodoId);
     const performanceWheelHtml = performanceProfile ? global.EDDCharts.renderPerformanceWheel(performanceProfile) : '';
 
+    const objetivosNA = !!(liderEval?.objetivosNoAplicanConfirmados || liderEval?.objetivosNoAplicanDecision === 'confirmado');
     const seccionesCards = ['actitud', 'habilidades', 'objetivos'].map((s) => {
       const meta = D.SECCIONES_META[s];
+      if (s === 'objetivos' && objetivosNA) {
+        return `<div class="seccion-card seccion-card-na">
+          <div class="seccion-card-title">${esc(meta.titulo)} <span class="peso-tag">N/A</span></div>
+          <div class="progress"><div class="progress-bar" style="width:0%"></div></div>
+          <div class="seccion-card-val">No aplicó en este periodo · el resultado fue reponderado con las secciones aplicables</div>
+        </div>`;
+      }
       const val = puntajes[s];
       const pctVal = (val !== undefined && val !== null && meta.peso) ? (val / meta.peso) * 100 : 0;
       return `<div class="seccion-card">
@@ -2469,7 +2483,7 @@
         <details class="performance-summary-details"><summary>Ver resumen ejecutivo de 3 dimensiones</summary>${radarHtml}</details>
       </section>
       ${ajustesObjetivos.length ? `<section class="objective-adjustment-context"><div class="admin-panel-head"><div><span class="admin-section-kicker">AJUSTES DE OBJETIVOS</span><h3>Calificaciones modificadas por el líder</h3></div></div>${ajustesObjetivos.map(a=>`<article class="objective-adjustment-card"><div><strong>${esc(a.objetivo)}</strong><span class="objective-score-change">Automática ${esc(a.automatica)}/5 → Líder ${esc(a.lider)}/5</span></div><p><b>Justificación:</b> ${esc(a.justificacion||'Sin justificación registrada.')}</p></article>`).join('')}</section>` : ''}
-      ${autoEval?.objetivosNoAplican ? `<section class="objective-adjustment-context objective-governance-context"><div class="admin-panel-head"><div><span class="admin-section-kicker">MADUREZ DE OBJETIVOS</span><h3>Validación de ausencia de objetivos</h3></div></div><article class="objective-adjustment-card"><div><strong>Colaborador: N/A — sin objetivos definidos</strong><span class="objective-score-change">Líder: ${evLider?.objetivosNoAplicanDecision==='rechazado'?'reporta que sí existían objetivos':'confirma ausencia de objetivos'}</span></div><p><b>Motivo del colaborador:</b> ${esc(autoEval.objetivosNoAplicanMotivo||'Sin motivo')} — ${esc(autoEval.objetivosNoAplicanDetalle||'Sin contexto')}</p><p><b>Contexto del líder:</b> ${esc(evLider?.objetivosNoAplicanComentarioLider||'Pendiente de documentar')}</p></article></section>` : ''}
+      ${autoEval?.objetivosNoAplican ? `<section class="objective-adjustment-context objective-governance-context"><div class="admin-panel-head"><div><span class="admin-section-kicker">MADUREZ DE OBJETIVOS</span><h3>Validación de ausencia de objetivos</h3></div></div><article class="objective-adjustment-card"><div><strong>Colaborador: N/A — sin objetivos definidos</strong><span class="objective-score-change">Líder: ${liderEval?.objetivosNoAplicanDecision==='rechazado'?'reporta que sí existían objetivos':'confirma ausencia de objetivos'}</span></div><p><b>Motivo del colaborador:</b> ${esc(autoEval.objetivosNoAplicanMotivo||'Sin motivo')} — ${esc(autoEval.objetivosNoAplicanDetalle||'Sin contexto')}</p><p><b>Contexto del líder:</b> ${esc(liderEval?.objetivosNoAplicanComentarioLider||'Pendiente de documentar')}</p></article></section>` : ''}
       <h3>Diferencias detalladas por competencia</h3>
       <table class="table">
         <thead><tr><th>Competencia</th><th>Autoevaluación</th><th>Evaluación líder</th><th>Diferencia</th><th>Brecha</th><th>Comentario líder</th><th>Comentario colaborador</th></tr></thead>
