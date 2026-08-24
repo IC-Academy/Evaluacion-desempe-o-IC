@@ -706,12 +706,31 @@
       objectiveId:o.backendObjectiveId || `${backendId}-OBJ-${Number(o.index ?? i)+1}`,
       leaderValidatedPercent:o.cumplimiento === '' ? '' : Number(o.cumplimiento), leaderAdjustmentReason:o.justificacionLider || '', evidenceLeader:o.evidenceLeader || ''
     }));
+    const colaboradorId = String(ev.colaboradorId || state.wizard.colaboradorId || '');
+    const periodoId = ev.periodoId || (state.periodo && state.periodo.id) || '';
+    const improvementPlan = colaboradorId && periodoId ? S.getAreasOportunidad(colaboradorId, periodoId).map(a => ({
+      area: a.area || '',
+      improvementPlan: a.planMejora || ''
+    })) : [];
+    const developmentPlan = colaboradorId && periodoId ? S.getPlanesDesarrollo(colaboradorId, periodoId).map(p => ({
+      competency: p.competencia || '',
+      action: p.accion || '',
+      responsible: p.responsable || '',
+      commitmentDate: p.fechaCompromiso || ''
+    })) : [];
     return {
       answers,
       tools:{ excel:h.excel ?? '', powerBi:h.analisis ?? '', ia:h.ia ?? '' },
       objectives,
       noObjectivesDecision: decision || '',
-      noObjectivesLeaderComment: ev.objetivosNoAplicanComentarioLider || ''
+      noObjectivesLeaderComment: ev.objetivosNoAplicanComentarioLider || '',
+      strengths: ev.fortalezas || '',
+      developmentOpportunities: ev.oportunidadesDesarrollo || '',
+      gaps: ev.debilidadesBrechas || '',
+      risks: ev.riesgosAtencion || '',
+      leaderSummary: ev.comentarios || '',
+      improvementPlan,
+      developmentPlan
     };
   }
   function backendIdForLocalEvaluation(localEvalId) {
@@ -1876,7 +1895,7 @@
     if(!resAuto||!resLider) return '';
     const sections=[['actitud','Valores y actitud'],['habilidades','Técnica funcional'],['objetivos','Objetivos']];
     return `<div class="performance-summary-strip">${sections.map(([k,label])=>{
-      const a=Number(resAuto?.promedios || {}?.[k]), l=Number(resLider?.promedios || {}?.[k]);
+      const a=Number((resAuto?.promedios || {})[k]), l=Number((resLider?.promedios || {})[k]);
       const lOk=Number.isFinite(l), aOk=Number.isFinite(a);
       const idealGap=lOk?5-l:null, perception=(aOk&&lOk)?a-l:null;
       const cls=idealGap===null?'neutral':idealGap<=.5?'good':idealGap<=1.25?'mid':'attention';
@@ -2000,6 +2019,24 @@
   // renderCuadranteInfo vive ahora en charts.js (EDDCharts.renderCuadranteInfo)
   // para que la matriz global y la individual usen exactamente la misma tarjeta.
   function renderCuadranteInfo(cuad) { return global.EDDCharts.renderCuadranteInfo(cuad); }
+
+  function normalizeFeedbackArray(value) {
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string' && value.trim()) {
+      try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : []; } catch (_) { return []; }
+    }
+    return [];
+  }
+  function renderRemoteImprovementPlan(value) {
+    const rows = normalizeFeedbackArray(value);
+    if (!rows.length) return '<p class="muted">Sin plan de mejora registrado.</p>';
+    return `<div class="admin-table-wrap"><table class="table table-compact"><thead><tr><th>Área de oportunidad</th><th>Plan de mejora</th></tr></thead><tbody>${rows.map(r=>`<tr><td><b>${esc(r.area||r.opportunityArea||'—')}</b></td><td>${esc(r.improvementPlan||r.plan||'—')}</td></tr>`).join('')}</tbody></table></div>`;
+  }
+  function renderRemoteDevelopmentPlan(value) {
+    const rows = normalizeFeedbackArray(value);
+    if (!rows.length) return '<p class="muted">Sin acciones de desarrollo registradas.</p>';
+    return `<div class="admin-table-wrap"><table class="table table-compact"><thead><tr><th>Competencia</th><th>Acción</th><th>Responsable</th><th>Fecha compromiso</th></tr></thead><tbody>${rows.map(r=>`<tr><td><b>${esc(r.competency||r.competencia||'—')}</b></td><td>${esc(r.action||r.accion||'—')}</td><td>${esc(r.responsible||r.responsable||'—')}</td><td>${esc(r.commitmentDate||r.fechaCompromiso||'—')}</td></tr>`).join('')}</tbody></table></div>`;
+  }
 
   function renderPlanesTabla(planes) {
     if (!planes.length) return '<p class="muted">Sin acciones de desarrollo registradas.</p>';
@@ -2252,7 +2289,7 @@
       <div id="areasWrap">${renderAreasEditable(col.empleado, state.periodo.id)}</div>
     </section>
     <section class="leader-agreement-block"><div class="leader-block-head"><div><span>DESARROLLO</span><h4>Plan de desarrollo</h4></div><button class="btn btn-outline btn-sm" onclick="App.mostrarNuevoPlan('${col.empleado}')">+ Agregar acción</button></div>
-      <div id="nuevoPlan-${col.empleado}" class="inline-editor leader-inline-editor leader-form-surface hidden"><div class="leader-form-intro"><strong>Registrar acción de desarrollo</strong><span>Define una acción concreta, medible y con fecha compromiso.</span></div><div class="leader-inline-grid leader-inline-grid-plan"><div class="leader-inline-field"><label>Competencia a desarrollar</label><input id="competenciaNueva-${col.empleado}" placeholder="Ej. Planeación y organización"/></div><div class="leader-inline-field"><label>Acción acordada</label><input id="accionNueva-${col.empleado}" placeholder="Ej. Revisión semanal de prioridades"/></div><div class="leader-inline-field leader-inline-date"><label>Fecha compromiso</label><input id="fechaNueva-${col.empleado}" type="date" value="2026-09-01"/></div></div><div class="inline-editor-actions"><button class="btn btn-primary btn-sm" onclick="App.guardarNuevoPlan('${col.empleado}','${col.liderId}')">Guardar acción</button><button class="btn btn-outline btn-sm" onclick="App.ocultarNuevoPlan('${col.empleado}')">Cancelar</button></div></div>
+      <div id="nuevoPlan-${col.empleado}" class="inline-editor leader-inline-editor leader-form-surface hidden"><div class="leader-form-intro"><strong>Registrar acción de desarrollo</strong><span>Define una acción concreta, medible y con fecha compromiso.</span></div><div class="leader-inline-grid leader-inline-grid-plan"><div class="leader-inline-field"><label>Competencia a desarrollar</label><input id="competenciaNueva-${col.empleado}" placeholder="Ej. Planeación y organización"/></div><div class="leader-inline-field"><label>Acción acordada</label><input id="accionNueva-${col.empleado}" placeholder="Ej. Revisión semanal de prioridades"/></div><div class="leader-inline-field"><label>Responsable</label><input id="responsableNuevo-${col.empleado}" value="${esc(col.liderId||'')}" placeholder="No. empleado o responsable"/></div><div class="leader-inline-field leader-inline-date"><label>Fecha compromiso</label><input id="fechaNueva-${col.empleado}" type="date" value="2026-09-01"/></div></div><div class="inline-editor-actions"><button class="btn btn-primary btn-sm" onclick="App.guardarNuevoPlan('${col.empleado}','${col.liderId}')">Guardar acción</button><button class="btn btn-outline btn-sm" onclick="App.ocultarNuevoPlan('${col.empleado}')">Cancelar</button></div></div>
       <div id="planesWrap">${renderPlanesEditable(col.empleado, state.periodo.id, col.liderId)}</div>
     </section>`;
   }
@@ -2265,7 +2302,7 @@
   function renderPlanesEditable(colaboradorId, periodoId) {
     const planes = S.getPlanesDesarrollo(colaboradorId, periodoId);
     if (!planes.length) return '<p class="muted">Sin acciones registradas todavía.</p>';
-    return `<table class="table table-compact"><thead><tr><th>Competencia</th><th>Acción</th><th>Fecha</th><th>Estado</th><th></th></tr></thead><tbody>${planes.map((p) => `<tr><td>${esc(p.competencia)}</td><td>${esc(p.accion)}</td><td>${esc(p.fechaCompromiso)}</td><td>${badge(p.estado)}</td><td><button class="btn btn-outline btn-sm" onclick="App.quitarPlanDesarrollo('${p.id}','${colaboradorId}')">Quitar</button></td></tr>`).join('')}</tbody></table>`;
+    return `<table class="table table-compact"><thead><tr><th>Competencia</th><th>Acción</th><th>Responsable</th><th>Fecha</th><th>Estado</th><th></th></tr></thead><tbody>${planes.map((p) => `<tr><td>${esc(p.competencia)}</td><td>${esc(p.accion)}</td><td>${esc(p.responsable||'—')}</td><td>${esc(p.fechaCompromiso)}</td><td>${badge(p.estado)}</td><td><button class="btn btn-outline btn-sm" onclick="App.quitarPlanDesarrollo('${p.id}','${colaboradorId}')">Quitar</button></td></tr>`).join('')}</tbody></table>`;
   }
 
   function viewComparacion(lider, colaboradorId, periodoId) {
@@ -2849,7 +2886,7 @@
 
           <article class="admin-panel calibration-objectives-rich"><div class="admin-panel-head"><div><span class="admin-section-kicker">OBJETIVOS</span><h2>Cumplimiento y validación del líder</h2></div></div>${objRows?`<div class="admin-table-wrap"><table class="table admin-table"><thead><tr><th>Objetivo</th><th>Meta</th><th>Resultado</th><th>% colaborador</th><th>% líder</th><th>Calificación</th></tr></thead><tbody>${objRows}</tbody></table></div>`:'<div class="admin-empty-state">Sin objetivos aplicables o sin datos disponibles.</div>'}</article>
 
-          <div class="admin-dashboard-grid calibration-context-two"><article class="admin-panel"><span class="admin-section-kicker">ACUERDOS</span><h2>Plan de mejora</h2><p>${esc(areas)||'<span class="muted">Sin dato backend disponible.</span>'}</p></article><article class="admin-panel"><span class="admin-section-kicker">DESARROLLO</span><h2>Plan de desarrollo</h2><p>${esc(dev)||'<span class="muted">Sin dato backend disponible.</span>'}</p></article></div>`}
+          <div class="admin-dashboard-grid calibration-context-two"><article class="admin-panel"><span class="admin-section-kicker">ACUERDOS</span><h2>Plan de mejora</h2>${renderRemoteImprovementPlan(areas)}</article><article class="admin-panel"><span class="admin-section-kicker">DESARROLLO</span><h2>Plan de desarrollo</h2>${renderRemoteDevelopmentPlan(dev)}</article></div>`}
 
           <article class="admin-panel calibration-do-context-card"><div class="admin-panel-head"><div><span class="admin-section-kicker">CONTEXTO DO</span><h2>Antecedentes administrativos y bienestar</h2><p class="panel-support-copy">Estos datos sirven como contexto para la revisión y no modifican automáticamente la calificación.</p></div></div>
             <div class="calibration-do-context-grid">
@@ -3565,7 +3602,7 @@
     quitarAreaOportunidad(id) { S.removeAreaOportunidad(id, state.user.nombre); render(); },
     mostrarNuevoPlan(colaboradorId){ const el=document.getElementById('nuevoPlan-'+colaboradorId); if(el) el.classList.remove('hidden'); },
     ocultarNuevoPlan(colaboradorId){ const el=document.getElementById('nuevoPlan-'+colaboradorId); if(el) el.classList.add('hidden'); },
-    guardarNuevoPlan(colaboradorId,liderId){ const c=document.getElementById('competenciaNueva-'+colaboradorId),a=document.getElementById('accionNueva-'+colaboradorId),f=document.getElementById('fechaNueva-'+colaboradorId); if(!c||!a||!c.value.trim()||!a.value.trim()){showNotice('Completa la competencia y la acción de desarrollo.','warning');return;} S.addPlanDesarrollo(colaboradorId,state.periodo.id,{competencia:c.value.trim(),accion:a.value.trim(),responsable:liderId,fechaCompromiso:f&&f.value?f.value:'2026-09-01'},state.user.nombre); render(); },
+    guardarNuevoPlan(colaboradorId,liderId){ const c=document.getElementById('competenciaNueva-'+colaboradorId),a=document.getElementById('accionNueva-'+colaboradorId),r=document.getElementById('responsableNuevo-'+colaboradorId),f=document.getElementById('fechaNueva-'+colaboradorId); if(!c||!a||!c.value.trim()||!a.value.trim()){showNotice('Completa la competencia y la acción de desarrollo.','warning');return;} S.addPlanDesarrollo(colaboradorId,state.periodo.id,{competencia:c.value.trim(),accion:a.value.trim(),responsable:r&&r.value.trim()?r.value.trim():liderId,fechaCompromiso:f&&f.value?f.value:'2026-09-01'},state.user.nombre); render(); },
     quitarPlanDesarrollo(id) { S.removePlanDesarrollo(id, state.user.nombre); render(); },
     async enviarEvaluacionLider(colaboradorId) {
       if (state.remote.leaderSubmitting) return;
@@ -3644,7 +3681,9 @@
         // La actualización de dashboard/equipo se hace después y en segundo plano.
         // No bloqueamos la confirmación del envío esperando otros GET de n8n.
         if (apiWriteMode()) {
-          state.remote.ready=false;
+          // Mantener `ready=true`: el refresh es secundario y NO debe reemplazar la
+          // comparación por la pantalla global "Conectando...". Si algún GET falla,
+          // la evaluación ya quedó enviada y la vista actual debe seguir utilizable.
           setTimeout(() => refreshBackendRead(true).catch(e => console.warn('Refresh post-submit líder', e)), 0);
         }
       } catch (err) {
