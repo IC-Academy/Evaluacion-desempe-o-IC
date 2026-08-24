@@ -2772,7 +2772,13 @@
         // o una competencia puede no tener todavía una de las dos respuestas. La pantalla de
         // calibración debe renderizar placeholders y continuar cargando, nunca romper el router.
         const roleOf = a => String((a && (a.evaluator||a.evaluador||a.role||a.evaluatorRole||a['Evaluador (rol)'])) || '').toLowerCase();
-        const valOf = a => a ? (a.value ?? a.valor ?? a.score ?? a.rating ?? a.calificacion ?? null) : null;
+        const valOf = a => {
+          if (!a) return null;
+          const raw = a.value ?? a.valor ?? a.score ?? a.rating ?? a.calificacion ?? null;
+          if (raw === null || raw === undefined || raw === '' || raw === 'N/A') return raw === 'N/A' ? 'N/A' : null;
+          const n = Number(raw);
+          return Number.isFinite(n) ? n : raw;
+        };
         const commentOf = a => a ? (a.comment ?? a.comentario ?? a.comments ?? '') : '';
         const cidOf = a => String((a && (a.competencyId||a.competenciaId||a.questionId||a.preguntaId)) || '');
         const findAns = (cid, leader) => answers.find(a => cidOf(a)===cid && (leader ? /l[ií]der|leader/.test(roleOf(a)) : !/l[ií]der|leader/.test(roleOf(a))));
@@ -2782,15 +2788,18 @@
         const toolRows=toolDefs.map(([id,label])=>{const aa=findAns(id,false),ll=findAns(id,true);return `<tr><td><strong>${label}</strong></td><td>${valOf(aa)??'—'}</td><td>${valOf(ll)??'—'}</td></tr>`}).join('');
 
         const objRows = objectives.length ? objectives.map((o,i)=>{
-          const desc=o.description??o.descripcion??o.objective??o.objetivo??`Objetivo ${i+1}`;
-          const meta=o.target??o.meta??o.metaAcordada??'—';
-          const result=o.result??o.resultado??o.resultadoAlcanzado??'—';
-          let selfPct=o.compliancePercent??o.cumplimiento??o.selfPercent??o.cumplimientoObjetivo??null;
-          if (typeof selfPct==='number' && selfPct>=0 && selfPct<=1.2) selfPct*=100;
-          const leaderPct=o.leaderValidatedPercent??o.porcentajeValidadoLider??o.leaderPercent??null;
-          const selfScore=o.selfScore??o.calificacionColaborador??o.automaticScore??o.calificacionAutomatica??null;
-          const leaderScore=o.leaderScore??o.calificacionLider??null;
-          const adj=o.leaderAdjustmentReason??o.justificacionAjusteLider??o.justificacionLider??'';
+          const f=o&&o.fields&&typeof o.fields==='object'?o.fields:{};
+          const pick=(...keys)=>{for(const k of keys){if(o&&o[k]!=null&&o[k]!=='')return o[k];if(f&&f[k]!=null&&f[k]!=='')return f[k];}return null};
+          const desc=pick('description','descripcion','objective','objetivo','Descripción','Objetivo')??`Objetivo ${i+1}`;
+          const meta=pick('target','meta','metaAcordada','Meta acordada','Meta')??'—';
+          const result=pick('result','resultado','resultadoAlcanzado','Resultado alcanzado','Resultado')??'—';
+          let selfPct=pick('compliancePercent','cumplimiento','selfPercent','cumplimientoObjetivo','Cumplimiento objetivo','% cumplimiento','Porcentaje cumplimiento');
+          if (selfPct!=null){ const np=Number(selfPct); if(Number.isFinite(np)){ selfPct=np; if(selfPct>=0&&selfPct<=1.2) selfPct*=100; } }
+          let leaderPct=pick('leaderValidatedPercent','porcentajeValidadoLider','leaderPercent','% validado por líder','Porcentaje validado líder');
+          if(leaderPct!=null){const np=Number(leaderPct);if(Number.isFinite(np))leaderPct=np;}
+          const selfScore=pick('selfScore','calificacionColaborador','automaticScore','calificacionAutomatica','Calificación colaborador','Calificación automática');
+          const leaderScore=pick('leaderScore','calificacionLider','Calificación líder');
+          const adj=pick('leaderAdjustmentReason','justificacionAjusteLider','justificacionLider','Justificación ajuste líder','Justificación líder')||'';
           return `<tr><td><strong>${esc(desc)}</strong>${adj?`<small>Ajuste líder: ${esc(adj)}</small>`:''}</td><td>${esc(meta)}</td><td>${esc(result)}</td><td>${selfPct==null?'—':f1(selfPct)+'%'}</td><td>${leaderPct==null?'—':f1(leaderPct)+'%'}</td><td>${selfScore??'—'} → ${leaderScore??'—'}</td></tr>`;
         }).join('') : '';
 
@@ -2798,7 +2807,15 @@
         const objScore=(leader)=>{const xs=objectives.map(o=>leader?(o.leaderScore??o.calificacionLider):(o.selfScore??o.calificacionColaborador??o.automaticScore??o.calificacionAutomatica)).filter(v=>typeof v==='number');return xs.length?xs.reduce((a,b)=>a+b,0)/xs.length:null};
         const autoProm={actitud:secAvg('A',false),habilidades:secAvg('B',false),objetivos:objScore(false)};
         const leaderProm={actitud:secAvg('A',true),habilidades:secAvg('B',true),objetivos:objScore(true)};
-        const radar = detailReady ? global.EDDCharts.renderRadarChart({autoevaluacion:autoProm,evaluacionLider:leaderProm,calibracion:item.calibratedResult!=null?{resultadoLider:item.leaderResult,resultadoCalibrado:item.calibratedResult}:null,size:340}) : '';
+        const radar = detailReady ? global.EDDCharts.renderRadarChart({autoevaluacion:autoProm,evaluacionLider:leaderProm,calibracion:item.calibratedResult!=null?{resultadoLider:item.leaderResult,resultadoCalibrado:item.calibratedResult}:null,size:380}) : '';
+        const chartLabels={A1:'Compromiso Organizacional',A2:'Actitud de Servicio',A3:'Trabajo en Equipo',A4:'Comunicación Efectiva',A5:'Adaptabilidad e Iniciativa',B1:'Dominio del Puesto',B2:'Procesos y Herramientas',B3:'Orientación a Resultados',B4:'Planeación y Organización',B5:'Seguimiento y Control'};
+        const performanceDims=[...(D.COMPETENCIAS.actitud||[]),...(D.COMPETENCIAS.habilidades||[])].map(c=>({key:c.id.toLowerCase(),label:c.nombre,shortLabel:chartLabels[c.id]||c.nombre}));
+        const performanceAuto={}, performanceLeader={};
+        performanceDims.forEach(d=>{ const cid=d.key.toUpperCase(); performanceAuto[d.key]=valOf(findAns(cid,false)); performanceLeader[d.key]=valOf(findAns(cid,true)); });
+        performanceDims.push({key:'objetivos',label:'Cumplimiento de Objetivos',shortLabel:'Objetivos'}); performanceAuto.objetivos=autoProm.objetivos; performanceLeader.objetivos=leaderProm.objetivos;
+        const performanceProfile={dimensiones:performanceDims,autoevaluacion:performanceAuto,evaluacionLider:performanceLeader};
+        const performanceWheel = detailReady ? global.EDDCharts.renderPerformanceWheel(performanceProfile) : '';
+        const sectionGapSummary = detailReady ? renderSectionGapSummary({promedios:autoProm},{promedios:leaderProm}) : '';
         const nine = global.EDDCharts.renderNineBoxIndividual({actitudProm:Number(item.leaderAttitude)/20, desempenoProm:Number(item.leaderPerformance)/20, nombreColaborador:item.name});
         const fget=(...keys)=>{for(const k of keys){if(feedback&&feedback[k]!=null&&feedback[k]!=='')return feedback[k];}return ''};
         const strengths=fget('strengths','fortalezas','Fortalezas');
@@ -2816,10 +2833,14 @@
           <div class="calibration-score-grid"><div class="calibration-score-card"><span>Autoevaluación</span><strong>${f1(item.selfResult)}</strong><small>Percepción colaborador</small></div><div class="calibration-score-card"><span>Evaluación líder</span><strong>${f1(item.leaderResult)}</strong><small>Base de calibración</small></div><div class="calibration-score-card ${gap!=null&&Math.abs(gap)>=1?'attention':''}"><span>Brecha auto vs líder</span><strong>${gap==null?'—':(gap>0?'+':'')+f1(gap)}</strong><small>Diferencia global</small></div><div class="calibration-score-card success"><span>Resultado calibrado</span><strong>${item.calibratedResult==null?'—':f1(item.calibratedResult)}</strong><small>${calibrationDone?'Completada':calibrationDraft?'Borrador':'Pendiente'}</small></div></div>
 
           ${!detailReady?`<article class="admin-panel calibration-loading-detail"><div class="backend-spinner"></div><div><span class="admin-section-kicker">CARGANDO EXPEDIENTE</span><h2>Recuperando respuestas, objetivos y contexto del líder…</h2><p>La calibración puede continuar cuando termine esta lectura. No se usan datos demo.</p></div></article>`:`
-          <div class="admin-dashboard-grid calibration-executive-grid">
-            <article class="admin-panel"><span class="admin-section-kicker">LECTURA POR SECCIÓN</span><h2>Autoevaluación vs. líder</h2>${radar}</article>
-            <article class="admin-panel"><span class="admin-section-kicker">9-BOX · EJES BACKEND</span><h2>Ubicación de talento</h2><div class="backend-objective-summary"><div><span>Actitud</span><strong>${f1(item.leaderAttitude)}</strong></div><div><span>Desempeño</span><strong>${f1(item.leaderPerformance)}</strong></div></div>${nine}<p class="panel-support-copy">Referencia para revisión humana de DO. No genera decisiones laborales automáticas.</p></article>
-          </div>
+          <section class="performance-profile-section calibration-performance-profile remote-performance-profile">
+            <div class="performance-profile-head"><div><span class="admin-section-kicker">LECTURA MULTIDIMENSIONAL</span><h2>Perfil de desempeño vs. ideal</h2><p>Recuperamos la lectura aprobada: compara la percepción del colaborador, la evaluación del líder y la distancia de cada dimensión contra el nivel ideal de 5/5.</p></div></div>
+            ${sectionGapSummary}
+            ${performanceWheel}
+            <details class="performance-summary-details"><summary>Ver resumen ejecutivo de 3 dimensiones</summary><div class="feedback-analysis-single"><div><h3>Radar ejecutivo</h3>${radar}</div></div></details>
+          </section>
+
+          <article class="admin-panel calibration-ninebox-card calibration-ninebox-wide"><div class="admin-panel-head"><div><span class="admin-section-kicker">9-BOX · EJES BACKEND</span><h2>Ubicación de talento</h2><p class="panel-support-copy">La ubicación se calcula con Actitud y Desempeño del backend y se usa únicamente como referencia para revisión humana de DO.</p></div><div class="backend-objective-summary compact"><div><span>Actitud</span><strong>${f1(item.leaderAttitude)}</strong></div><div><span>Desempeño</span><strong>${f1(item.leaderPerformance)}</strong></div></div></div>${nine}</article>
 
           <article class="admin-panel calibration-detail-table"><div class="admin-panel-head"><div><span class="admin-section-kicker">COMPETENCIAS</span><h2>Detalle de la evaluación</h2><p>Contrasta la percepción del colaborador con la valoración del líder y enfoca la revisión donde exista brecha.</p></div></div><div class="admin-table-wrap"><table class="table admin-table"><thead><tr><th>Competencia</th><th>Auto</th><th>Líder</th><th>Brecha</th><th>Comentario</th></tr></thead><tbody>${competencyRows}</tbody></table></div></article>
 
@@ -2828,6 +2849,15 @@
           <article class="admin-panel calibration-objectives-rich"><div class="admin-panel-head"><div><span class="admin-section-kicker">OBJETIVOS</span><h2>Cumplimiento y validación del líder</h2></div></div>${objRows?`<div class="admin-table-wrap"><table class="table admin-table"><thead><tr><th>Objetivo</th><th>Meta</th><th>Resultado</th><th>% colaborador</th><th>% líder</th><th>Calificación</th></tr></thead><tbody>${objRows}</tbody></table></div>`:'<div class="admin-empty-state">Sin objetivos aplicables o sin datos disponibles.</div>'}</article>
 
           <div class="admin-dashboard-grid calibration-context-two"><article class="admin-panel"><span class="admin-section-kicker">ACUERDOS</span><h2>Plan de mejora</h2><p>${esc(areas)||'<span class="muted">Sin dato backend disponible.</span>'}</p></article><article class="admin-panel"><span class="admin-section-kicker">DESARROLLO</span><h2>Plan de desarrollo</h2><p>${esc(dev)||'<span class="muted">Sin dato backend disponible.</span>'}</p></article></div>`}
+
+          <article class="admin-panel calibration-do-context-card"><div class="admin-panel-head"><div><span class="admin-section-kicker">CONTEXTO DO</span><h2>Antecedentes administrativos y bienestar</h2><p class="panel-support-copy">Estos datos sirven como contexto para la revisión y no modifican automáticamente la calificación.</p></div></div>
+            <div class="calibration-do-context-grid">
+              <label><span>Actas administrativas</span><input type="number" id="calRemoteActas" min="0" step="1" value="0" ${calibrationDone?'disabled':''}/><small>Número de actas registradas en el periodo.</small></label>
+              <label><span>Referencia NOM-035</span><select id="calRemoteNom035" ${calibrationDone?'disabled':''}><option value="No">No</option><option value="Sí">Sí</option><option value="En seguimiento">En seguimiento</option></select><small>Indica si existe antecedente o seguimiento relacionado.</small></label>
+              <label class="span-2"><span>Detalle NOM-035 / contexto relevante</span><textarea id="calRemoteNom035Detail" ${calibrationDone?'disabled':''} placeholder="Describe únicamente el contexto necesario para la calibración..."></textarea></label>
+            </div>
+            <div class="calibration-info-note">La información de NOM-035 debe tratarse como contexto sensible de revisión humana; no genera ajustes automáticos ni decisiones laborales.</div>
+          </article>
 
           <article class="admin-panel calibration-write-panel calibration-write-wide"><div class="admin-panel-head"><div><span class="admin-section-kicker">DECISIÓN DO</span><h2>Calibrar resultado</h2><p class="panel-support-copy">Mantén el resultado del líder o ajusta el valor con evidencia y justificación. El resultado original siempre queda visible.</p></div><span class="calibration-live-result" id="calRemoteLiveBadge">${f1(currentCalibrated)}</span></div>
             <div class="calibration-adjust-row"><label><span>Resultado calibrado</span><input type="number" id="calRemoteResult" min="1" max="5" step="0.01" value="${esc(currentCalibrated)}" ${calibrationDone?'disabled':''} oninput="App.previewRemoteCalibracion()"/></label><div class="calibration-reference-box"><span>Resultado líder original</span><strong>${f1(item.leaderResult)}</strong><small>Fuente de verdad del backend</small></div></div>
@@ -3674,7 +3704,14 @@
       const notesEl = document.getElementById('calRemoteNotes');
       const calibratedResult = Number(resultEl && resultEl.value);
       const adjustmentReason = String(reasonEl && reasonEl.value || '').trim();
-      const notes = String(notesEl && notesEl.value || '').trim();
+      const freeNotes = String(notesEl && notesEl.value || '').trim();
+      const actasEl = document.getElementById('calRemoteActas');
+      const nomEl = document.getElementById('calRemoteNom035');
+      const nomDetailEl = document.getElementById('calRemoteNom035Detail');
+      const actas = Math.max(0, parseInt(actasEl && actasEl.value || '0',10) || 0);
+      const nom035 = String(nomEl && nomEl.value || 'No');
+      const nom035Detail = String(nomDetailEl && nomDetailEl.value || '').trim();
+      const notes = [`[CONTEXTO DO]`,`Actas administrativas: ${actas}`,`NOM-035: ${nom035}${nom035Detail ? ' · ' + nom035Detail : ''}`,freeNotes ? `Notas DO: ${freeNotes}` : ''].filter(Boolean).join('\n');
       if (!Number.isFinite(calibratedResult) || calibratedResult < 1 || calibratedResult > 5) { showNotice('Captura un resultado calibrado válido entre 1 y 5.','warning'); return; }
       state.remote.calibrationSaving = true; render();
       try {
@@ -3691,7 +3728,14 @@
       const notesEl = document.getElementById('calRemoteNotes');
       const calibratedResult = Number(resultEl && resultEl.value);
       const adjustmentReason = String(reasonEl && reasonEl.value || '').trim();
-      const notes = String(notesEl && notesEl.value || '').trim();
+      const freeNotes = String(notesEl && notesEl.value || '').trim();
+      const actasEl = document.getElementById('calRemoteActas');
+      const nomEl = document.getElementById('calRemoteNom035');
+      const nomDetailEl = document.getElementById('calRemoteNom035Detail');
+      const actas = Math.max(0, parseInt(actasEl && actasEl.value || '0',10) || 0);
+      const nom035 = String(nomEl && nomEl.value || 'No');
+      const nom035Detail = String(nomDetailEl && nomDetailEl.value || '').trim();
+      const notes = [`[CONTEXTO DO]`,`Actas administrativas: ${actas}`,`NOM-035: ${nom035}${nom035Detail ? ' · ' + nom035Detail : ''}`,freeNotes ? `Notas DO: ${freeNotes}` : ''].filter(Boolean).join('\n');
       if (!Number.isFinite(calibratedResult) || calibratedResult < 1 || calibratedResult > 5) { showNotice('Captura un resultado calibrado válido entre 1 y 5.','warning'); return; }
       state.remote.calibrationCompleting = true; render();
       try {

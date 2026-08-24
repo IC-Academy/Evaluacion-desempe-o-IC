@@ -1475,3 +1475,25 @@ body{background:linear-gradient(180deg,#f6f9fd 0%,#eef4fa 100%);}
 /* ========================================================================== */
 .calibration-rich-remote{display:flex;flex-direction:column;gap:18px}.calibration-loading-detail{display:flex;align-items:center;gap:18px;min-height:120px}.calibration-loading-detail .backend-spinner{flex:0 0 auto}.calibration-executive-grid,.calibration-context-two,.do-restored-grid,.do-alerts-restored{grid-template-columns:repeat(2,minmax(0,1fr))}.calibration-executive-grid .admin-panel,.calibration-context-two .admin-panel{min-width:0}.calibration-detail-table .admin-table td:first-child{min-width:320px}.calibration-detail-table .admin-table td small,.calibration-objectives-rich .admin-table td small{display:block;color:var(--muted);margin-top:4px}.cal-gap-row{background:#fff7ed}.calibration-objectives-rich .admin-table th:first-child{min-width:280px}.calibration-write-wide{width:100%}.admin-area-progress-list{display:flex;flex-direction:column;gap:14px}.admin-area-progress-row{display:grid;grid-template-columns:minmax(170px,1fr) minmax(220px,2.2fr) 56px;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--border)}.admin-area-progress-row:last-child{border-bottom:0}.admin-area-progress-row>div:first-child{display:flex;flex-direction:column;gap:3px}.admin-area-progress-row small{color:var(--muted)}.admin-area-progress-row>b{text-align:right}.backend-data-gap.compact{padding:14px}.backend-ninebox-grid.compact{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.backend-ninebox-grid.compact article{min-height:82px}.admin-people-summary-restored{margin-top:18px}.do-alerts-restored{margin-top:18px}.calibration-rich-remote .ninebox-wrap{margin-top:12px}.calibration-rich-remote .radar-wrap{margin-top:12px}.calibration-rich-remote .leader-context-grid{margin-top:12px}.calibration-rich-remote .admin-empty-state{padding:28px}.calibration-rich-remote .calibration-score-card.attention{border-top-color:#dc2626}.calibration-rich-remote .calibration-meta{flex-wrap:wrap}
 @media(max-width:980px){.calibration-executive-grid,.calibration-context-two,.do-restored-grid,.do-alerts-restored{grid-template-columns:1fr}.admin-area-progress-row{grid-template-columns:1fr}.admin-area-progress-row>b{text-align:left}.calibration-detail-table .admin-table td:first-child{min-width:240px}.backend-ninebox-grid.compact{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* v11.3 — Recuperación visual de calibración DO */
+.calibration-rich-remote{gap:24px}
+.calibration-rich-remote .admin-panel,.calibration-rich-remote .performance-profile-section{border-radius:20px;padding:24px 26px;box-shadow:0 12px 34px rgba(20,55,92,.055)}
+.calibration-rich-remote .remote-performance-profile{margin:0;background:linear-gradient(180deg,#fff 0%,#f8fbff 100%)}
+.calibration-rich-remote .remote-performance-profile .performance-profile-head{margin-bottom:16px}
+.calibration-rich-remote .remote-performance-profile .performance-wheel-wrap{grid-template-columns:minmax(620px,1.35fr) minmax(360px,.65fr);gap:36px;align-items:start}
+.calibration-rich-remote .remote-performance-profile .performance-wheel-svg{max-width:720px}
+.calibration-rich-remote .calibration-ninebox-wide{width:100%;overflow:visible}
+.calibration-rich-remote .calibration-ninebox-wide .ninebox-wrap{max-width:1180px;margin:18px auto 0}
+.calibration-rich-remote .backend-objective-summary.compact{display:flex;gap:10px;margin:0;min-width:260px}
+.calibration-rich-remote .backend-objective-summary.compact>div{min-width:120px}
+.calibration-do-context-card{background:linear-gradient(180deg,#fff 0%,#fbfdff 100%)}
+.calibration-do-context-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:16px}
+.calibration-do-context-grid label{display:flex;flex-direction:column;gap:8px;font-weight:800;color:#0b315c}
+.calibration-do-context-grid label.span-2{grid-column:1/-1}
+.calibration-do-context-grid input,.calibration-do-context-grid select,.calibration-do-context-grid textarea{width:100%;border:1px solid #cbd9e8;border-radius:13px;background:#fff;padding:13px 14px;color:#0c2f57;font:inherit;font-weight:500;outline:none}
+.calibration-do-context-grid textarea{min-height:96px;resize:vertical}
+.calibration-do-context-grid small{font-weight:500;color:#71859c;line-height:1.45}
+.calibration-rich-remote .calibration-detail-table .admin-table-wrap,.calibration-rich-remote .calibration-objectives-rich .admin-table-wrap{overflow-x:auto}
+.calibration-rich-remote .calibration-context-two{gap:24px}
+@media(max-width:1100px){.calibration-rich-remote .remote-performance-profile .performance-wheel-wrap{grid-template-columns:1fr}.calibration-rich-remote .backend-objective-summary.compact{min-width:0}.calibration-do-context-grid{grid-template-columns:1fr}.calibration-do-context-grid label.span-2{grid-column:auto}}
