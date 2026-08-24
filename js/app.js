@@ -643,6 +643,55 @@
     return { selfMetrics, leaderMetrics };
   }
 
+  function hydrateRemoteFeedback(detail, colaboradorId, periodoId, leaderEv) {
+    if (!detail || !colaboradorId || !periodoId) return null;
+    const fb = detail.feedback;
+    const calRemote = detail.calibration || detail.calibracion || null;
+    if (!fb && !calRemote) return null;
+    const cambios = {_motivo:'Sincronización desde backend'};
+    if (fb) {
+      cambios.feedbackId = fb.feedbackId || fb.id || '';
+      cambios.retroHabilitada = true;
+      cambios.reunionLiderRealizada = !!fb.meetingConfirmed;
+      cambios.acuerdosLiberados = !!fb.releasedForSignature;
+      cambios.firmaLider = !!fb.leaderSigned;
+      cambios.firmaColaborador = !!fb.employeeSigned;
+      cambios.aceptacionColaborador = !!fb.employeeSigned || /cerrad|closed/i.test(String(fb.signatureState||''));
+      cambios.acuerdosFinales = fb.finalAgreements || fb.agreements || '';
+      cambios.fechaFirmaLider = fb.leaderSignedAt || fb.leaderSignatureAt || null;
+      cambios.fechaFirmaColaborador = fb.employeeSignedAt || fb.employeeSignatureAt || fb.closedAt || null;
+      if (fb.closedAt) cambios.closedAt = fb.closedAt;
+      if (leaderEv) {
+        leaderEv.fortalezas = fb.strengths || leaderEv.fortalezas || '';
+        leaderEv.oportunidadesDesarrollo = fb.developmentOpportunities || leaderEv.oportunidadesDesarrollo || '';
+        leaderEv.debilidadesBrechas = fb.gaps || leaderEv.debilidadesBrechas || '';
+        leaderEv.riesgosAtencion = fb.risks || leaderEv.riesgosAtencion || '';
+        leaderEv.comentarios = fb.leaderSummary || leaderEv.comentarios || '';
+      }
+      const db=S.load();
+      db.areas_oportunidad=(db.areas_oportunidad||[]).filter(a=>!(String(a.colaboradorId)===String(colaboradorId)&&a.periodoId===periodoId));
+      normalizeFeedbackArray(fb.improvementPlan).forEach((a,i)=>db.areas_oportunidad.push({id:`AO-REMOTE-${colaboradorId}-${i}`,colaboradorId:String(colaboradorId),periodoId,area:a.area||a.opportunityArea||'',planMejora:a.improvementPlan||a.plan||''}));
+      db.planes_desarrollo=(db.planes_desarrollo||[]).filter(a=>!(String(a.colaboradorId)===String(colaboradorId)&&a.periodoId===periodoId));
+      normalizeFeedbackArray(fb.developmentPlan).forEach((a,i)=>db.planes_desarrollo.push({id:`PD-REMOTE-${colaboradorId}-${i}`,colaboradorId:String(colaboradorId),periodoId,competencia:a.competency||a.competencia||'',accion:a.action||a.accion||'',responsable:a.responsible||a.responsable||'',fechaCompromiso:a.commitmentDate||a.fechaCompromiso||'',estado:'No iniciada',evidencia:'',observaciones:''}));
+      S.persist();
+    }
+    if (calRemote) {
+      const cr=calRemote;
+      const rr=Number(cr.calibratedResult ?? cr.resultadoCalibrado);
+      if(Number.isFinite(rr)) cambios.resultadoCalibrado=rr;
+      if(cr.notes||cr.notas) cambios.observacionesRH=cr.notes||cr.notas;
+      if(/completed/i.test(String(cr.status||cr.calibrationStatus||cr.estado||''))) cambios.calibracionCompletada=true;
+    }
+    return S.crearOActualizarCalibracion(String(colaboradorId),periodoId,cambios,(state.user&&state.user.nombre)||'Backend');
+  }
+
+  async function refreshFeedbackDetail(evaluationId, colaboradorId, leaderEv) {
+    const fresh=apiData(await global.EDDApi.evaluationDetail(evaluationId,true));
+    state.remote.detail=fresh; state.remote.detailError=null;
+    hydrateRemoteFeedback(fresh,String(colaboradorId),state.periodo.id,leaderEv||S.getEvaluacion(String(colaboradorId),state.periodo.id,'lider'));
+    return fresh;
+  }
+
   function ensureLocalResultForEvaluation(ev) {
     if (!ev || !ev.id) return null;
     const existing = S.getResultado(ev.id);
@@ -678,6 +727,7 @@
     (d.answers || []).filter(a => !/l[ií]der|leader/i.test(String(a.evaluator || a.evaluador || ''))).forEach(a => mapRemoteAnswerToLocal(local.id, a));
     hydrateObjectives(local.id, d.objectives || [], false);
     syncBackendResultsFromDetail(d, local, null);
+    hydrateRemoteFeedback(d, me.empleado, state.periodo.id, S.getEvaluacion(me.empleado, state.periodo.id, 'lider'));
   }
   function selfDraftPayload(localEvalId, backendId) {
     const ev = S.load().evaluaciones.find(e => e.id === localEvalId) || {};
@@ -900,7 +950,7 @@
     const param = parts[2];
 
     // Carga lazy del detalle propio: evita pagar ~10s al entrar al dashboard.
-    const necesitaDetallePropio = (area === 'colaborador' && page === 'autoevaluacion') || (area === 'lider' && page === 'mi-autoevaluacion');
+    const necesitaDetallePropio = (area === 'colaborador' && (page === 'autoevaluacion' || page === 'retroalimentacion')) || (area === 'lider' && (page === 'mi-autoevaluacion' || page === 'mi-retroalimentacion'));
     const mineEvalParaDetalle = state.remote.mine && state.remote.mine.evaluation;
     if (apiReadMode() && necesitaDetallePropio && mineEvalParaDetalle && !state.remote.detail) {
       if (!state.remote.detailLoading) ensureOwnRemoteDetail(false);
@@ -2090,7 +2140,7 @@
     const pendingEval = team.filter(x => /pendiente|no iniciada|en progreso/i.test(String(x.leaderStatus || x.processState || ''))).length;
     const pendingLeaderSignature = team.filter(x => x.leaderSignaturePending).length;
     const pendingEmployeeSignature = team.filter(x => x.employeeSignaturePending).length;
-    return `<section class="backend-live-section"><div class="kpi-grid">${kpi('Colaboradores',team.length)}${kpi('Pendientes por evaluar',pendingEval,pendingEval?'yellow':'gray')}${kpi('Por firmar líder',pendingLeaderSignature,pendingLeaderSignature?'red':'gray')}${kpi('Firma colaborador pendiente',pendingEmployeeSignature,pendingEmployeeSignature?'yellow':'gray')}</div><div class="card"><div class="admin-panel-head"><div><span class="admin-section-kicker">DATOS EN VIVO</span><h2>${soloFirmas?'Pendientes por firmar':soloPendientes?'Pendientes por evaluar':'Mi equipo'}</h2><p>Origen: n8n + Airtable · identidad y jerarquía validadas por sesión.</p></div><button class="btn btn-outline btn-sm" onclick="App.recargarBackend()">Actualizar</button></div><div class="admin-table-wrap"><table class="table"><thead><tr><th>Nombre</th><th>Puesto</th><th>Área</th><th>Autoevaluación</th><th>Evaluación líder</th><th>Proceso</th><th>Retroalimentación</th><th>Firma</th><th></th></tr></thead><tbody>${team.map(x=>{const selfReady=/submitted|completada|enviada|pendiente.*l[ií]der/i.test(String(x.selfStatus||x.processState||''));const leaderDone=/submitted|completada|enviada/i.test(String(x.leaderStatus||''));return `<tr><td><div class="backend-person-cell"><strong>${esc(x.name||x.employeeName||x.employeeId)}</strong><small>${esc(x.employeeId||'')}</small></div></td><td>${esc(x.position||'—')}</td><td>${esc(x.area||'—')}</td><td>${badge(x.selfStatus||'—')}</td><td>${badge(x.leaderStatus||'—')}</td><td>${badge(x.processState||'—')}</td><td>${badge(x.feedbackState||'—')}</td><td>${x.leaderSignaturePending?badge('Pendiente líder','red'):x.employeeSignaturePending?badge('Pendiente colaborador','yellow'):'—'}</td><td>${selfReady&&!leaderDone&&x.evaluationId?`<button class="btn btn-primary btn-sm" onclick="App.abrirEvaluacionLider('${esc(x.employeeId)}','${esc(x.evaluationId)}')">Evaluar</button>`:leaderDone?'<span class="muted">Enviada</span>':'<span class="muted">Esperando autoevaluación</span>'}</td></tr>`}).join('')||`<tr><td colspan="9" class="muted">Sin registros para esta vista.</td></tr>`}</tbody></table></div><p class="backend-read-note">La evaluación del líder ya guarda borradores y envíos en n8n + Airtable. Calibración y firmas se conectarán en una fase posterior.</p></div></section>`;
+    return `<section class="backend-live-section"><div class="kpi-grid">${kpi('Colaboradores',team.length)}${kpi('Pendientes por evaluar',pendingEval,pendingEval?'yellow':'gray')}${kpi('Por firmar líder',pendingLeaderSignature,pendingLeaderSignature?'red':'gray')}${kpi('Firma colaborador pendiente',pendingEmployeeSignature,pendingEmployeeSignature?'yellow':'gray')}</div><div class="card"><div class="admin-panel-head"><div><span class="admin-section-kicker">DATOS EN VIVO</span><h2>${soloFirmas?'Pendientes por firmar':soloPendientes?'Pendientes por evaluar':'Mi equipo'}</h2><p>Origen: n8n + Airtable · identidad y jerarquía validadas por sesión.</p></div><button class="btn btn-outline btn-sm" onclick="App.recargarBackend()">Actualizar</button></div><div class="admin-table-wrap"><table class="table"><thead><tr><th>Nombre</th><th>Puesto</th><th>Área</th><th>Autoevaluación</th><th>Evaluación líder</th><th>Proceso</th><th>Retroalimentación</th><th>Firma</th><th></th></tr></thead><tbody>${team.map(x=>{const selfReady=/submitted|completada|enviada|pendiente.*l[ií]der/i.test(String(x.selfStatus||x.processState||''));const leaderDone=/submitted|completada|enviada/i.test(String(x.leaderStatus||''));return `<tr><td><div class="backend-person-cell"><strong>${esc(x.name||x.employeeName||x.employeeId)}</strong><small>${esc(x.employeeId||'')}</small></div></td><td>${esc(x.position||'—')}</td><td>${esc(x.area||'—')}</td><td>${badge(x.selfStatus||'—')}</td><td>${badge(x.leaderStatus||'—')}</td><td>${badge(x.processState||'—')}</td><td>${badge(x.feedbackState||'—')}</td><td>${x.leaderSignaturePending?badge('Pendiente líder','red'):x.employeeSignaturePending?badge('Pendiente colaborador','yellow'):'—'}</td><td>${selfReady&&!leaderDone&&x.evaluationId?`<button class="btn btn-primary btn-sm" onclick="App.abrirEvaluacionLider('${esc(x.employeeId)}','${esc(x.evaluationId)}')">Evaluar</button>`:leaderDone&&x.evaluationId?`<button class="btn btn-outline btn-sm" onclick="App.abrirComparacionLider('${esc(x.employeeId)}','${esc(x.evaluationId)}')">Ver seguimiento</button>`:'<span class="muted">Esperando autoevaluación</span>'}</td></tr>`}).join('')||`<tr><td colspan="9" class="muted">Sin registros para esta vista.</td></tr>`}</tbody></table></div><p class="backend-read-note">Evaluación, calibración, retroalimentación y firmas usan n8n + Airtable como fuente de verdad.</p></div></section>`;
   }
 
   function viewLiderDashboard(lider, periodoId, soloPendientes, soloFirmas) {
@@ -2387,7 +2437,7 @@
       <h3>Ubicación en la Matriz 9-Box</h3>
       ${ninaBoxHtml}
       <p class="muted">Estado actual del proceso: ${badge(estado)}. La calibración y liberación de retroalimentación las gestiona el administrador de RH.</p>
-      ${cal && cal.retroHabilitada ? `<section class="leader-release-card"><div class="feedback-signing-head"><div><span class="admin-section-kicker">CIERRE DE RETROALIMENTACIÓN</span><h3>Reunión, acuerdos y firma</h3><p>Confirma la reunión, ajusta los acuerdos si es necesario y libera la versión final antes de firmar.</p></div><div class="document-actions"><button class="btn btn-outline btn-sm" onclick="App.descargarRetroalimentacion('${colaboradorId}','${periodoId}')">Descargar constancia</button><button class="btn btn-outline btn-sm" onclick="App.imprimirRetroalimentacion('${colaboradorId}','${periodoId}')">Imprimir / Guardar PDF</button></div></div><label class="confirm-check"><input type="checkbox" ${cal.reunionLiderRealizada?'checked':''} ${cal.firmaLider?'disabled':''} onchange="App.confirmarReunionLider('${colaboradorId}','${periodoId}',this.checked)"/> Confirmo que ya realicé la reunión de retroalimentación con el colaborador.</label><div class="actions"><button class="btn btn-primary" ${cal.reunionLiderRealizada&&!cal.acuerdosLiberados&&!cal.firmaLider?'':'disabled'} onclick="App.liberarAcuerdos('${colaboradorId}','${periodoId}')">${cal.acuerdosLiberados?'✓ Acuerdos liberados':'Liberar acuerdos para firma'}</button></div><div class="signature-own-flow leader-signature-grid">${renderSignatureCard('lider',col,periodoId,cal,!cal.acuerdosLiberados?'Libera primero los acuerdos finales.':null)}${renderOtherPartySignatureStatus('colaborador',cal)}</div></section>` : ''}
+      ${cal && cal.retroHabilitada ? `<section class="leader-release-card"><div class="feedback-signing-head"><div><span class="admin-section-kicker">CIERRE DE RETROALIMENTACIÓN</span><h3>Reunión, acuerdos y firma</h3><p>Confirma la reunión, ajusta los acuerdos si es necesario y libera la versión final antes de firmar.</p></div><div class="document-actions"><button class="btn btn-outline btn-sm" onclick="App.descargarRetroalimentacion('${colaboradorId}','${periodoId}')">Descargar constancia</button><button class="btn btn-outline btn-sm" onclick="App.imprimirRetroalimentacion('${colaboradorId}','${periodoId}')">Imprimir / Guardar PDF</button></div></div><label class="confirm-check"><input type="checkbox" ${cal.reunionLiderRealizada?'checked':''} ${cal.firmaLider?'disabled':''} onchange="App.confirmarReunionLider('${colaboradorId}','${periodoId}',this.checked)"/> Confirmo que ya realicé la reunión de retroalimentación con el colaborador.</label><label class="calibration-field" style="margin-top:14px"><span>Acuerdos finales de la reunión</span><textarea id="feedbackAgreements-${colaboradorId}" ${cal.acuerdosLiberados?'disabled':''} placeholder="Documenta compromisos, responsables y acuerdos finales...">${esc(cal.acuerdosFinales||'')}</textarea></label><div class="actions"><button class="btn btn-primary" ${cal.reunionLiderRealizada&&!cal.acuerdosLiberados&&!cal.firmaLider?'':'disabled'} onclick="App.liberarAcuerdos('${colaboradorId}','${periodoId}')">${cal.acuerdosLiberados?'✓ Acuerdos liberados':'Guardar y liberar acuerdos para firma'}</button></div><div class="signature-own-flow leader-signature-grid">${renderSignatureCard('lider',col,periodoId,cal,!cal.acuerdosLiberados?'Libera primero los acuerdos finales.':null)}${renderOtherPartySignatureStatus('colaborador',cal)}</div></section>` : ''}
     </div>`;
   }
 
@@ -2902,7 +2952,7 @@
             <label class="calibration-field"><span>Justificación del ajuste <em>${Math.abs(currentCalibrated-Number(item.leaderResult))>0.0001?'obligatoria':'si modificas el resultado'}</em></span><textarea id="calRemoteReason" ${calibrationDone?'disabled':''} placeholder="Describe la evidencia y el criterio utilizado para el ajuste...">${esc(reason)}</textarea></label>
             <label class="calibration-field"><span>Notas de DO <em>opcional</em></span><textarea id="calRemoteNotes" ${calibrationDone?'disabled':''} placeholder="Contexto adicional de la revisión..."></textarea></label>
             <div class="calibration-state-note ${calibrationDone?'is-complete':calibrationDraft?'is-draft':''}">${calibrationDone?'✓ Calibración completada. El resultado quedó bloqueado para esta etapa.':calibrationDraft?'Borrador guardado. Puedes seguir ajustando o completar la calibración.':'Aún no existe una calibración guardada.'}</div>
-            <div class="calibration-actions"><button class="btn btn-outline" id="calRemoteSaveBtn" ${calibrationDone?'disabled':''} onclick="App.guardarCalibracionRemota('${esc(item.evaluationId)}')">${state.remote.calibrationSaving?'Guardando…':'Guardar borrador'}</button><button class="btn btn-primary" id="calRemoteCompleteBtn" ${calibrationDone||state.remote.calibrationCompleting?'disabled':''} onclick="App.completarCalibracionRemota('${esc(item.evaluationId)}')">${calibrationDone?'✓ Calibración completada':state.remote.calibrationCompleting?'Completando…':'Completar calibración'}</button></div>${calibrationDone?`<div class="calibration-release-panel"><div><span class="admin-section-kicker">SIGUIENTE ETAPA</span><h3>Retroalimentación</h3><p>La calibración ya está cerrada. Libera el resultado cuando el endpoint de producción esté configurado.</p></div><button class="btn btn-primary" ${state.remote.calibrationReleasing?'disabled':''} onclick="App.liberarResultadoRemoto('${esc(item.evaluationId)}')">${state.remote.calibrationReleasing?'Liberando…':'Liberar para retroalimentación'}</button></div>`:''}
+            <div class="calibration-actions"><button class="btn btn-outline" id="calRemoteSaveBtn" ${calibrationDone?'disabled':''} onclick="App.guardarCalibracionRemota('${esc(item.evaluationId)}')">${state.remote.calibrationSaving?'Guardando…':'Guardar borrador'}</button><button class="btn btn-primary" id="calRemoteCompleteBtn" ${calibrationDone||state.remote.calibrationCompleting?'disabled':''} onclick="App.completarCalibracionRemota('${esc(item.evaluationId)}')">${calibrationDone?'✓ Calibración completada':state.remote.calibrationCompleting?'Completando…':'Completar calibración'}</button></div>${calibrationDone?`<div class="calibration-release-panel"><div><span class="admin-section-kicker">SIGUIENTE ETAPA</span><h3>Retroalimentación</h3><p>La calibración ya está cerrada. Libera el resultado para iniciar la retroalimentación y habilitar el seguimiento de firmas.</p></div><button class="btn btn-primary" ${state.remote.calibrationReleasing?'disabled':''} onclick="App.liberarResultadoRemoto('${esc(item.evaluationId)}')">${state.remote.calibrationReleasing?'Liberando…':'Liberar para retroalimentación'}</button></div>`:''}
           </article>
         </section>`;
       }
@@ -3167,11 +3217,33 @@
         hydrateObjectives(auto.id, detail.objectives || [], false);
         hydrateObjectives(lev.id, detail.objectives || [], true);
         const backendMetrics = syncBackendResultsFromDetail(detail, auto, lev);
+        hydrateRemoteFeedback(detail, String(employeeId), state.periodo.id, lev);
         if (auto.estado === D.ESTADOS.COMPLETADA && !(backendMetrics && backendMetrics.selfMetrics)) ensureLocalResultForEvaluation(auto);
         if (lev.estado === D.ESTADOS.COMPLETADA && !(backendMetrics && backendMetrics.leaderMetrics)) ensureLocalResultForEvaluation(lev);
         state.wizard={seccionIdx:0,evaluacionId:lev.id,tipo:'lider',colaboradorId:String(employeeId),liderId:String(state.user.empleado)};
         navigate('#/lider/evaluar/' + employeeId);
       } catch (err) { showNotice(err.message || 'No fue posible cargar la evaluación.','warning'); } finally { state.remote.loadingEvaluationId = null; }
+    },
+    async abrirComparacionLider(employeeId, evaluationId) {
+      if (!apiReadMode()) { navigate('#/lider/comparacion/' + employeeId); return; }
+      if (state.remote.loadingEvaluationId) return;
+      state.remote.loadingEvaluationId=String(evaluationId);
+      try {
+        showNotice('Cargando seguimiento y retroalimentación…','info');
+        const detail=apiData(await global.EDDApi.evaluationDetail(evaluationId,true));
+        state.remote.detail=detail;
+        const row=((state.remote.team&&state.remote.team.team)||[]).find(x=>String(x.employeeId)===String(employeeId))||{};
+        const emp=detail.employee||{employeeId,name:row.name,position:row.position,area:row.area};
+        upsertColaboradorRemoto(emp,state.user.empleado);
+        const info=detail.evaluation||{};
+        const auto=getOrCreateLocalEvaluation(employeeId,state.user.empleado,'autoevaluacion',info.selfEvaluationId||info.evaluationId||evaluationId,info.selfState||row.selfStatus||'Completada');
+        const lev=getOrCreateLocalEvaluation(employeeId,state.user.empleado,'lider',info.leaderEvaluationId||info.managerEvaluationId||row.leaderEvaluationId||(evaluationId+'-LIDER'),info.leaderState||row.leaderStatus||'Completada');
+        (detail.answers||[]).forEach(a=>{const who=String(a.evaluator||a.evaluador||a.role||a.evaluatorRole||'').toLowerCase();mapRemoteAnswerToLocal(/l[ií]der|leader/.test(who)?lev.id:auto.id,a);});
+        hydrateObjectives(auto.id,detail.objectives||[],false); hydrateObjectives(lev.id,detail.objectives||[],true);
+        syncBackendResultsFromDetail(detail,auto,lev); hydrateRemoteFeedback(detail,String(employeeId),state.periodo.id,lev);
+        navigate('#/lider/comparacion/'+employeeId);
+      } catch(e) { showNotice(e&&e.message?e.message:'No fue posible cargar el seguimiento.','warning'); }
+      finally { state.remote.loadingEvaluationId=null; }
     },
     async abrirCalibracionDO(employeeId, evaluationId) {
       if (!apiReadMode()) { navigate('#/admin/calibracion/' + employeeId); return; }
@@ -3196,6 +3268,7 @@
           (detail.answers||[]).forEach(a=>{ const who=String(a.evaluator||a.evaluador||a.role||a.evaluatorRole||'').toLowerCase(); mapRemoteAnswerToLocal(/l[ií]der|leader/.test(who)?lev.id:auto.id,a); });
           hydrateObjectives(auto.id, detail.objectives||[], false); hydrateObjectives(lev.id, detail.objectives||[], true);
           syncBackendResultsFromDetail(detail, auto, lev);
+          hydrateRemoteFeedback(detail,String(employeeId),state.periodo.id,lev);
         } catch(e) { console.warn('EDD DO: hidratación visual parcial',e); }
       } catch(e) { state.remote.detailError = e.message||'No fue posible cargar el expediente completo.'; showNotice(state.remote.detailError,'warning'); }
       finally { state.remote.detailLoading=false; render(); }
@@ -3205,13 +3278,20 @@
       if(state.remote.calibrationReleasing) return;
       state.remote.calibrationReleasing=true; render();
       try{
-        await global.EDDApi.releaseResult(evaluationId);
+        const released=apiData(await global.EDDApi.releaseResult(evaluationId));
+        if(released&&released.feedbackId){
+          const employeeId=(state.remote.detail&&state.remote.detail.employee&&(state.remote.detail.employee.employeeId||state.remote.detail.employee.empleado))||'';
+          if(employeeId) S.crearOActualizarCalibracion(String(employeeId),state.periodo.id,{feedbackId:released.feedbackId,retroHabilitada:true,_motivo:'Release confirmado por backend'},state.user.nombre);
+        }
+        try {
+          const employeeId=(state.remote.detail&&state.remote.detail.employee&&(state.remote.detail.employee.employeeId||state.remote.detail.employee.empleado))||'';
+          if(employeeId) await refreshFeedbackDetail(evaluationId,employeeId,S.getEvaluacion(String(employeeId),state.periodo.id,'lider'));
+        } catch(refreshErr){ console.warn('Release confirmado; refresh de feedback pendiente',refreshErr); }
         showNotice('Resultado liberado para retroalimentación.','success');
         if(global.EDDApi.adminCalibration) state.remote.calibration=apiData(await global.EDDApi.adminCalibration(true));
         if(global.EDDApi.adminDashboard) state.remote.dashboard=apiData(await global.EDDApi.adminDashboard(true));
       }catch(e){
-        if(e&&e.tipo==='endpoint_not_configured') showNotice('Backend listo, pero falta colocar en config.js la URL exacta del webhook de liberación.','warning');
-        else showNotice(e&&e.message?e.message:'No fue posible liberar el resultado.','warning');
+        showNotice(e&&e.message?e.message:'No fue posible liberar el resultado.','warning');
       }finally{state.remote.calibrationReleasing=false;render();}
     },
     logout,
@@ -3704,15 +3784,12 @@
       }
     },
     limpiarFirma(canvasId){ const c=document.getElementById(canvasId); if(!c)return; const ctx=c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height); },
-    firmarRetroalimentacion(role,colaboradorId,periodoId,canvasId){
+    async firmarRetroalimentacion(role,colaboradorId,periodoId,canvasId){
       const cal=S.getCalibracion(colaboradorId,periodoId), c=document.getElementById(canvasId);
       const perfil=state.user&&state.user.perfil;
       if((role==='lider'&&perfil!=='lider')||(role==='colaborador'&&perfil!=='colaborador')){showNotice('Esta firma debe realizarse desde el portal personal correspondiente.','warning');return;}
       if(role==='colaborador'&&String(state.user.empleado)!==String(colaboradorId)){showNotice('Solo puedes firmar tu propia retroalimentación.','warning');return;}
-      if(role==='lider'){
-        const col=S.getColaborador(colaboradorId);
-        if(!col||String(col.liderId)!==String(state.user.empleado)){showNotice('No tienes autorización para firmar la retroalimentación de este colaborador.','warning');return;}
-      }
+      if(role==='lider'){ const col=S.getColaborador(colaboradorId); if(!col||String(col.liderId)!==String(state.user.empleado)){showNotice('No tienes autorización para firmar la retroalimentación de este colaborador.','warning');return;} }
       if(!cal||!cal.retroHabilitada){showNotice('La retroalimentación todavía no está habilitada.','warning');return;}
       if(!cal.acuerdosLiberados){showNotice('Los acuerdos finales deben estar liberados antes de firmar.','warning');return;}
       if(role==='colaborador'&&!cal.firmaLider){showNotice('La firma del colaborador se habilita después de la firma del líder.','warning');return;}
@@ -3720,9 +3797,20 @@
       const blank=document.createElement('canvas');blank.width=c.width;blank.height=c.height;
       if(c.toDataURL()===blank.toDataURL()){showNotice('Firma dentro del recuadro antes de confirmar.','warning');return;}
       const now=new Date().toISOString(), data=c.toDataURL('image/png');
-      if(role==='lider') S.crearOActualizarCalibracion(colaboradorId,periodoId,{firmaLider:true,fechaFirmaLider:now,firmaLiderNombre:state.user.nombre,firmaLiderData:data,_motivo:'Líder firma constancia de retroalimentación'},state.user.nombre);
-      else S.crearOActualizarCalibracion(colaboradorId,periodoId,{firmaColaborador:true,fechaFirmaColaborador:now,firmaColaboradorNombre:state.user.nombre,firmaColaboradorData:data,aceptacionColaborador:true,fechaAceptacion:now,_motivo:'Colaborador firma constancia de retroalimentación'},state.user.nombre);
-      showNotice(role==='lider'?'Firma del líder registrada. El colaborador ya puede firmar.':'Firma registrada. La retroalimentación quedó cerrada.','success'); render();
+      try {
+        if(apiWriteMode()){
+          const feedbackId=cal.feedbackId;
+          if(!feedbackId) throw new Error('No se encontró el identificador de retroalimentación. Actualiza la pantalla e intenta de nuevo.');
+          const payload={signatureImage:data};
+          if(role==='lider') await global.EDDApi.signFeedbackAsLeader(feedbackId,payload);
+          else await global.EDDApi.signFeedbackAsEmployee(feedbackId,payload);
+        }
+        if(role==='lider') S.crearOActualizarCalibracion(colaboradorId,periodoId,{firmaLider:true,fechaFirmaLider:now,firmaLiderNombre:state.user.nombre,firmaLiderData:data,_motivo:'Líder firma constancia de retroalimentación'},state.user.nombre);
+        else S.crearOActualizarCalibracion(colaboradorId,periodoId,{firmaColaborador:true,fechaFirmaColaborador:now,firmaColaboradorNombre:state.user.nombre,firmaColaboradorData:data,aceptacionColaborador:true,fechaAceptacion:now,_motivo:'Colaborador firma constancia de retroalimentación'},state.user.nombre);
+        showNotice(role==='lider'?'Firma del líder registrada. El colaborador ya puede firmar.':'Firma registrada. La retroalimentación quedó cerrada.','success');
+        if(apiWriteMode()) { try { if(role==='colaborador') await ensureOwnRemoteDetail(true); else { const ev=S.getEvaluacion(colaboradorId,periodoId,'autoevaluacion'); const bid=ev&&ev.backendId; if(bid) await refreshFeedbackDetail(bid,colaboradorId,S.getEvaluacion(colaboradorId,periodoId,'lider')); } } catch(e){console.warn('Refresh post-firma',e);} }
+        render();
+      } catch(e){ showNotice(e&&e.message?e.message:'No fue posible registrar la firma.','warning'); }
     },
     descargarRetroalimentacion(colaboradorId,periodoId){ const html=buildRetroDocument(colaboradorId,periodoId); if(!html){showNotice('No hay información suficiente para generar la constancia.','warning');return;} const blob=new Blob([html],{type:'text/html;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`retroalimentacion-${colaboradorId}-${periodoId}.html`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000); },
     imprimirRetroalimentacion(colaboradorId,periodoId){ const html=buildRetroDocument(colaboradorId,periodoId); if(!html){showNotice('No hay información suficiente para generar la constancia.','warning');return;} const w=window.open('','_blank','noopener,noreferrer');if(!w){showNotice('Permite ventanas emergentes para imprimir la constancia.','warning');return;}w.document.open();w.document.write(html);w.document.close();setTimeout(()=>{w.focus();w.print();},350); },
@@ -3733,8 +3821,32 @@
       S.aceptarResultado(colaboradorId, periodoId, state.user.nombre); showNotice('Retroalimentación aceptada correctamente.','success'); render();
     },
     rateHerramienta(evaluacionId,seccion,herramientaId,valor){ S.saveHerramientaEvaluacion(evaluacionId,herramientaId,valor); const vals=Object.values(S.getHerramientasEvaluacion(evaluacionId)).filter(v=>v!=='N/A'&&v!==''&&v!=null).map(Number).filter(Number.isFinite); const avg=vals.length?C.round1(vals.reduce((a,b)=>a+b,0)/vals.length):''; S.saveRespuesta(evaluacionId,seccion,'B2',avg,''); render(); },
-    confirmarReunionLider(colaboradorId,periodoId,checked){ S.crearOActualizarCalibracion(colaboradorId,periodoId,{reunionLiderRealizada:!!checked,fechaReunion:checked?new Date().toISOString():null,_motivo:'Confirmación de reunión de retroalimentación'},state.user.nombre); showNotice(checked?'Reunión marcada como realizada. Puedes ajustar acuerdos antes de liberarlos.':'Se retiró la confirmación de reunión.','info'); render(); },
-    liberarAcuerdos(colaboradorId,periodoId){ const cal=S.getCalibracion(colaboradorId,periodoId); if(!cal||!cal.reunionLiderRealizada){showNotice('Confirma primero que realizaste la reunión de retroalimentación.','warning');return;} S.crearOActualizarCalibracion(colaboradorId,periodoId,{acuerdosLiberados:true,fechaLiberacionAcuerdos:new Date().toISOString(),_motivo:'Líder libera acuerdos finales para aceptación'},state.user.nombre); showNotice('Acuerdos liberados. El colaborador ya puede revisarlos y aceptar.','success'); render(); },
+    async confirmarReunionLider(colaboradorId,periodoId,checked){
+      const cal=S.getCalibracion(colaboradorId,periodoId);
+      if(apiWriteMode() && !checked){ showNotice('En producción la reunión confirmada no se revierte desde el portal.','info'); render(); return; }
+      try{
+        if(apiWriteMode()){
+          if(!cal||!cal.feedbackId) throw new Error('No se encontró el identificador de retroalimentación. Actualiza la pantalla.');
+          await global.EDDApi.confirmFeedbackMeeting(cal.feedbackId);
+        }
+        S.crearOActualizarCalibracion(colaboradorId,periodoId,{reunionLiderRealizada:!!checked,fechaReunion:checked?new Date().toISOString():null,_motivo:'Confirmación de reunión de retroalimentación'},state.user.nombre);
+        showNotice(checked?'Reunión confirmada. Documenta los acuerdos finales.':'Se retiró la confirmación de reunión.','success'); render();
+      }catch(e){showNotice(e&&e.message?e.message:'No fue posible confirmar la reunión.','warning');render();}
+    },
+    async liberarAcuerdos(colaboradorId,periodoId){
+      const cal=S.getCalibracion(colaboradorId,periodoId); if(!cal||!cal.reunionLiderRealizada){showNotice('Confirma primero que realizaste la reunión de retroalimentación.','warning');return;}
+      const txt=String((document.getElementById('feedbackAgreements-'+colaboradorId)||{}).value||cal.acuerdosFinales||'').trim();
+      if(!txt){showNotice('Documenta los acuerdos finales antes de liberarlos para firma.','warning');return;}
+      try{
+        if(apiWriteMode()){
+          if(!cal.feedbackId) throw new Error('No se encontró el identificador de retroalimentación. Actualiza la pantalla.');
+          await global.EDDApi.saveFeedbackAgreements(cal.feedbackId,{agreements:txt});
+          await global.EDDApi.releaseFeedbackForSignature(cal.feedbackId);
+        }
+        S.crearOActualizarCalibracion(colaboradorId,periodoId,{acuerdosFinales:txt,acuerdosLiberados:true,fechaLiberacionAcuerdos:new Date().toISOString(),_motivo:'Líder libera acuerdos finales para firma'},state.user.nombre);
+        showNotice('Acuerdos guardados y liberados para firma.','success'); render();
+      }catch(e){showNotice(e&&e.message?e.message:'No fue posible liberar los acuerdos.','warning');}
+    },
     async enviarNotificacionVencida(empleado){
       const col=S.getColaborador(empleado); if(!col){showNotice('No se encontró al colaborador.','warning');return;}
       const cfg=global.APP_CONFIG||{};

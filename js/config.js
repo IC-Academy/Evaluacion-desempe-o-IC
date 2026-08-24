@@ -77,17 +77,14 @@
     testCaptureEnabled: false,
     writeApiEnabled: true,
 
-    // Rutas dinámicas que n8n puede prefijar con webhookId.
-    // Dejar null hasta recibir la URL exacta publicada; el frontend mostrará
-    // el estado como pendiente sin inventar una URL.
-    endpointOverrides: {
-      releaseResultPath: null,
-      feedbackMeetingPath: null,
-      feedbackAgreementsPath: null,
-      feedbackReleaseAgreementsPath: null,
-      feedbackLeaderSignaturePath: null,
-      feedbackEmployeeSignaturePath: null
-    }
+    // Rutas dinámicas con webhookId: ya NO se leen desde aquí. Se
+    // hardcodearon directamente en api.js (mismo patrón que self-draft,
+    // submit-self, leader-draft, submit-leader, save/complete calibration),
+    // para evitar que este objeto quede en null silenciosamente y rompa un
+    // endpoint sin que nadie lo note. Ver api.js: releaseResult(),
+    // confirmFeedbackMeeting(), saveFeedbackAgreements(),
+    // releaseFeedbackForSignature(), signFeedbackAsLeader(),
+    // signFeedbackAsEmployee().
   };
 
   global.APP_CONFIG = APP_CONFIG;

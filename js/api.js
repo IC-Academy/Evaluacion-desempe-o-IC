@@ -192,21 +192,54 @@
     leaderTeam(forceRefresh) { return apiRequest('/leader/team', { method: 'GET', cacheMs: 20000, forceRefresh: !!forceRefresh, timeoutMs: 12000 }); },
     adminDashboard(forceRefresh) { return apiRequest('/admin/dashboard', { method: 'GET', cacheMs: 20000, forceRefresh: !!forceRefresh, timeoutMs: 15000 }); },
     adminCalibration(forceRefresh) { return apiRequest('/admin/calibration', { method: 'GET', cacheMs: 15000, forceRefresh: !!forceRefresh, timeoutMs: 15000 }); },
-    async saveAdminCalibration(evaluationId, payload) { const r=await apiRequest('/admin/calibration/' + encodeURIComponent(evaluationId), { method: 'PUT', body: payload, timeoutMs: 30000 }); clearReadCache('/admin/calibration'); return r; },
-    async completeAdminCalibration(evaluationId) { const r=await apiRequest('/admin/calibration/' + encodeURIComponent(evaluationId) + '/complete', { method: 'POST', timeoutMs: 30000 }); clearReadCache('/admin/calibration'); clearReadCache('/admin/dashboard'); return r; },
+    // FIX (cierre E2E): faltaba el webhookId real de n8n en el path dinámico
+    // (mismo patrón que ya rompió self-draft/submit-self/leader-draft en su
+    // momento). Sin el webhookId, n8n devuelve 404 y el navegador nunca llega
+    // al workflow -> "No fue posible conectar con el servidor".
+    async saveAdminCalibration(evaluationId, payload) { const r=await apiRequest('/1ff38682-54db-4bc4-a8e5-4d6b9af56404/admin/calibration/' + encodeURIComponent(evaluationId), { method: 'PUT', body: payload, timeoutMs: 30000 }); clearReadCache('/admin/calibration'); return r; },
+    async completeAdminCalibration(evaluationId) { const r=await apiRequest('/61a9fc92-586b-4343-a783-e0ceb82ec52a/admin/calibration/' + encodeURIComponent(evaluationId) + '/complete', { method: 'POST', timeoutMs: 30000 }); clearReadCache('/admin/calibration'); clearReadCache('/admin/dashboard'); return r; },
     async releaseResult(evaluationId) {
-      const path = global.APP_CONFIG && global.APP_CONFIG.endpointOverrides && global.APP_CONFIG.endpointOverrides.releaseResultPath;
-      if (!path) throw new ApiError('La URL de liberación todavía no está configurada en el frontend.', { tipo:'endpoint_not_configured', status:0 });
-      const resolved = String(path).replace(':evaluationId', encodeURIComponent(evaluationId));
-      const r = await apiRequest(resolved, { method:'POST', timeoutMs:30000 });
+      // FIX (verificación explícita): antes dependía de
+      // APP_CONFIG.endpointOverrides.releaseResultPath, que podía quedar
+      // null silenciosamente si alguien reseteaba config.js. URL real de
+      // n8n (workflow "EDD - Liberar Resultado", identificador = evaluationId,
+      // NUNCA feedbackId) verificada directamente contra la production URL
+      // del trigger: https://jmejiaromero.app.n8n.cloud/webhook/fa5dbc0a-401a-4db1-8f95-e480ab620cc7/evaluations/:evaluationId/release
+      const r = await apiRequest('/fa5dbc0a-401a-4db1-8f95-e480ab620cc7/evaluations/' + encodeURIComponent(evaluationId) + '/release', { method: 'POST', timeoutMs: 30000 });
       clearReadCache(); return r;
     },
-    async feedbackAction(key, evaluationId, payload) {
-      const map = global.APP_CONFIG && global.APP_CONFIG.endpointOverrides || {};
-      const path = map[key];
-      if (!path) throw new ApiError('Este endpoint de retroalimentación todavía no está configurado.', { tipo:'endpoint_not_configured', status:0 });
-      const resolved = String(path).replace(':evaluationId', encodeURIComponent(evaluationId));
-      const r = await apiRequest(resolved, { method:'POST', body:payload || undefined, timeoutMs:30000 });
+
+    // --- Retroalimentación y firmas ------------------------------------------
+    // FIX (cierre E2E): antes existía un único feedbackAction(key, evaluationId,
+    // payload) genérico que reemplazaba ':feedbackId' usando el valor de
+    // evaluationId — evaluationId y feedbackId NUNCA son el mismo identificador
+    // (feedbackId = ID de Retroalimentaciones, un registro aparte, distinto de
+    // la evaluación). Se reemplaza por 5 métodos explícitos, cada uno exige el
+    // identificador correcto por nombre — no hay forma de invocarlos con el ID
+    // equivocado sin que sea obvio en la firma de la función.
+    async confirmFeedbackMeeting(feedbackId) {
+      const r = await apiRequest('/f9620b5c-7fe4-4afc-a8d6-164bff48c1d1/feedback/' + encodeURIComponent(feedbackId) + '/confirm-meeting', { method: 'POST', timeoutMs: 30000 });
+      clearReadCache(); return r;
+    },
+    async saveFeedbackAgreements(feedbackId, payload) {
+      const r = await apiRequest('/31fcda18-e890-4da7-9d69-ad387e473f12/feedback/' + encodeURIComponent(feedbackId) + '/agreements', { method: 'PUT', body: payload, timeoutMs: 30000 });
+      clearReadCache(); return r;
+    },
+    async releaseFeedbackForSignature(feedbackId) {
+      const r = await apiRequest('/2e91868a-6fdb-428a-9a60-5f689316fd9f/feedback/' + encodeURIComponent(feedbackId) + '/release-for-signature', { method: 'POST', timeoutMs: 30000 });
+      clearReadCache(); return r;
+    },
+    async signFeedbackAsLeader(feedbackId, payload) {
+      const r = await apiRequest('/d02bdd76-e268-4d1f-adf3-f1afbc75be86/feedback/' + encodeURIComponent(feedbackId) + '/sign-leader', { method: 'POST', body: payload || undefined, timeoutMs: 30000 });
+      clearReadCache(); return r;
+    },
+    // NOTA: no existe un endpoint de "cierre" separado. La firma del
+    // colaborador (sign-employee) ES la acción de cierre: el workflow
+    // "EDD - Firmar Retroalimentación Colaborador" marca Estado de firma =
+    // 'Cerrada' Y cierra la evaluación (Estado general del proceso = 'closed')
+    // en la misma transacción. Confirmado por inspección directa del workflow.
+    async signFeedbackAsEmployee(feedbackId, payload) {
+      const r = await apiRequest('/770a2cff-b447-4880-9289-d6b024645df7/feedback/' + encodeURIComponent(feedbackId) + '/sign-employee', { method: 'POST', body: payload || undefined, timeoutMs: 30000 });
       clearReadCache(); return r;
     },
 
