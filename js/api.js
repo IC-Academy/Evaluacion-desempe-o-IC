@@ -194,6 +194,21 @@
     adminCalibration(forceRefresh) { return apiRequest('/admin/calibration', { method: 'GET', cacheMs: 15000, forceRefresh: !!forceRefresh, timeoutMs: 15000 }); },
     async saveAdminCalibration(evaluationId, payload) { const r=await apiRequest('/admin/calibration/' + encodeURIComponent(evaluationId), { method: 'PUT', body: payload, timeoutMs: 30000 }); clearReadCache('/admin/calibration'); return r; },
     async completeAdminCalibration(evaluationId) { const r=await apiRequest('/admin/calibration/' + encodeURIComponent(evaluationId) + '/complete', { method: 'POST', timeoutMs: 30000 }); clearReadCache('/admin/calibration'); clearReadCache('/admin/dashboard'); return r; },
+    async releaseResult(evaluationId) {
+      const path = global.APP_CONFIG && global.APP_CONFIG.endpointOverrides && global.APP_CONFIG.endpointOverrides.releaseResultPath;
+      if (!path) throw new ApiError('La URL de liberación todavía no está configurada en el frontend.', { tipo:'endpoint_not_configured', status:0 });
+      const resolved = String(path).replace(':evaluationId', encodeURIComponent(evaluationId));
+      const r = await apiRequest(resolved, { method:'POST', timeoutMs:30000 });
+      clearReadCache(); return r;
+    },
+    async feedbackAction(key, evaluationId, payload) {
+      const map = global.APP_CONFIG && global.APP_CONFIG.endpointOverrides || {};
+      const path = map[key];
+      if (!path) throw new ApiError('Este endpoint de retroalimentación todavía no está configurado.', { tipo:'endpoint_not_configured', status:0 });
+      const resolved = String(path).replace(':evaluationId', encodeURIComponent(evaluationId));
+      const r = await apiRequest(resolved, { method:'POST', body:payload || undefined, timeoutMs:30000 });
+      clearReadCache(); return r;
+    },
 
     // --- Capa de escritura real (Write API v1) ----------------------------
     async initializeMyEvaluation() { const r=await apiRequest('/evaluations/mine/initialize', { method: 'POST' }); clearReadCache('/evaluations/'); return r; },

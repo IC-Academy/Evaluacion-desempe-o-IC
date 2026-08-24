@@ -472,7 +472,7 @@
     jerarquiasFiltros: {},
     nineboxSel: null,
     nineboxSelEmpleado: null,
-    remote: { ready: false, loading: false, error: null, me: null, mine: null, detail: null, detailLoading: false, team: null, dashboard: null, calibration: null, lastSync: null, leaderSubmitting: false, calibrationSaving: false, calibrationCompleting: false },
+    remote: { ready: false, loading: false, error: null, me: null, mine: null, detail: null, detailLoading: false, detailError: null, detailRetry: 0, team: null, dashboard: null, calibration: null, lastSync: null, leaderSubmitting: false, leaderSubmitSuccess: false, calibrationSaving: false, calibrationCompleting: false, calibrationReleasing: false },
     // --- Estado del login de dos pasos (beta 3) ---
     login: {
       paso: 'solicitar',   // 'solicitar' | 'validar'
@@ -2442,6 +2442,7 @@
         const peopleHtml=people.length?`<div class="admin-table-wrap"><table class="table admin-table"><thead><tr><th>Colaborador</th><th>Área</th><th>Etapa / atención</th><th>Resultado</th><th></th></tr></thead><tbody>${people.slice(0,30).map(x=>`<tr><td><strong>${esc(x.name||x.employeeName||x.employeeId||'—')}</strong><small>${esc(x.position||'')}</small></td><td>${esc(x.area||'—')}</td><td>${badge(x.attention||x.status||'Seguimiento')}</td><td>${x.leaderResult!=null?f1(x.leaderResult):'—'}</td><td>${x.evaluationId?`<a class="btn btn-outline btn-sm" href="#/admin/calibracion/${encodeURIComponent(String(x.employeeId||''))}">Revisar</a>`:''}</td></tr>`).join('')}</tbody></table></div>`:'<div class="admin-empty-state">Sin personas con alertas o actividad disponible en los endpoints actuales.</div>';
         return `<div class="admin-dashboard-grid do-restored-grid"><article class="admin-panel"><div class="admin-panel-head"><div><span class="admin-section-kicker">COBERTURA POR ÁREA</span><h2>Avance de evaluación</h2><p>Recuperamos la lectura ejecutiva por área sin mezclar información demo.</p></div></div><div class="admin-area-progress-list">${areaHtml}</div></article><article class="admin-panel"><div class="admin-panel-head"><div><span class="admin-section-kicker">TALENTO</span><h2>Resumen 9-Box</h2></div><a class="btn btn-outline btn-sm" href="#/admin/9box">Abrir matriz</a></div><div class="backend-ninebox-grid compact">${nine.length?nine.map(x=>`<article><span>${esc(x.quadrant??'—')}</span><strong>${esc(x.count??0)}</strong><small>${esc(x.name||'')}</small></article>`).join(''):'<div class="backend-empty-wide">Sin distribución disponible todavía.</div>'}</div></article></div><article class="admin-panel admin-people-summary-restored"><div class="admin-panel-head"><div><span class="admin-section-kicker">OPERACIÓN DO</span><h2>Resumen de empleados y seguimiento</h2><p>Personas visibles actualmente por alertas, calibración o cierre.</p></div><span class="admin-panel-note">${people.length} visibles</span></div>${peopleHtml}</article><div class="admin-dashboard-grid do-alerts-restored"><article class="admin-panel"><span class="admin-section-kicker">VENCIMIENTOS</span><h2>Evaluaciones fuera de fecha</h2><div class="backend-objective-summary"><div><span>Autoevaluación</span><strong>${overdueSelf}</strong></div><div><span>Evaluación líder</span><strong>${overdueLeader}</strong></div><div><span>Retroalimentación</span><strong>${overdueFeedback}</strong></div></div></article><article class="admin-panel"><span class="admin-section-kicker">CIERRE</span><h2>Firmas y retroalimentación</h2><div class="backend-objective-summary"><div><span>Liberadas</span><strong>${f.released??0}</strong></div><div><span>Firma líder</span><strong>${f.pendingLeaderSignature??0}</strong></div><div><span>Firma colaborador</span><strong>${f.pendingEmployeeSignature??0}</strong></div></div></article></div>`;
       })()}
+      <article class="admin-panel demo-readiness-panel"><div class="admin-panel-head"><div><span class="admin-section-kicker">LISTO PARA DEMO</span><h2>Flujo de punta a punta</h2><p>Lectura rápida para presentar el avance sin entrar a cada módulo.</p></div></div><div class="demo-flow-strip"><span class="done">1 · Autoevaluación</span><span class="done">2 · Evaluación líder</span><span class="${calPending||calDone?'done':''}">3 · Calibración DO</span><span class="${Number(f.released||0)>0?'done':''}">4 · Retroalimentación</span><span class="${Number(f.closed||0)>0?'done':''}">5 · Cierre</span></div></article>
       <div class="backend-live-footer"><span><i></i> Lectura backend activa</span><small>Datos reales; los módulos sin información muestran el gap en lugar de datos demo.</small><button class="btn btn-outline btn-sm" onclick="App.recargarBackend()">Actualizar</button></div>
     </section>`;
   }
@@ -2832,7 +2833,7 @@
 
           <div class="calibration-score-grid"><div class="calibration-score-card"><span>Autoevaluación</span><strong>${f1(item.selfResult)}</strong><small>Percepción colaborador</small></div><div class="calibration-score-card"><span>Evaluación líder</span><strong>${f1(item.leaderResult)}</strong><small>Base de calibración</small></div><div class="calibration-score-card ${gap!=null&&Math.abs(gap)>=1?'attention':''}"><span>Brecha auto vs líder</span><strong>${gap==null?'—':(gap>0?'+':'')+f1(gap)}</strong><small>Diferencia global</small></div><div class="calibration-score-card success"><span>Resultado calibrado</span><strong>${item.calibratedResult==null?'—':f1(item.calibratedResult)}</strong><small>${calibrationDone?'Completada':calibrationDraft?'Borrador':'Pendiente'}</small></div></div>
 
-          ${!detailReady?`<article class="admin-panel calibration-loading-detail"><div class="backend-spinner"></div><div><span class="admin-section-kicker">CARGANDO EXPEDIENTE</span><h2>Recuperando respuestas, objetivos y contexto del líder…</h2><p>La calibración puede continuar cuando termine esta lectura. No se usan datos demo.</p></div></article>`:`
+          ${!detailReady?`<article class="admin-panel calibration-loading-detail ${state.remote.detailError?'has-error':''}">${state.remote.detailError?'':`<div class="backend-spinner"></div>`}<div><span class="admin-section-kicker">${state.remote.detailError?'EXPEDIENTE NO DISPONIBLE':'CARGANDO EXPEDIENTE'}</span><h2>${state.remote.detailError?'No pudimos cargar el detalle completo':'Recuperando respuestas, objetivos y contexto del líder…'}</h2><p>${state.remote.detailError?esc(state.remote.detailError):'La calibración puede continuar cuando termine esta lectura. No se usan datos demo.'}</p>${state.remote.detailError?`<button class="btn btn-primary btn-sm" onclick="App.reintentarDetalleCalibracion('${esc(item.employeeId)}','${esc(item.evaluationId)}')">Reintentar cargar expediente</button>`:''}</div></article>`:`
           <section class="performance-profile-section calibration-performance-profile remote-performance-profile">
             <div class="performance-profile-head"><div><span class="admin-section-kicker">LECTURA MULTIDIMENSIONAL</span><h2>Perfil de desempeño vs. ideal</h2><p>Recuperamos la lectura aprobada: compara la percepción del colaborador, la evaluación del líder y la distancia de cada dimensión contra el nivel ideal de 5/5.</p></div></div>
             ${sectionGapSummary}
@@ -2864,7 +2865,7 @@
             <label class="calibration-field"><span>Justificación del ajuste <em>${Math.abs(currentCalibrated-Number(item.leaderResult))>0.0001?'obligatoria':'si modificas el resultado'}</em></span><textarea id="calRemoteReason" ${calibrationDone?'disabled':''} placeholder="Describe la evidencia y el criterio utilizado para el ajuste...">${esc(reason)}</textarea></label>
             <label class="calibration-field"><span>Notas de DO <em>opcional</em></span><textarea id="calRemoteNotes" ${calibrationDone?'disabled':''} placeholder="Contexto adicional de la revisión..."></textarea></label>
             <div class="calibration-state-note ${calibrationDone?'is-complete':calibrationDraft?'is-draft':''}">${calibrationDone?'✓ Calibración completada. El resultado quedó bloqueado para esta etapa.':calibrationDraft?'Borrador guardado. Puedes seguir ajustando o completar la calibración.':'Aún no existe una calibración guardada.'}</div>
-            <div class="calibration-actions"><button class="btn btn-outline" id="calRemoteSaveBtn" ${calibrationDone?'disabled':''} onclick="App.guardarCalibracionRemota('${esc(item.evaluationId)}')">${state.remote.calibrationSaving?'Guardando…':'Guardar borrador'}</button><button class="btn btn-primary" id="calRemoteCompleteBtn" ${calibrationDone||state.remote.calibrationCompleting?'disabled':''} onclick="App.completarCalibracionRemota('${esc(item.evaluationId)}')">${calibrationDone?'✓ Calibración completada':state.remote.calibrationCompleting?'Completando…':'Completar calibración'}</button></div>
+            <div class="calibration-actions"><button class="btn btn-outline" id="calRemoteSaveBtn" ${calibrationDone?'disabled':''} onclick="App.guardarCalibracionRemota('${esc(item.evaluationId)}')">${state.remote.calibrationSaving?'Guardando…':'Guardar borrador'}</button><button class="btn btn-primary" id="calRemoteCompleteBtn" ${calibrationDone||state.remote.calibrationCompleting?'disabled':''} onclick="App.completarCalibracionRemota('${esc(item.evaluationId)}')">${calibrationDone?'✓ Calibración completada':state.remote.calibrationCompleting?'Completando…':'Completar calibración'}</button></div>${calibrationDone?`<div class="calibration-release-panel"><div><span class="admin-section-kicker">SIGUIENTE ETAPA</span><h3>Retroalimentación</h3><p>La calibración ya está cerrada. Libera el resultado cuando el endpoint de producción esté configurado.</p></div><button class="btn btn-primary" ${state.remote.calibrationReleasing?'disabled':''} onclick="App.liberarResultadoRemoto('${esc(item.evaluationId)}')">${state.remote.calibrationReleasing?'Liberando…':'Liberar para retroalimentación'}</button></div>`:''}
           </article>
         </section>`;
       }
@@ -3143,10 +3144,10 @@
     },
     async cargarDetalleCalibracionDO(employeeId, evaluationId) {
       if (!apiReadMode() || state.remote.detailLoading || !evaluationId) return;
-      state.remote.detailLoading = true;
+      state.remote.detailLoading = true; state.remote.detailError = null;
       try {
         const detail = apiData(await global.EDDApi.evaluationDetail(evaluationId, true));
-        state.remote.detail = detail;
+        state.remote.detail = detail; state.remote.detailRetry = 0;
         // Hidrata una copia local únicamente para reutilizar componentes visuales históricos;
         // la fuente de verdad sigue siendo backend y no se sustituye con datos demo.
         try {
@@ -3159,8 +3160,22 @@
           hydrateObjectives(auto.id, detail.objectives||[], false); hydrateObjectives(lev.id, detail.objectives||[], true);
           syncBackendResultsFromDetail(detail, auto, lev);
         } catch(e) { console.warn('EDD DO: hidratación visual parcial',e); }
-      } catch(e) { showNotice(e.message||'No fue posible cargar el expediente completo.','warning'); }
+      } catch(e) { state.remote.detailError = e.message||'No fue posible cargar el expediente completo.'; showNotice(state.remote.detailError,'warning'); }
       finally { state.remote.detailLoading=false; render(); }
+    },
+    async reintentarDetalleCalibracion(employeeId,evaluationId){ state.remote.detailError=null; state.remote.detail=null; state.remote.detailRetry=(state.remote.detailRetry||0)+1; render(); await Actions.cargarDetalleCalibracionDO(employeeId,evaluationId); },
+    async liberarResultadoRemoto(evaluationId){
+      if(state.remote.calibrationReleasing) return;
+      state.remote.calibrationReleasing=true; render();
+      try{
+        await global.EDDApi.releaseResult(evaluationId);
+        showNotice('Resultado liberado para retroalimentación.','success');
+        if(global.EDDApi.adminCalibration) state.remote.calibration=apiData(await global.EDDApi.adminCalibration(true));
+        if(global.EDDApi.adminDashboard) state.remote.dashboard=apiData(await global.EDDApi.adminDashboard(true));
+      }catch(e){
+        if(e&&e.tipo==='endpoint_not_configured') showNotice('Backend listo, pero falta colocar en config.js la URL exacta del webhook de liberación.','warning');
+        else showNotice(e&&e.message?e.message:'No fue posible liberar el resultado.','warning');
+      }finally{state.remote.calibrationReleasing=false;render();}
     },
     logout,
     async solicitarCodigo(numeroEmpleado) {
@@ -3609,13 +3624,19 @@
           showNotice('Cambios guardados. Enviando evaluación…', 'info');
           if (submitBtn) submitBtn.textContent = 'Enviando…';
           await global.EDDApi.submitLeader(backendId);
-          try {
-            const fresh = apiData(await global.EDDApi.evaluationDetail(backendId, { force:true }));
-            state.remote.detail = fresh;
-            const autoEv = S.getEvaluacion(colaboradorId, state.periodo.id, 'autoevaluacion');
-            const leaderEv = S.load().evaluaciones.find(e=>e.id===evaluacionId);
-            syncBackendResultsFromDetail(fresh, autoEv, leaderEv);
-          } catch (e) { console.warn('No fue posible refrescar resultado backend tras submit-leader', e); }
+          state.remote.leaderSubmitSuccess = true;
+          // El submit ya terminó. La comparación se refresca aparte y jamás retiene
+          // el botón ni el mensaje de éxito. Si el GET tarda, la pantalla permite reintentar.
+          setTimeout(async()=>{
+            try {
+              const fresh = apiData(await global.EDDApi.evaluationDetail(backendId, true));
+              state.remote.detail = fresh; state.remote.detailError = null;
+              const autoEv = S.getEvaluacion(colaboradorId, state.periodo.id, 'autoevaluacion');
+              const leaderEv = S.load().evaluaciones.find(e=>e.id===evaluacionId);
+              syncBackendResultsFromDetail(fresh, autoEv, leaderEv);
+              render();
+            } catch (e) { console.warn('Refresh comparación post-submit líder', e); state.remote.detailError = e.message || 'No fue posible cargar la comparación.'; render(); }
+          },0);
         }
         S.completarEvaluacion(evaluacionId, state.user.nombre);
         showNotice('Evaluación enviada correctamente.', 'success');

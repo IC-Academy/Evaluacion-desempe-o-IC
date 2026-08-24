@@ -75,7 +75,19 @@
     // Permite validar el formulario completo con la identidad real de /auth/me
     // mientras la escritura n8n/Airtable se termina. Nunca se presenta como dato persistido.
     testCaptureEnabled: false,
-    writeApiEnabled: true
+    writeApiEnabled: true,
+
+    // Rutas dinámicas que n8n puede prefijar con webhookId.
+    // Dejar null hasta recibir la URL exacta publicada; el frontend mostrará
+    // el estado como pendiente sin inventar una URL.
+    endpointOverrides: {
+      releaseResultPath: null,
+      feedbackMeetingPath: null,
+      feedbackAgreementsPath: null,
+      feedbackReleaseAgreementsPath: null,
+      feedbackLeaderSignaturePath: null,
+      feedbackEmployeeSignaturePath: null
+    }
   };
 
   global.APP_CONFIG = APP_CONFIG;
