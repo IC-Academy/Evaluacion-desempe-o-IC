@@ -2768,10 +2768,13 @@
         const objectives = detailReady ? (detail.objectives||[]) : [];
         const feedback = detailReady ? (detail.feedback||{}) : {};
 
-        const roleOf = a => String(a.evaluator||a.evaluador||a.role||a.evaluatorRole||a['Evaluador (rol)']||'').toLowerCase();
-        const valOf = a => a.value ?? a.valor ?? a.score ?? a.rating ?? a.calificacion ?? null;
-        const commentOf = a => a.comment ?? a.comentario ?? a.comments ?? '';
-        const cidOf = a => String(a.competencyId||a.competenciaId||a.questionId||a.preguntaId||'');
+        // Null-safe helpers: durante el lazy-load del expediente `answers` puede estar vacío
+        // o una competencia puede no tener todavía una de las dos respuestas. La pantalla de
+        // calibración debe renderizar placeholders y continuar cargando, nunca romper el router.
+        const roleOf = a => String((a && (a.evaluator||a.evaluador||a.role||a.evaluatorRole||a['Evaluador (rol)'])) || '').toLowerCase();
+        const valOf = a => a ? (a.value ?? a.valor ?? a.score ?? a.rating ?? a.calificacion ?? null) : null;
+        const commentOf = a => a ? (a.comment ?? a.comentario ?? a.comments ?? '') : '';
+        const cidOf = a => String((a && (a.competencyId||a.competenciaId||a.questionId||a.preguntaId)) || '');
         const findAns = (cid, leader) => answers.find(a => cidOf(a)===cid && (leader ? /l[ií]der|leader/.test(roleOf(a)) : !/l[ií]der|leader/.test(roleOf(a))));
         const cat = [...(D.COMPETENCIAS.actitud||[]), ...(D.COMPETENCIAS.habilidades||[])];
         const competencyRows = cat.map(c=>{ const aa=findAns(c.id,false), ll=findAns(c.id,true); const av=valOf(aa), lv=valOf(ll); const diff=(typeof av==='number'&&typeof lv==='number')?Number(lv)-Number(av):null; return `<tr class="${diff!=null&&Math.abs(diff)>=2?'cal-gap-row':''}"><td><strong>${esc(c.nombre)}</strong><small>${esc(c.id)} · ${c.peso}%</small></td><td>${av==null?'—':esc(av)}</td><td>${lv==null?'—':esc(lv)}</td><td>${diff==null?'—':(diff>0?'+':'')+f1(diff)}</td><td>${esc(commentOf(ll)||commentOf(aa)||'—')}</td></tr>`; }).join('');
