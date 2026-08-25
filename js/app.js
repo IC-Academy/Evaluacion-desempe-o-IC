@@ -975,7 +975,7 @@
         <div class="profile-selector-brand"><img src="assets/logo-ic-blanco-horizontal.png" alt="IC Seguridad Privada"></div>
         <div class="profile-selector-copy">
           <span class="profile-selector-kicker">EVALUACIÓN DE DESEMPEÑO</span>
-          <h1>Hola, ${esc((u.nombre || '').split(/\s+/)[0] || u.nombre)}</h1>
+          <h1>Hola, ${esc(nombreParaSaludo(u.nombre) || u.nombre)}</h1>
           <p>Selecciona el perfil con el que deseas ingresar. Podrás cambiar de perfil en cualquier momento sin volver a iniciar sesión.</p>
         </div>
         <div class="profile-selector-grid">
