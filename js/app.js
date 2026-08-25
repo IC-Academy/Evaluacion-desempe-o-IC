@@ -1090,7 +1090,7 @@
       tabs = [['dashboard', 'Mi equipo'], ['pendientes', 'Pendientes por evaluar'], ['firmas', 'Por firmar']];
       if (perfilesDisponibles(u).includes('colaborador')) tabs.unshift(['mi-inicio', 'Mi evaluación']);
     } else {
-      tabs = [['dashboard', 'Dashboard'], ['calibracion', 'Calibración'], ['9box', 'Matriz 9-Box'], ['usuarios', 'Usuarios'], ['jerarquias', 'Jerarquías'], ['auditoria', 'Auditoría'], ['config', 'Configuración']];
+      tabs = [['dashboard', 'Dashboard'], ['calibracion', 'Calibración'], ['9box', 'Matriz 9-Box'], ['usuarios', 'Usuarios'], ['config', 'Configuración']];
     }
     const retroPendiente = u.perfil === 'colaborador' && state.periodo && (() => { const cal=S.getCalibracion(u.empleado, state.periodo.id); return !!(cal && cal.retroHabilitada && !cal.aceptacionColaborador); })();
     const firmasPendientesLider = u.perfil === 'lider' && state.periodo ? S.getColaboradoresDeLider(u.empleado).filter((c) => { const cal = S.getCalibracion(c.empleado, state.periodo.id); return !!(cal && cal.acuerdosLiberados && !cal.firmaLider); }).length : 0;
@@ -2611,8 +2611,7 @@
     if (page === 'calibracion') return param ? viewCalibracionDetalle(param, periodoId) : viewCalibracionLista(periodoId);
     if (page === '9box') return view9BoxAdmin(periodoId);
     if (page === 'usuarios') return viewAdminUsuarios();
-    if (page === 'jerarquias') return viewAdminJerarquias(periodoId);
-    if (page === 'auditoria') return viewAuditoria();
+    if (page === 'jerarquias' || page === 'auditoria') { location.hash = '#/admin/dashboard'; return ''; }
     if (page === 'config') return viewConfig();
     return apiReadMode() ? viewAdminDashboardApi() : viewAdminDashboard(periodoId);
   }
@@ -3178,7 +3177,7 @@
         </article>
       </div>
 
-      <article class="admin-panel calibration-history-card"><div class="admin-panel-head"><div><span class="admin-section-kicker">ÚLTIMO CAMBIO</span><h2>Resumen de trazabilidad</h2></div><a href="#/admin/auditoria" class="admin-text-link">Ver auditoría completa →</a></div>${(cal.historial||[]).length?(()=>{const h=cal.historial[cal.historial.length-1];return `<div class="history-summary"><strong>${esc(h.campo)}</strong><span>${esc(h.motivo||'Actualización')}</span><small>${esc(h.usuario)} · ${esc(h.fecha)} ${esc(h.hora)}</small></div>`})():'<p class="muted">Sin cambios registrados.</p>'}</article>
+      <article class="admin-panel calibration-history-card"><div class="admin-panel-head"><div><span class="admin-section-kicker">ÚLTIMO CAMBIO</span><h2>Resumen de trazabilidad</h2></div></div>${(cal.historial||[]).length?(()=>{const h=cal.historial[cal.historial.length-1];return `<div class="history-summary"><strong>${esc(h.campo)}</strong><span>${esc(h.motivo||'Actualización')}</span><small>${esc(h.usuario)} · ${esc(h.fecha)} ${esc(h.hora)}</small></div>`})():'<p class="muted">Sin cambios registrados.</p>'}</article>
     </section>`;
   }
 
