@@ -187,7 +187,13 @@
     const session = getSession();
     if (!session) return null;
     const emp = data.employee || {};
-    const caps = data.capabilities || {};
+    const rawCaps = data.capabilities || {};
+    const role = String(data.platformRole || session.user.rol || '').toLowerCase();
+    const caps = Object.assign({}, rawCaps, {
+      isAdmin: rawCaps.isAdmin === true || rawCaps.canAdminister === true || rawCaps.canCalibrate === true || role === 'administrador' || role === 'administrator' || role === 'admin',
+      canEvaluate: rawCaps.canEvaluate === true || rawCaps.canEvaluateTeam === true || emp.canEvaluate === true || emp.canEvaluateTeam === true || emp.puedeEvaluar === true,
+      canSelfEvaluate: rawCaps.canSelfEvaluate === true || rawCaps.canSelfAssess === true || rawCaps.requiresEvaluation === true || emp.canSelfEvaluate === true || emp.requiresEvaluation === true || emp.puedeAutoevaluarse === true || emp.requiereEvaluacion === true
+    });
     session.user = Object.assign({}, session.user || {}, {
       numeroEmpleado: emp.employeeId || session.user.numeroEmpleado,
       nombreCompleto: emp.name || session.user.nombreCompleto,
@@ -229,9 +235,17 @@
   function getAppUser(session) {
     session = session || getSession();
     if (!session) return null;
-    const caps = session.user.capabilities || {};
+    const rawCaps = session.user.capabilities || {};
+    const caps = Object.assign({}, rawCaps, {
+      isAdmin: rawCaps.isAdmin === true || rawCaps.canAdminister === true || rawCaps.canManage === true || rawCaps.canCalibrate === true,
+      canEvaluate: rawCaps.canEvaluate === true || rawCaps.canEvaluateTeam === true || rawCaps.canLead === true || rawCaps.isLeader === true,
+      canSelfEvaluate: rawCaps.canSelfEvaluate === true || rawCaps.canSelfAssess === true || rawCaps.canSelfEvaluation === true || rawCaps.requiresEvaluation === true
+    });
     const rolNormalizado = String(session.user.rol || '').toLowerCase();
     const perfil = caps.isAdmin ? 'administrador' : (caps.canEvaluate ? 'lider' : (ROL_API_A_INTERNO[rolNormalizado] || rolNormalizado || 'colaborador'));
+    if (perfil === 'administrador') caps.isAdmin = true;
+    if (perfil === 'lider') caps.canEvaluate = true;
+    if (perfil === 'colaborador') caps.canSelfEvaluate = true;
     return {
       empleado: session.user.numeroEmpleado,
       nombre: session.user.nombreCompleto,

@@ -495,6 +495,59 @@
   function pct(n) { return Math.max(0, Math.min(100, Math.round(n))); }
   function personalRoute(page) { return state.user && state.user.perfil === 'lider' ? '#/lider/mi-' + page : '#/colaborador/' + page; }
 
+  // =========================================================================
+  // PERFILES ACUMULABLES
+  // La identidad y el token no cambian: solo cambia la vista funcional activa.
+  // Un mismo usuario puede entrar como Administrador, Líder y/o Colaborador.
+  // =========================================================================
+  const PROFILE_KEY_PREFIX = 'edd_active_profile_';
+  function capBool(caps, keys) {
+    caps = caps || {};
+    for (const k of keys) if (Object.prototype.hasOwnProperty.call(caps, k)) return caps[k] === true;
+    return false;
+  }
+  function perfilesDisponibles(user) {
+    if (!user) return [];
+    const caps = user.capabilities || {};
+    const base = String(user.perfil || '').toLowerCase();
+    const perfiles = [];
+    const esAdmin = capBool(caps, ['isAdmin','canAdminister','canManage','canCalibrate']) || base === 'administrador';
+    const esLider = capBool(caps, ['canEvaluate','canEvaluateTeam','canLead','isLeader']) || base === 'lider';
+    const esColaborador = capBool(caps, ['canSelfEvaluate','canSelfAssess','canSelfEvaluation','requiresEvaluation']) || base === 'colaborador';
+    if (esAdmin) perfiles.push('administrador');
+    if (esLider) perfiles.push('lider');
+    if (esColaborador) perfiles.push('colaborador');
+    return [...new Set(perfiles)];
+  }
+  function profileKey(user) { return PROFILE_KEY_PREFIX + String((user && user.empleado) || 'anon'); }
+  function perfilGuardado(user) {
+    if (!user) return null;
+    let p = null;
+    try { p = sessionStorage.getItem(profileKey(user)); } catch (_) {}
+    return perfilesDisponibles(user).includes(p) ? p : null;
+  }
+  function guardarPerfil(user, perfil) {
+    if (!user || !perfilesDisponibles(user).includes(perfil)) return false;
+    try { sessionStorage.setItem(profileKey(user), perfil); } catch (_) {}
+    return true;
+  }
+  function limpiarPerfil(user) {
+    if (!user) return;
+    try { sessionStorage.removeItem(profileKey(user)); } catch (_) {}
+  }
+  function aplicarPerfilSeleccionado(user) {
+    if (!user) return null;
+    const disponibles = perfilesDisponibles(user);
+    user.availableProfiles = disponibles;
+    const elegido = perfilGuardado(user);
+    if (elegido) user.perfil = elegido;
+    else if (disponibles.length === 1) { guardarPerfil(user, disponibles[0]); user.perfil = disponibles[0]; }
+    return user;
+  }
+  function resetRemoteForProfile() {
+    state.remote = { ready: false, loading: false, error: null, me: null, mine: null, detail: null, detailLoading: false, detailError: null, detailRetry: 0, team: null, dashboard: null, calibration: null, lastSync: null, leaderSubmitting: false, leaderSubmitSuccess: false, calibrationSaving: false, calibrationCompleting: false, calibrationReleasing: false };
+  }
+
   const ESTADO_COLOR = {
     'No iniciada': 'gray', 'En progreso': 'yellow', 'Completada': 'green',
     'Pendiente de líder': 'yellow', 'Pendiente de calibración': 'yellow', 'Calibrada': 'blue',
@@ -813,7 +866,7 @@
     try {
       // /auth/me hidrata la sesión una sola vez. api.js deduplica/cachea este GET
       // para evitar la segunda llamada que hacía la integración v1.
-      try { await A.refreshProfileFromApi(); state.user = A.getAppUser(); } catch (e) { console.warn('EDD read: /auth/me profile refresh failed', e); }
+      try { await A.refreshProfileFromApi(); state.user = aplicarPerfilSeleccionado(A.getAppUser()); } catch (e) { console.warn('EDD read: /auth/me profile refresh failed', e); }
       try { state.remote.me = apiData(await global.EDDApi.authMe(false)); } catch (e) { console.warn('EDD read: /auth/me state refresh failed', e); }
 
       // Mine + equipo/dashboard son webhooks independientes: el navegador sí
@@ -901,10 +954,43 @@
       sessionStorage.removeItem(introKey());
     }
     if (state.aiSmart.open) { state.aiSmart.open = false; renderAiSmartModal(); }
+    const userAntesDeSalir = state.user;
     await A.logout();
+    limpiarPerfil(userAntesDeSalir);
     state.user = null;
     resetLoginState('solicitar');
     navigate('#/login');
+  }
+
+  function viewProfileSelector() {
+    const u = state.user;
+    const perfiles = perfilesDisponibles(u);
+    const cards = {
+      administrador: { icon:'A', title:'Administrador', kicker:'GESTIÓN DEL CICLO', desc:'Consulta el avance general, calibra resultados y administra el proceso de evaluación.', action:'Ingresar como administrador' },
+      lider: { icon:'L', title:'Líder', kicker:'GESTIÓN DE EQUIPO', desc:'Evalúa a tu equipo, realiza la retroalimentación y da seguimiento a firmas y acuerdos.', action:'Ingresar como líder' },
+      colaborador: { icon:'C', title:'Colaborador', kicker:'MI DESEMPEÑO', desc:'Realiza tu autoevaluación y consulta tus resultados y retroalimentación personal.', action:'Ingresar como colaborador' }
+    };
+    return `<main class="profile-selector-shell">
+      <section class="profile-selector-card">
+        <div class="profile-selector-brand"><img src="assets/logo-ic-blanco-horizontal.png" alt="IC Seguridad Privada"></div>
+        <div class="profile-selector-copy">
+          <span class="profile-selector-kicker">EVALUACIÓN DE DESEMPEÑO</span>
+          <h1>Hola, ${esc((u.nombre || '').split(/\s+/)[0] || u.nombre)}</h1>
+          <p>Selecciona el perfil con el que deseas ingresar. Podrás cambiar de perfil en cualquier momento sin volver a iniciar sesión.</p>
+        </div>
+        <div class="profile-selector-grid">
+          ${perfiles.map((p) => { const c=cards[p]; return `<button type="button" class="profile-choice-card profile-choice-${p}" onclick="App.seleccionarPerfil('${p}')">
+            <span class="profile-choice-icon">${c.icon}</span>
+            <span class="profile-choice-body"><small>${c.kicker}</small><strong>${c.title}</strong><span>${c.desc}</span></span>
+            <span class="profile-choice-action">${c.action}<b>→</b></span>
+          </button>`; }).join('')}
+        </div>
+        <div class="profile-selector-foot">
+          <span>${esc(u.puesto || '')}${u.area ? ' · ' + esc(u.area) : ''}</span>
+          <div>${languageSwitcher(true)}<button class="profile-selector-logout" onclick="App.logout()">Cerrar sesión</button></div>
+        </div>
+      </section>
+    </main>`;
   }
 
   // =========================================================================
@@ -921,7 +1007,7 @@
     const root = document.getElementById('app-root');
     const teniaUsuario = !!state.user;
     const session = A.getSession();
-    state.user = session ? A.getAppUser(session) : null;
+    state.user = session ? aplicarPerfilSeleccionado(A.getAppUser(session)) : null;
 
     if (!state.user) {
       state.remote = { ready: false, loading: false, error: null, me: null, mine: null, detail: null, detailLoading: false, team: null, dashboard: null, lastSync: null };
@@ -935,6 +1021,16 @@
       translateDOM(root);
       return;
     }
+
+    const routeParts = parseHash();
+    const disponibles = perfilesDisponibles(state.user);
+    const seleccionado = perfilGuardado(state.user);
+    if ((disponibles.length > 1 && !seleccionado) || routeParts[0] === 'perfil') {
+      root.innerHTML = viewProfileSelector();
+      translateDOM(root);
+      return;
+    }
+
     if (apiReadMode() && !state.remote.ready) {
       if (!state.remote.loading && !state.remote.error) refreshBackendRead(false);
       root.innerHTML = state.remote.error ? viewBackendError(state.remote.error) : viewBackendLoading();
@@ -943,7 +1039,7 @@
     }
     state.periodo = apiReadMode() ? (periodoRemotoNormalizado(state.remote.mine && state.remote.mine.period) || S.getPeriodoActivo()) : S.getPeriodoActivo();
 
-    const parts = parseHash();
+    const parts = routeParts;
     const areaEsperada = state.user.perfil === 'colaborador' ? 'colaborador' : state.user.perfil === 'lider' ? 'lider' : 'admin';
     const area = parts[0] || areaEsperada;
     const page = parts[1] || (areaEsperada === 'colaborador' ? 'inicio' : 'dashboard');
@@ -991,7 +1087,8 @@
     if (u.perfil === 'colaborador') {
       tabs = [['inicio', 'Inicio'], ['autoevaluacion', 'Autoevaluación'], ['retroalimentacion', 'Retroalimentación']];
     } else if (u.perfil === 'lider') {
-      tabs = [['mi-inicio', 'Mi evaluación'], ['dashboard', 'Mi equipo'], ['pendientes', 'Pendientes por evaluar'], ['firmas', 'Por firmar']];
+      tabs = [['dashboard', 'Mi equipo'], ['pendientes', 'Pendientes por evaluar'], ['firmas', 'Por firmar']];
+      if (perfilesDisponibles(u).includes('colaborador')) tabs.unshift(['mi-inicio', 'Mi evaluación']);
     } else {
       tabs = [['dashboard', 'Dashboard'], ['calibracion', 'Calibración'], ['9box', 'Matriz 9-Box'], ['usuarios', 'Usuarios'], ['jerarquias', 'Jerarquías'], ['auditoria', 'Auditoría'], ['config', 'Configuración']];
     }
@@ -1019,6 +1116,7 @@
         <div class="premium-user-menu">
           <span class="premium-user-avatar">${iniciales}</span>
           <span class="premium-user-copy"><strong>${esc(u.nombre)}</strong><small>${capitalize(u.perfil)} · ${esc(per ? per.nombre : '')}</small></span>
+          ${perfilesDisponibles(u).length > 1 ? '<button type="button" class="premium-profile-switch" onclick="App.cambiarPerfil()">Cambiar perfil</button>' : ''}
           ${languageSwitcher(true)}
           <button class="premium-logout" onclick="App.logout()" title="Cerrar sesión"><span class="logout-icon">↪</span><span class="logout-label">Cerrar sesión</span></button>
         </div>
@@ -3358,6 +3456,21 @@
         showNotice(e&&e.message?e.message:'No fue posible liberar el resultado.','warning');
       }finally{state.remote.calibrationReleasing=false;render();}
     },
+    seleccionarPerfil(perfil) {
+      const baseUser = A.getAppUser();
+      if (!baseUser || !perfilesDisponibles(baseUser).includes(perfil)) { showNotice('No tienes acceso a este perfil.','warning'); return; }
+      const anterior = perfilGuardado(baseUser);
+      guardarPerfil(baseUser, perfil);
+      state.user = aplicarPerfilSeleccionado(baseUser);
+      resetRemoteForProfile();
+      if (anterior && anterior !== perfil) S.addAudit(state.user.nombre, 'Cambio de perfil', 'usuarios', state.user.empleado, anterior, perfil);
+      irAHomeDePerfil(perfil);
+    },
+    cambiarPerfil() {
+      const baseUser = A.getAppUser();
+      if (!baseUser || perfilesDisponibles(baseUser).length < 2) return;
+      navigate('#/perfil');
+    },
     logout,
     async solicitarCodigo(numeroEmpleado) {
       state.login.error = null; state.login.info = null;
@@ -3383,10 +3496,14 @@
       try {
         const resp = await A.verifyCode(state.login.numeroEmpleado, codigo.trim());
         const appUser = A.getAppUser();
-        state.user = appUser;
+        limpiarPerfil(appUser);
+        state.user = aplicarPerfilSeleccionado(appUser);
         S.addAudit(appUser.nombre, 'Inicio de sesión', 'usuarios', appUser.empleado, null, appUser.perfil);
         resetLoginState('solicitar');
-        irAHomeDePerfil(appUser.perfil);
+        resetRemoteForProfile();
+        const perfiles = perfilesDisponibles(appUser);
+        if (perfiles.length > 1) navigate('#/perfil');
+        else irAHomeDePerfil(state.user.perfil);
       } catch (err) {
         console.error('Error al validar código', err);
         state.login.loading = false;
@@ -3411,10 +3528,14 @@
         await A.requestCode(numeroEmpleado);
         const resp = await A.verifyCode(numeroEmpleado, global.APP_CONFIG.demoCode);
         const appUser = A.getAppUser();
-        state.user = appUser;
+        limpiarPerfil(appUser);
+        state.user = aplicarPerfilSeleccionado(appUser);
         S.addAudit(appUser.nombre, 'Inicio de sesión', 'usuarios', appUser.empleado, null, appUser.perfil);
         resetLoginState('solicitar');
-        irAHomeDePerfil(appUser.perfil);
+        resetRemoteForProfile();
+        const perfiles = perfilesDisponibles(appUser);
+        if (perfiles.length > 1) navigate('#/perfil');
+        else irAHomeDePerfil(state.user.perfil);
       } catch (err) {
         console.error('Error en acceso rápido', err);
         state.login.loading = false;
