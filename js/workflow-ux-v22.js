@@ -8,7 +8,6 @@
   function txt(el) { return (el && el.textContent ? el.textContent : '').replace(/\s+/g, ' ').trim(); }
   function esc(value) { return String(value == null ? '' : value).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
   function lower(value) { return String(value == null ? '' : value).trim().toLowerCase(); }
-  function statusMatches(value, rx) { return rx.test(lower(value)); }
 
   function needsLeaderEvaluation(item) {
     const self = lower(item.selfStatus || item.autoEvaluationStatus || item.processState);
@@ -47,6 +46,10 @@
     });
   }
 
+  function setButtonText(btn, value) {
+    if (txt(btn) !== value) btn.textContent = value;
+  }
+
   function decorateActionButtons(root) {
     (root || document).querySelectorAll('table tbody tr').forEach(row => {
       const rowText = lower(txt(row));
@@ -55,14 +58,14 @@
         const label = lower(txt(btn));
         if (label.includes('ver seguimiento') || label.includes('ver comparación') || label.includes('revisar')) {
           btn.classList.add('workflow-action-primary');
-          if (/pendiente.*firma|lista para firma|firma.*l[ií]der/.test(rowText)) btn.textContent = 'Firmar ahora →';
-          else if (/retroalimentaci[oó]n.*pendiente|pendiente.*reuni[oó]n|en revisi[oó]n con colaborador/.test(rowText)) btn.textContent = 'Continuar retroalimentación →';
-          else if (/pendiente de calibraci[oó]n|leader_submitted/.test(rowText) && location.hash.indexOf('/admin/') !== -1) btn.textContent = 'Calibrar ahora →';
-          else btn.textContent = 'Ver seguimiento →';
+          if (/pendiente.*firma|lista para firma|firma.*l[ií]der/.test(rowText)) setButtonText(btn, 'Firmar ahora →');
+          else if (/retroalimentaci[oó]n.*pendiente|pendiente.*reuni[oó]n|en revisi[oó]n con colaborador/.test(rowText)) setButtonText(btn, 'Continuar retroalimentación →');
+          else if (/pendiente de calibraci[oó]n|leader_submitted/.test(rowText) && location.hash.indexOf('/admin/') !== -1) setButtonText(btn, 'Calibrar ahora →');
+          else setButtonText(btn, 'Ver seguimiento →');
         }
         if (label === 'evaluar') {
           btn.classList.add('workflow-action-primary');
-          btn.textContent = 'Evaluar ahora →';
+          setButtonText(btn, 'Evaluar ahora →');
         }
       });
     });
@@ -75,10 +78,14 @@
   function setNavBadge(el, count, tone) {
     if (!el) return;
     let badge = el.querySelector('.workflow-nav-badge');
-    if (!count) { if (badge) badge.remove(); return; }
+    if (!count) {
+      if (badge) badge.remove();
+      el.classList.remove('workflow-nav-has-action');
+      return;
+    }
     if (!badge) { badge = document.createElement('span'); badge.className = 'workflow-nav-badge'; el.appendChild(badge); }
     badge.className = 'workflow-nav-badge ' + (tone || 'attention');
-    badge.textContent = String(count);
+    if (badge.textContent !== String(count)) badge.textContent = String(count);
     el.classList.add('workflow-nav-has-action');
   }
 
@@ -119,7 +126,7 @@
     const id = x.employeeId || x.id || '';
     const evId = x.evaluationId || x.id || '';
     const self = x.selfStatus || '—';
-    const leader = x.leaderStatus || '—';
+    const leader = /leader_submitted/i.test(String(x.leaderStatus || '')) ? 'Evaluación enviada' : (x.leaderStatus || '—');
     const processRaw = lower(x.processState || '');
     let process = x.processState || '—';
     if (/leader_submitted|pending_calibration/.test(processRaw)) process = 'Pendiente de calibración';
@@ -142,9 +149,14 @@
     if (!table) return;
     const tbody = table.querySelector('tbody');
     if (!tbody) return;
-    tbody.innerHTML = rows.length ? rows.map(x => leaderRowHtml(x, isPending ? 'pending' : 'sign')).join('') : `<tr><td colspan="9"><div class="workflow-empty-state">${isPending ? 'No tienes evaluaciones pendientes en este momento.' : 'No tienes retroalimentaciones pendientes de tu firma.'}</div></td></tr>`;
+    const key = (isPending ? 'pending:' : 'sign:') + rows.map(x => String(x.employeeId || x.id || '') + ':' + String(x.evaluationId || '')).join('|');
+    if (tbody.dataset.workflowQueueKey !== key) {
+      tbody.dataset.workflowQueueKey = key;
+      tbody.innerHTML = rows.length ? rows.map(x => leaderRowHtml(x, isPending ? 'pending' : 'sign')).join('') : `<tr><td colspan="9"><div class="workflow-empty-state">${isPending ? 'No tienes evaluaciones pendientes en este momento.' : 'No tienes retroalimentaciones pendientes de tu firma.'}</div></td></tr>`;
+    }
     const title = table.closest('.card') && table.closest('.card').querySelector('h2');
-    if (title) title.textContent = isPending ? `Pendientes por evaluar · ${rows.length}` : `Pendientes por firmar · ${rows.length}`;
+    const desiredTitle = isPending ? `Pendientes por evaluar · ${rows.length}` : `Pendientes por firmar · ${rows.length}`;
+    if (title && txt(title) !== desiredTitle) title.textContent = desiredTitle;
   }
 
   let adminCache = null;
@@ -176,7 +188,7 @@
     document.querySelectorAll('table tbody tr').forEach(row => {
       if (!/pendiente de calibraci[oó]n/i.test(txt(row))) return;
       const action = Array.from(row.querySelectorAll('a.btn,button.btn')).find(b => /revisar|ver/i.test(txt(b)));
-      if (action) { action.textContent = 'Calibrar ahora →'; action.classList.add('workflow-action-primary'); }
+      if (action) { setButtonText(action, 'Calibrar ahora →'); action.classList.add('workflow-action-primary'); }
     });
   }
 
@@ -237,12 +249,15 @@
       const gapIdx = heads.findIndex(h => /brecha|diferencia/.test(h));
       if (autoIdx < 0 || leaderIdx < 0) return;
       Array.from(t.querySelectorAll('tbody tr')).forEach(row => {
-        if (!/procesos y herramientas de trabajo/i.test(txt(row.children[0]))) return;
-        if (a != null && row.children[autoIdx]) row.children[autoIdx].textContent = Number.isInteger(a) ? String(a) : a.toFixed(2).replace(/0+$/,'').replace(/\.$/,'');
-        if (l != null && row.children[leaderIdx]) row.children[leaderIdx].textContent = Number.isInteger(l) ? String(l) : l.toFixed(2).replace(/0+$/,'').replace(/\.$/,'');
+        if (!row.children[0] || !/procesos y herramientas de trabajo/i.test(txt(row.children[0]))) return;
+        const aText = a == null ? null : (Number.isInteger(a) ? String(a) : a.toFixed(2).replace(/0+$/,'').replace(/\.$/,''));
+        const lText = l == null ? null : (Number.isInteger(l) ? String(l) : l.toFixed(2).replace(/0+$/,'').replace(/\.$/,''));
+        if (aText != null && row.children[autoIdx] && txt(row.children[autoIdx]) !== aText) row.children[autoIdx].textContent = aText;
+        if (lText != null && row.children[leaderIdx] && txt(row.children[leaderIdx]) !== lText) row.children[leaderIdx].textContent = lText;
         if (gapIdx >= 0 && row.children[gapIdx] && a != null && l != null) {
           const d = Math.round((l-a)*100)/100;
-          row.children[gapIdx].textContent = (d > 0 ? '+' : '') + d.toFixed(2).replace(/0+$/,'').replace(/\.$/,'');
+          const dText = (d > 0 ? '+' : '') + d.toFixed(2).replace(/0+$/,'').replace(/\.$/,'');
+          if (txt(row.children[gapIdx]) !== dText) row.children[gapIdx].textContent = dText;
         }
         row.classList.add('workflow-b2-aggregated');
       });
