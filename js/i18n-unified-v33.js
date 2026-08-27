@@ -516,7 +516,106 @@
   "Borrador de calibración guardado.": "Calibration draft saved.",
   "No fue posible guardar la calibración.": "Unable to save the calibration.",
   "Calibración completada correctamente.": "Calibration completed successfully.",
-  "No fue posible completar la calibración.": "Unable to complete the calibration."
+  "No fue posible completar la calibración.": "Unable to complete the calibration.",
+
+  "Avance": "Progress",
+  "Objetivos": "Objectives",
+  "Calibración": "Calibration",
+  "Retroalimentación": "Feedback",
+  "Alertas": "Alerts",
+  "Talento": "Talent",
+  "Estado del ciclo": "Cycle status",
+  "Información consolidada del ciclo de evaluación.": "Consolidated evaluation cycle information.",
+  "Actualizar datos": "Refresh data",
+  "Evaluación de líder": "Manager evaluation",
+  "Evaluation of líder": "Manager evaluation",
+  "Cierre": "Closure",
+  "Cobertura de objetivos": "Objective coverage",
+  "La ausencia de objetivos es un indicador de gestión; no se interpreta automáticamente como bajo desempeño del colaborador.": "The absence of objectives is a management indicator; it is not automatically interpreted as poor employee performance.",
+  "Con objetivos": "With objectives",
+  "Sin objetivos": "Without objectives",
+  "Cobertura": "Coverage",
+  "Información pendiente": "Pending information",
+  "No existe en Airtable un campo formal que distinga NO_TUVO_OBJETIVOS de TODAVÍA_NO_CAPTURO — este bloque solo mide ausencia de registros en Objetivos, no la razón.": "Airtable does not contain a formal field that distinguishes NO_OBJECTIVES_ASSIGNED from NOT_YET_ENTERED — this section only measures missing objective records, not the reason.",
+  "Gap de gestión": "Management gap",
+  "Seguimiento de revisión DO": "OD review tracking",
+  "Pendientes": "Pending",
+  "Calibradas": "Calibrated",
+  "Promedio calibrado": "Average calibrated score",
+  "Requieren revisión DO": "Require OD review",
+  "Con resultado": "With result",
+  "Resultado disponible": "Result available",
+  "Consulta aquí el avance de las calibraciones del periodo.": "Review the progress of the cycle’s calibrations here.",
+  "COBERTURA POR ÁREA": "COVERAGE BY AREA",
+  "Avance de evaluación": "Evaluation progress",
+  "Avance consolidado por área para el periodo actual.": "Consolidated progress by area for the current cycle.",
+  "Desglose por área no disponible": "Area breakdown unavailable",
+  "El detalle por área estará disponible cuando existan datos suficientes para el periodo.": "Area details will be available when enough data exists for the cycle.",
+  "Resumen 9-Box": "9-Box summary",
+  "Abrir matriz": "Open matrix",
+  "Sin distribución disponible todavía.": "No distribution available yet.",
+  "OPERACIÓN DO": "OD OPERATIONS",
+  "Resumen de empleados y seguimiento": "Employee summary and follow-up",
+  "Personas visibles actualmente por alertas, calibración o cierre.": "People currently visible due to alerts, calibration, or closure.",
+  "visibles": "visible",
+  "VENCIMIENTOS": "OVERDUE ITEMS",
+  "Evaluaciones fuera de fecha": "Overdue evaluations",
+  "Autoevaluación": "Self-assessment",
+  "Evaluación líder": "Manager evaluation",
+  "Retroalimentación": "Feedback",
+  "CIERRE": "CLOSURE",
+  "Firmas y retroalimentación": "Signatures and feedback",
+  "Liberadas": "Released",
+  "Firma líder": "Manager signature",
+  "Firma colaborador": "Employee signature",
+  "FLUJO DEL PROCESO": "PROCESS FLOW",
+  "Avance de principio a fin": "End-to-end progress",
+  "Vista ejecutiva del estado de cada etapa del ciclo.": "Executive view of the status of each stage of the cycle.",
+  "1 · Autoevaluación": "1 · Self-assessment",
+  "2 · Evaluación líder": "2 · Manager evaluation",
+  "3 · Calibración DO": "3 · OD calibration",
+  "4 · Retroalimentación": "4 · Feedback",
+  "5 · Cierre": "5 · Closure",
+  "Información al día": "Information up to date",
+  "Los módulos muestran únicamente la información disponible para el ciclo actual.": "Modules show only the information available for the current cycle.",
+  "Actualizar": "Refresh",
+  "Autoevaluaciones vencidas": "Overdue self-assessments",
+  "Evaluaciones líder vencidas": "Overdue manager evaluations",
+  "Firmas pendientes": "Pending signatures",
+  "Requieren seguimiento": "Require follow-up",
+  "Seguimiento con liderazgo": "Manager follow-up",
+  "Proceso sin cerrar": "Process not closed",
+  "Seguimiento requerido": "Follow-up required",
+  "Personas y etapas que requieren atención durante el ciclo.": "People and stages that require attention during the cycle.",
+  "Autoevaluación vencida": "Self-assessment overdue",
+  "Evaluación líder vencida": "Manager evaluation overdue",
+  "Retroalimentación vencida": "Feedback overdue",
+  "COLABORADOR": "EMPLOYEE",
+  "ÁREA": "AREA",
+  "LÍDER": "MANAGER",
+  "FECHA LÍMITE": "DEADLINE",
+  "Distribución 9-Box": "9-Box distribution",
+  "Vista agregada de la distribución de talento disponible para el periodo.": "Aggregate view of the talent distribution available for the cycle.",
+  "Actitud promedio": "Average attitude",
+  "Desempeño promedio": "Average performance",
+  "Sin distribución disponible": "No distribution available",
+  "Se poblará conforme existan evaluaciones con resultado.": "It will populate as completed evaluation results become available.",
+  "Cuadrantes con datos": "Quadrants with data",
+  "Distribución 9-Box": "9-Box distribution",
+  "Inter-Con Seguridad Privada · Evaluación de Desempeño · FOR-CAP-003 Rev. 4": "Inter-Con Private Security · Performance Evaluation · FOR-CAP-003 Rev. 4",
+  "Base disponible": "Available data",
+  "CALIBRACIÓN": "CALIBRATION",
+  "Cierre y firmas": "Closure and signatures",
+  "Etapa / atención": "Stage / attention",
+  "Fecha límite": "Deadline",
+  "Firma líder pendiente": "Manager signature pending",
+  "MADUREZ DE GESTIÓN": "MANAGEMENT MATURITY",
+  "No hay detalle de colaboradores para esta alerta.": "No employee details are available for this alert.",
+  "Para retroalimentación": "Ready for feedback",
+  "Pendiente reunión": "Meeting pending",
+  "RETROALIMENTACIÓN": "FEEDBACK",
+  "Sin personas con alertas o actividad pendiente en este momento.": "No people currently have alerts or pending activity.",
+  "No existe en Airtable un campo formal que distinga NO_TUVO_OBJETIVOS de TODAVIA_NO_CAPTURO — este bloque solo mide ausencia de registros en Objetivos, no la razón.": "Airtable does not contain a formal field that distinguishes NO_OBJECTIVES_ASSIGNED from NOT_YET_ENTERED — this section only measures missing objective records, not the reason."
 }));
 
   // -------------------------------------------------------------------
@@ -589,6 +688,22 @@
     // These patterns translate the whole sentence, never isolated words.
     const notification = core.match(/^Notificación enviada a (.+)\.$/);
     if (notification) return leading + `Notification sent to ${notification[1]}.` + trailing;
+    const withObjectives = core.match(/^(\d+|—) con objetivos$/);
+    if (withObjectives) return leading + `${withObjectives[1]} with objectives` + trailing;
+    const visible = core.match(/^(\d+) visibles$/);
+    if (visible) return leading + `${visible[1]} visible` + trailing;
+    const pending = core.match(/^(\d+) pendientes$/);
+    if (pending) return leading + `${pending[1]} pending` + trailing;
+    const closedPercent = core.match(/^(\d+(?:\.\d+)?)% cerrado$/);
+    if (closedPercent) return leading + `${closedPercent[1]}% closed` + trailing;
+    const closedEvaluations = core.match(/^(\d+) de (\d+) evaluaciones cerradas$/);
+    if (closedEvaluations) return leading + `${closedEvaluations[1]} of ${closedEvaluations[2]} evaluations closed` + trailing;
+    const completed = core.match(/^(\d+)\/(\d+) completadas$/);
+    if (completed) return leading + `${completed[1]}/${completed[2]} completed` + trailing;
+    const records = core.match(/^(\d+) registros$/);
+    if (records) return leading + `${records[1]} records` + trailing;
+    const closurePercent = core.match(/^(\d+(?:\.\d+)?)% de cierre$/);
+    if (closurePercent) return leading + `${closurePercent[1]}% closure` + trailing;
     const codeSuffix = core.match(/^(.*?)(\s+\([A-Z0-9_-]+\))$/);
     if (codeSuffix && DICT.has(codeSuffix[1])) {
       return leading + DICT.get(codeSuffix[1]) + codeSuffix[2] + trailing;
