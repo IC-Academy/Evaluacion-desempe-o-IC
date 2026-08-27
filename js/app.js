@@ -1611,14 +1611,14 @@
       const checked = String(valorActual) === String(v);
       const descEntry = D.ESCALA.find((e) => String(e.valor) === String(v));
       const tip = descEntry ? (v + ' — ' + descEntry.descripcion) : String(v);
-      return `<input type="radio" name="${safeGroup}" id="${id}" value="${v}" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''} onchange="${onchangeJs}"/><label class="star" for="${id}" title="${esc(tip)}">★</label>`;
+      return `<input type="radio" name="${safeGroup}" id="${id}" value="${v}" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''} autocomplete="off" onclick="${onchangeJs}"/><label class="star" for="${id}" title="${esc(tip)}">★</label>`;
     }).join('');
     const idNA = safeGroup + '_na';
     const checkedNA = String(valorActual) === 'N/A';
     const vacio = valorActual === '' || valorActual === null || valorActual === undefined;
     return `<div class="rating-widget${disabled ? ' rating-readonly' : ''}${compact ? ' rating-compact' : ''}">
       <div class="star-rating">${estrellas}</div>
-      ${allowNA ? `<input type="radio" class="na-radio" name="${safeGroup}" id="${idNA}" value="N/A" ${checkedNA ? 'checked' : ''} ${disabled ? 'disabled' : ''} onchange="${onchangeJs}"/><label class="na-pill" for="${idNA}" title="No aplica o sin elementos suficientes para evaluar">N/A</label>` : '<span class="required-tool-pill">Obligatorio</span>'}
+      ${allowNA ? `<input type="radio" class="na-radio" name="${safeGroup}" id="${idNA}" value="N/A" ${checkedNA ? 'checked' : ''} ${disabled ? 'disabled' : ''} autocomplete="off" onclick="${onchangeJs}"/><label class="na-pill" for="${idNA}" title="No aplica o sin elementos suficientes para evaluar">N/A</label>` : '<span class="required-tool-pill">Obligatorio</span>'}
       ${vacio ? '<span class="rating-empty-hint">Sin calificar</span>' : ''}
     </div>`;
   }
@@ -3605,7 +3605,11 @@
       const actual = existentes.find((r) => r.competenciaId === competenciaId);
       S.saveRespuesta(evaluacionId, seccion, competenciaId, valor, actual ? actual.comentario : '');
       const card = Array.from(document.querySelectorAll('.competency-card')).find((el) => el.dataset.competenciaId === String(competenciaId));
-      if (card) card.classList.remove('validation-error');
+      if (card) {
+        card.classList.remove('validation-error');
+        const emptyHint = card.querySelector('.rating-empty-hint');
+        if (emptyHint) emptyHint.remove();
+      }
     },
     comentar(evaluacionId, seccion, competenciaId, comentario) {
       const existentes = S.getRespuestas(evaluacionId);
