@@ -471,6 +471,7 @@
   "Eje PERFORMANCE": "PERFORMANCE axis",
   "No calificado": "Not rated",
   "Sin calificar": "Not rated",
+  "Recuperando respuestas y objetivos guardados...": "Restoring your saved responses and goals...",
   "Cargando evaluación del colaborador…": "Loading employee evaluation…",
   "Cargando seguimiento y retroalimentación…": "Loading follow-up and feedback…",
   "Resultado liberado para retroalimentación.": "Result released for feedback.",
