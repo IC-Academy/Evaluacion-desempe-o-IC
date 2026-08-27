@@ -615,7 +615,83 @@
   "Pendiente reunión": "Meeting pending",
   "RETROALIMENTACIÓN": "FEEDBACK",
   "Sin personas con alertas o actividad pendiente en este momento.": "No people currently have alerts or pending activity.",
-  "No existe en Airtable un campo formal que distinga NO_TUVO_OBJETIVOS de TODAVIA_NO_CAPTURO — este bloque solo mide ausencia de registros en Objetivos, no la razón.": "Airtable does not contain a formal field that distinguishes NO_OBJECTIVES_ASSIGNED from NOT_YET_ENTERED — this section only measures missing objective records, not the reason."
+  "No existe en Airtable un campo formal que distinga NO_TUVO_OBJETIVOS de TODAVIA_NO_CAPTURO — este bloque solo mide ausencia de registros en Objetivos, no la razón.": "Airtable does not contain a formal field that distinguishes NO_OBJECTIVES_ASSIGNED from NOT_YET_ENTERED — this section only measures missing objective records, not the reason.",
+
+  "Tu autoevaluación ya fue enviada": "Your self-assessment has already been submitted",
+  "El proceso continúa con tu líder y Desarrollo Organizacional. Te notificaremos cuando tu retroalimentación esté disponible.": "The process continues with your manager and Organizational Development. We will notify you when your feedback is available.",
+  "Tu evaluación es importante": "Your evaluation matters",
+  "Colaboradores": "Employees",
+  "Por firmar líder": "Pending manager signatures",
+  "Pendientes por firmar": "Pending signatures",
+  "Pendiente colaborador": "Pending employee",
+  "Esperando autoevaluación": "Waiting for self-assessment",
+  "Evaluar": "Evaluate",
+  "Ver seguimiento": "View follow-up",
+  "Sin acuerdos listos para firma. Las retroalimentaciones recién liberadas aparecen primero en Mi equipo como Pendiente de reunión; después de confirmar la reunión y liberar acuerdos pasarán a esta vista.": "There are no agreements ready for signature. Newly released feedback first appears in My team as Meeting pending; after the meeting is confirmed and the agreements are released, it will appear in this view.",
+  "No tienes acuerdos pendientes por firmar en este momento.": "You have no agreements pending signature at this time.",
+  "SEGUIMIENTO": "FOLLOW-UP",
+  "Consulta el avance de tu equipo y las acciones que requieren seguimiento.": "Review your team’s progress and actions that require follow-up.",
+  "La información se actualiza conforme avanza cada etapa del proceso.": "Information updates as each stage of the process progresses.",
+  "ACCIÓN REQUERIDA": "ACTION REQUIRED",
+  "Revisa la retroalimentación y firma desde tu portal para que el colaborador pueda continuar.": "Review the feedback and sign from your portal so the employee can continue.",
+  "Avance del equipo": "Team progress",
+  "Evaluaciones pendientes (líder)": "Pending manager evaluations",
+  "Evaluación del líder": "Manager evaluation",
+  "Puntaje autoevaluación": "Self-assessment score",
+  "Puntaje evaluación líder": "Manager evaluation score",
+  "Ver comparación": "View comparison",
+  "Volver a mi equipo": "Back to my team",
+  "El colaborador aún no completa su autoevaluación. No es posible iniciar la evaluación del líder todavía.": "The employee has not completed their self-assessment yet. The manager evaluation cannot be started at this time.",
+  "Ambas evaluaciones deben estar completas para ver la comparación.": "Both evaluations must be complete to view the comparison.",
+  "Las evaluaciones están completas, pero todavía no hay resultados calculados disponibles. Actualiza e intenta de nuevo.": "The evaluations are complete, but calculated results are not available yet. Refresh and try again.",
+  "Progreso de evaluación": "Evaluation progress",
+  "Guarda tu avance y verifica cada sección antes de enviar. La autoevaluación se mostrará después del envío.": "Save your progress and review each section before submitting. The self-assessment will be shown after submission.",
+  "La autoevaluación del colaborador permanecerá oculta hasta que envíes tu evaluación.": "The employee’s self-assessment will remain hidden until you submit your evaluation.",
+  "OBJETIVOS DEL PERIODO": "PERIOD OBJECTIVES",
+  "El colaborador no registró objetivos en este periodo.": "The employee did not record objectives for this cycle.",
+  "El colaborador reportó que no tuvo objetivos definidos": "The employee reported that no objectives were defined",
+  "Como líder, valida si esta ausencia corresponde a la realidad del periodo. Esto permite distinguir una brecha de desempeño de una brecha de gestión.": "As the manager, confirm whether this reflects the reality of the cycle. This distinguishes a performance gap from a management gap.",
+  "Validación del líder": "Manager validation",
+  "Había objetivos": "Objectives existed",
+  "Debes documentarlos y evaluarlos para este cierre.": "You must document and evaluate them for this cycle close.",
+  "✓ Confirmar sin objetivos": "✓ Confirm no objectives",
+  "La sección queda N/A y se reporta como indicador de madurez de gestión.": "The section remains N/A and is reported as a management maturity indicator.",
+  "Documenta los objetivos que sí existían": "Document the objectives that existed",
+  "Captura objetivo, meta y resultado. El cumplimiento y la equivalencia se calcularán automáticamente. Esta discrepancia quedará visible para DO.": "Enter the objective, target, and result. Achievement and its rating equivalent will be calculated automatically. This discrepancy will be visible to OD.",
+  "% reportado por colaborador:": "% reported by employee:",
+  "% de cumplimiento validado por líder": "% achievement validated by manager",
+  "Captura el porcentaje que determinaste después de validar la evidencia o fuente.": "Enter the percentage determined after validating the evidence or source.",
+  "Equivalencia del colaborador:": "Employee rating equivalent:",
+  "Calificación resultante": "Resulting rating",
+  "Se calcula automáticamente con la equivalencia Rev. 4.": "Calculated automatically using the Rev. 4 rating scale.",
+  "Justificación de la discrepancia": "Discrepancy justification",
+  "Si el porcentaje validado es diferente al reportado por el colaborador, registra la justificación y fuente utilizada.": "If the validated percentage differs from the employee’s reported percentage, record the justification and source used.",
+  "El porcentaje validado coincide con el colaborador.": "The validated percentage matches the employee’s report.",
+  "Sin ajuste": "No adjustment",
+  "Resumen cualitativo del desempeño": "Qualitative performance summary",
+  "Analiza el desempeño con una lógica inspirada en FODA, enfocada en desarrollo. Registra hechos observables y evita comentarios personales o ambiguos.": "Analyze performance using a development-focused SWOT approach. Record observable facts and avoid personal or ambiguous comments.",
+  "Riesgos o factores de atención": "Risks or attention factors",
+  "Situaciones que podrían afectar el desempeño si no se atienden oportunamente.": "Situations that could affect performance if they are not addressed promptly.",
+  "Síntesis del líder": "Manager summary",
+  "Resume los puntos anteriores en un mensaje claro, respetuoso, útil y orientado a acciones.": "Summarize the points above in a clear, respectful, useful, and action-oriented message.",
+  "Áreas de oportunidad y plan de mejora": "Development opportunities and improvement plan",
+  "Área de oportunidad": "Development opportunity",
+  "Plan de mejora": "Improvement plan",
+  "Registrar acuerdo de mejora": "Add improvement agreement",
+  "+ Agregar acción": "+ Add action",
+  "Guardar acción": "Save action",
+  "Sin áreas registradas todavía.": "No development opportunities recorded yet.",
+  "Registrar acción de desarrollo": "Add development action",
+  "Acción acordada": "Agreed action",
+  "Define una acción concreta, medible y con fecha compromiso.": "Define a specific, measurable action with a due date.",
+  "Sin acciones registradas todavía.": "No actions recorded yet.",
+  "CIERRE DE RETROALIMENTACIÓN": "FEEDBACK CLOSURE",
+  "Reunión, acuerdos y firma": "Meeting, agreements, and signature",
+  "Confirma la reunión, ajusta los acuerdos si es necesario y libera la versión final antes de firmar.": "Confirm the meeting, adjust the agreements if needed, and release the final version before signing.",
+  "Confirmo que ya realicé la reunión de retroalimentación con el colaborador.": "I confirm that I held the feedback meeting with the employee.",
+  "Acuerdos finales de la reunión": "Final meeting agreements",
+  "Firma del líder": "Manager signature",
+  "Firma del colaborador": "Employee signature"
 }));
 
   // -------------------------------------------------------------------
@@ -704,6 +780,16 @@
     if (records) return leading + `${records[1]} records` + trailing;
     const closurePercent = core.match(/^(\d+(?:\.\d+)?)% de cierre$/);
     if (closurePercent) return leading + `${closurePercent[1]}% closure` + trailing;
+    const leaderSection = core.match(/^(Mi equipo|Pendientes por evaluar|Pendientes por firmar)\s+—\s+(.+)$/);
+    if (leaderSection) {
+      const sectionLabel = DICT.get(leaderSection[1]) || leaderSection[1];
+      return leading + `${sectionLabel} — ${leaderSection[2]}` + trailing;
+    }
+    const agreementsToSign = core.match(/^Tienes (\d+) acuerdos? por firmar$/);
+    if (agreementsToSign) {
+      const count = agreementsToSign[1];
+      return leading + `You have ${count} agreement${count === '1' ? '' : 's'} pending signature` + trailing;
+    }
     const codeSuffix = core.match(/^(.*?)(\s+\([A-Z0-9_-]+\))$/);
     if (codeSuffix && DICT.has(codeSuffix[1])) {
       return leading + DICT.get(codeSuffix[1]) + codeSuffix[2] + trailing;
