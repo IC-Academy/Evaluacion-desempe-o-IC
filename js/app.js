@@ -3556,6 +3556,10 @@
       if (seccionActual !== 'resumen') {
         const ev = { id: state.wizard.evaluacionId };
         const seccion = seccionActual;
+        // Fuente de verdad de ultimo recurso: algunos navegadores muestran el
+        // radio marcado pero no disparan el evento del control oculto. Antes
+        // de validar, copiamos todas las selecciones visibles a EDDStorage.
+        syncCheckedRatingsFromDom();
         const faltantes = validarSeccionVisual(ev.id, seccion);
         if (faltantes) {
           showNotice(currentLang === 'en' ? `You cannot continue. Review the fields marked in red.` : `No puedes continuar. Revisa los campos marcados en rojo.`,'warning');
@@ -4216,6 +4220,21 @@
   };
 
   global.App = Actions;
+  function applyDeclaredRatingAction(action, value) {
+    const match = String(action || '').match(/^App\.(rate|rateHerramienta)\('([^']*)','([^']*)','([^']*)',this\.value\)$/);
+    if (!match || typeof Actions[match[1]] !== 'function') return false;
+    Actions[match[1]](match[2], match[3], match[4], value);
+    return true;
+  }
+
+  function syncCheckedRatingsFromDom() {
+    global.document.querySelectorAll('input[data-edd-rating="1"]:checked').forEach((input) => {
+      if (!input.id || input.disabled) return;
+      const label = global.document.querySelector(`label[for="${input.id}"][data-edd-rating-action]`);
+      if (label) applyDeclaredRatingAction(label.getAttribute('data-edd-rating-action'), input.value);
+    });
+  }
+
   // Los radios ocultos pueden ser restaurados visualmente por el navegador
   // sin que su valor exista todavía en EDDStorage. Guardamos desde el clic
   // real sobre la estrella/N-A para que la seleccion siempre llegue a App,
@@ -4227,10 +4246,7 @@
     if (!input || input.disabled) return;
     ev.preventDefault();
     input.checked = true;
-    const action = label.getAttribute('data-edd-rating-action') || '';
-    const match = action.match(/^App\.(rate|rateHerramienta)\('([^']*)','([^']*)','([^']*)',this\.value\)$/);
-    if (!match || typeof Actions[match[1]] !== 'function') return;
-    Actions[match[1]](match[2], match[3], match[4], input.value);
+    applyDeclaredRatingAction(label.getAttribute('data-edd-rating-action'), input.value);
   }, true);
 
   // Accesibilidad: al seleccionar el radio con teclado (espacio/flechas), el
@@ -4241,9 +4257,7 @@
     if (!input || !input.id) return;
     const label = global.document.querySelector(`label[for="${input.id}"][data-edd-rating-action]`);
     if (!label) return;
-    const action = label.getAttribute('data-edd-rating-action') || '';
-    const match = action.match(/^App\.(rate|rateHerramienta)\('([^']*)','([^']*)','([^']*)',this\.value\)$/);
-    if (match && typeof Actions[match[1]] === 'function') Actions[match[1]](match[2], match[3], match[4], input.value);
+    applyDeclaredRatingAction(label.getAttribute('data-edd-rating-action'), input.value);
   });
 
   // Feedback visual inmediato para cualquier acción: el usuario siempre ve que el clic fue recibido.
