@@ -428,10 +428,8 @@
       if (translated === normalized) {
         // Dynamic values that are not fixed UI labels (names, counts and tenure).
         const greeting = normalized.match(/^¡Bienvenid[oa],\s*(.+)!$/i);
-        const evalOf = normalized.match(/^Evaluación de\s+(.+)$/i);
         const thanks = normalized.match(/^Gracias por tu participación,\s*(.+)\.$/i);
         if (greeting) translated = `Welcome, ${greeting[1]}!`;
-        else if (evalOf) translated = `Evaluation of ${evalOf[1]}`;
         else if (thanks) translated = `Thank you for participating, ${thanks[1]}.`;
         // Other dynamic sentences remain untouched until they have an
         // explicit full-sentence translation. Partial replacements are not
