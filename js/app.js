@@ -1611,14 +1611,14 @@
       const checked = String(valorActual) === String(v);
       const descEntry = D.ESCALA.find((e) => String(e.valor) === String(v));
       const tip = descEntry ? (v + ' — ' + descEntry.descripcion) : String(v);
-      return `<input type="radio" name="${safeGroup}" id="${id}" value="${v}" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''} autocomplete="off" onclick="${onchangeJs}"/><label class="star" for="${id}" title="${esc(tip)}">★</label>`;
+      return `<input type="radio" name="${safeGroup}" id="${id}" value="${v}" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''} autocomplete="off" data-edd-rating="1"/><label class="star" for="${id}" title="${esc(tip)}" data-edd-rating-action="${esc(onchangeJs)}">★</label>`;
     }).join('');
     const idNA = safeGroup + '_na';
     const checkedNA = String(valorActual) === 'N/A';
     const vacio = valorActual === '' || valorActual === null || valorActual === undefined;
     return `<div class="rating-widget${disabled ? ' rating-readonly' : ''}${compact ? ' rating-compact' : ''}">
       <div class="star-rating">${estrellas}</div>
-      ${allowNA ? `<input type="radio" class="na-radio" name="${safeGroup}" id="${idNA}" value="N/A" ${checkedNA ? 'checked' : ''} ${disabled ? 'disabled' : ''} autocomplete="off" onclick="${onchangeJs}"/><label class="na-pill" for="${idNA}" title="No aplica o sin elementos suficientes para evaluar">N/A</label>` : '<span class="required-tool-pill">Obligatorio</span>'}
+      ${allowNA ? `<input type="radio" class="na-radio" name="${safeGroup}" id="${idNA}" value="N/A" ${checkedNA ? 'checked' : ''} ${disabled ? 'disabled' : ''} autocomplete="off" data-edd-rating="1"/><label class="na-pill" for="${idNA}" title="No aplica o sin elementos suficientes para evaluar" data-edd-rating-action="${esc(onchangeJs)}">N/A</label>` : '<span class="required-tool-pill">Obligatorio</span>'}
       ${vacio ? '<span class="rating-empty-hint">Sin calificar</span>' : ''}
     </div>`;
   }
@@ -4216,6 +4216,36 @@
   };
 
   global.App = Actions;
+  // Los radios ocultos pueden ser restaurados visualmente por el navegador
+  // sin que su valor exista todavía en EDDStorage. Guardamos desde el clic
+  // real sobre la estrella/N-A para que la seleccion siempre llegue a App,
+  // incluso si se vuelve a pulsar una opcion que el navegador marco antes.
+  global.document.addEventListener('click', (ev) => {
+    const label = ev.target && ev.target.closest ? ev.target.closest('label[data-edd-rating-action]') : null;
+    if (!label) return;
+    const input = label.htmlFor ? global.document.getElementById(label.htmlFor) : null;
+    if (!input || input.disabled) return;
+    ev.preventDefault();
+    input.checked = true;
+    const action = label.getAttribute('data-edd-rating-action') || '';
+    const match = action.match(/^App\.(rate|rateHerramienta)\('([^']*)','([^']*)','([^']*)',this\.value\)$/);
+    if (!match || typeof Actions[match[1]] !== 'function') return;
+    Actions[match[1]](match[2], match[3], match[4], input.value);
+  }, true);
+
+  // Accesibilidad: al seleccionar el radio con teclado (espacio/flechas), el
+  // evento change tambien persiste el valor usando la misma accion declarada
+  // en su etiqueta asociada.
+  global.document.addEventListener('change', (ev) => {
+    const input = ev.target && ev.target.matches && ev.target.matches('input[data-edd-rating="1"]') ? ev.target : null;
+    if (!input || !input.id) return;
+    const label = global.document.querySelector(`label[for="${input.id}"][data-edd-rating-action]`);
+    if (!label) return;
+    const action = label.getAttribute('data-edd-rating-action') || '';
+    const match = action.match(/^App\.(rate|rateHerramienta)\('([^']*)','([^']*)','([^']*)',this\.value\)$/);
+    if (match && typeof Actions[match[1]] === 'function') Actions[match[1]](match[2], match[3], match[4], input.value);
+  });
+
   // Feedback visual inmediato para cualquier acción: el usuario siempre ve que el clic fue recibido.
   global.document.addEventListener('click', (ev) => {
     const btn = ev.target && ev.target.closest ? ev.target.closest('button, .btn') : null;
