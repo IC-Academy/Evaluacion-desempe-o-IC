@@ -433,16 +433,11 @@
         if (greeting) translated = `Welcome, ${greeting[1]}!`;
         else if (evalOf) translated = `Evaluation of ${evalOf[1]}`;
         else if (thanks) translated = `Thank you for participating, ${thanks[1]}.`;
-        else {
-          translated = translated
-            .replace(/(\d+)\s+año(?:s)?\b/gi, (_, n) => `${n} year${n === '1' ? '' : 's'}`)
-            .replace(/(\d+)\s+mes(?:es)?\b/gi, (_, n) => `${n} month${n === '1' ? '' : 's'}`)
-            .replace(/(\d+)\s+semanas?\b/gi, (_, n) => `${n} week${n === '1' ? '' : 's'}`);
-        }
-        const keys = Object.keys(EN).sort((a, b) => b.length - a.length);
-        keys.forEach((key) => {
-          if (translated.includes(key)) translated = translated.split(key).join(EN[key]);
-        });
+        // Other dynamic sentences remain untouched until they have an
+        // explicit full-sentence translation. Partial replacements are not
+        // allowed because they create mixed Spanish/English text.
+        // Never translate fragments inside a longer sentence. Doing so creates
+        // mixed-language UI when only one word happens to exist in EN.
       }
       if (translated !== normalized) node.nodeValue = raw.replace(trimmed, translated);
     });
@@ -1129,7 +1124,10 @@
   function showNotice(message, type) {
     let host=document.getElementById('appInlineNotice');
     if(!host){ host=document.createElement('div'); host.id='appInlineNotice'; host.className='app-inline-notice'; document.body.appendChild(host); }
-    host.className='app-inline-notice show '+(type||'info'); host.innerHTML=`<span>${esc(message)}</span><button type="button" aria-label="Cerrar" onclick="this.parentElement.classList.remove('show')">×</button>`;
+    const translatedMessage = currentLang === 'en' && global.EDDI18N
+      ? global.EDDI18N.translateText(message)
+      : t(message);
+    host.className='app-inline-notice show '+(type||'info'); host.innerHTML=`<span>${esc(translatedMessage)}</span><button type="button" aria-label="${currentLang === 'en' ? 'Close' : 'Cerrar'}" onclick="this.parentElement.classList.remove('show')">×</button>`;
     clearTimeout(showNotice._timer); showNotice._timer=setTimeout(()=>host.classList.remove('show'),5200);
   }
 
