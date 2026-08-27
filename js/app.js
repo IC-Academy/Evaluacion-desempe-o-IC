@@ -1431,9 +1431,9 @@
         ${retroDisponible
           ? `<a class="btn welcome-start-btn" href="${personalRoute('retroalimentacion')}">→&nbsp;&nbsp;Conocer mi retroalimentación</a>`
           : evaluacionEnviada
-            ? `<div class="welcome-process-status"><strong>✓ Tu autoevaluación ya fue enviada</strong><span>El proceso continúa con tu líder y Desarrollo Organizacional. Te notificaremos cuando tu retroalimentación esté disponible.</span></div>`
+            ? `<div class="welcome-process-status"><strong>Tu autoevaluación ya fue enviada</strong><span>El proceso continúa con tu líder y Desarrollo Organizacional. Te notificaremos cuando tu retroalimentación esté disponible.</span></div>`
             : `<button class="btn welcome-start-btn" onclick="App.comenzarEvaluacion()">→&nbsp;&nbsp;${enProgreso ? 'Continuar mi evaluación' : 'Comenzar mi evaluación'}</button>`}
-        <div class="welcome-important">◈ &nbsp;Tu evaluación es importante</div>
+        <div class="welcome-important">Tu evaluación es importante</div>
       </div>
     </section>`;
   }
