@@ -713,6 +713,13 @@
         leaderEv.debilidadesBrechas = fb.gaps || leaderEv.debilidadesBrechas || '';
         leaderEv.riesgosAtencion = fb.risks || leaderEv.riesgosAtencion || '';
         leaderEv.comentarios = fb.leaderSummary || leaderEv.comentarios || '';
+        const continuity = detail.continuityRisk || fb.continuityRisk || null;
+        if (continuity) {
+          leaderEv.continuityOperationalImpact = continuity.operationalImpact || leaderEv.continuityOperationalImpact || '';
+          leaderEv.continuityReplacementAvailability = continuity.replacementAvailability || leaderEv.continuityReplacementAvailability || '';
+          leaderEv.continuityRecommendedActions = Array.isArray(continuity.recommendedActions) ? continuity.recommendedActions : (leaderEv.continuityRecommendedActions || []);
+          leaderEv.continuityConfidentialComment = continuity.confidentialComment || leaderEv.continuityConfidentialComment || '';
+        }
       }
       const db=S.load();
       db.areas_oportunidad=(db.areas_oportunidad||[]).filter(a=>!(String(a.colaboradorId)===String(colaboradorId)&&a.periodoId===periodoId));
@@ -825,9 +832,29 @@
       gaps: ev.debilidadesBrechas || '',
       risks: ev.riesgosAtencion || '',
       leaderSummary: ev.comentarios || '',
+      continuityRisk: {
+        operationalImpact: ev.continuityOperationalImpact || '',
+        replacementAvailability: ev.continuityReplacementAvailability || '',
+        recommendedActions: Array.isArray(ev.continuityRecommendedActions) ? ev.continuityRecommendedActions : [],
+        confidentialComment: ev.continuityConfidentialComment || '',
+        riskLevel: continuityRiskLevel(ev.continuityOperationalImpact, ev.continuityReplacementAvailability),
+        status: 'Confirmado'
+      },
       improvementPlan,
       developmentPlan
     };
+  }
+
+  function continuityRiskLevel(impact, replacement) {
+    const impactIndex = ['Bajo','Moderado','Alto','Crítico'].indexOf(impact);
+    const replacementIndex = ['Cobertura inmediata','Cobertura con capacitación breve','Cobertura parcial','Sin reemplazo identificado'].indexOf(replacement);
+    if (impactIndex < 0 || replacementIndex < 0) return '';
+    return [
+      ['Bajo','Bajo','Medio','Medio'],
+      ['Bajo','Medio','Medio','Alto'],
+      ['Medio','Medio','Alto','Crítico'],
+      ['Alto','Alto','Crítico','Crítico']
+    ][impactIndex][replacementIndex];
   }
   function backendIdForLocalEvaluation(localEvalId) {
     const ev = S.load().evaluaciones.find(e => e.id === localEvalId);
@@ -2481,6 +2508,9 @@
   }
 
   function renderResumenLider(ev, col) {
+    const continuityActions = Array.isArray(ev.continuityRecommendedActions) ? ev.continuityRecommendedActions : [];
+    const continuityLevel = continuityRiskLevel(ev.continuityOperationalImpact, ev.continuityReplacementAvailability);
+    const continuityActionOptions = ['Documentar procesos','Transferir conocimientos','Capacitación cruzada','Preparar sucesor','Plan de retención','Redistribuir responsabilidades','Ninguna acción inmediata','Otra'];
     return `
     <section class="leader-foda-section">
       <div class="leader-foda-head"><div><span>LECTURA INTEGRAL</span><h3>Resumen cualitativo del desempeño</h3><p>Analiza el desempeño con una lógica inspirada en FODA, enfocada en desarrollo. Registra hechos observables y evita comentarios personales o ambiguos.</p></div><div class="leader-foda-badge">F · O · D · A</div></div>
@@ -2491,6 +2521,20 @@
         <label class="leader-foda-card risk"><span class="leader-foda-icon">A</span><div><strong>Riesgos o factores de atención</strong><small>Situaciones que podrían afectar el desempeño si no se atienden oportunamente.</small></div><textarea placeholder="Ej. Dependencia de una sola persona/proceso, carga acumulada o falta de capacitación específica." onchange="App.setAmenazas('${ev.id}',this.value)">${esc(ev.riesgosAtencion||'')}</textarea></label>
       </div>
       <label class="leader-foda-summary"><div><strong>Síntesis del líder</strong><small>Resume los puntos anteriores en un mensaje claro, respetuoso, útil y orientado a acciones.</small></div><textarea placeholder="Ej. Durante el periodo destacaste por..., y el principal foco de desarrollo será..." onchange="App.setComentarios('${ev.id}',this.value)">${esc(ev.comentarios||'')}</textarea></label>
+    </section>
+    <section class="leader-continuity-block">
+      <div class="leader-continuity-head">
+        <div><span class="admin-section-kicker">INFORMACIÓN CONFIDENCIAL · LÍDER Y RH</span><h3>Continuidad operativa y cobertura</h3><p>Evalúa el impacto operativo de una posible salida y la capacidad actual del área para cubrir las funciones. Esta valoración apoya decisiones de documentación, sucesión, capacitación y retención; no modifica la calificación de desempeño.</p></div>
+        <span class="leader-confidential-badge">🔒 Confidencial</span>
+      </div>
+      <div class="leader-continuity-grid">
+        <label class="leader-continuity-field"><span>Impacto operativo de una salida <em>obligatorio</em></span><select onchange="App.setContinuityField('${ev.id}','continuityOperationalImpact',this.value)"><option value="">Selecciona una opción</option>${['Bajo','Moderado','Alto','Crítico'].map(v=>`<option value="${v}" ${ev.continuityOperationalImpact===v?'selected':''}>${v}</option>`).join('')}</select><small>Considera afectación al servicio, tiempos, clientes, cumplimiento y operación del equipo.</small></label>
+        <label class="leader-continuity-field"><span>Disponibilidad de reemplazo <em>obligatorio</em></span><select onchange="App.setContinuityField('${ev.id}','continuityReplacementAvailability',this.value)"><option value="">Selecciona una opción</option>${['Cobertura inmediata','Cobertura con capacitación breve','Cobertura parcial','Sin reemplazo identificado'].map(v=>`<option value="${v}" ${ev.continuityReplacementAvailability===v?'selected':''}>${v}</option>`).join('')}</select><small>Valora si otra persona puede asumir las funciones con el conocimiento disponible hoy.</small></label>
+      </div>
+      <div class="leader-continuity-result ${continuityLevel ? 'risk-'+continuityLevel.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'') : 'pending'}"><span>Nivel de riesgo calculado</span><strong>${esc(continuityLevel||'Pendiente de completar')}</strong></div>
+      <fieldset class="leader-continuity-actions"><legend>Acciones recomendadas</legend><p>Selecciona una o más acciones para gestionar la continuidad.</p><div>${continuityActionOptions.map(v=>`<label><input type="checkbox" ${continuityActions.includes(v)?'checked':''} onchange="App.toggleContinuityAction('${ev.id}','${v}',this.checked)"/> <span>${v}</span></label>`).join('')}</div></fieldset>
+      <label class="leader-continuity-comment"><span>Comentario confidencial para RH</span><textarea maxlength="1500" placeholder="Describe funciones críticas, conocimiento especializado, posibles coberturas o acciones que RH deba considerar." oninput="App.setContinuityField('${ev.id}','continuityConfidentialComment',this.value)">${esc(ev.continuityConfidentialComment||'')}</textarea><small>No incluyas diagnósticos médicos, datos sensibles ni apreciaciones personales. Registra únicamente hechos y contexto operativo.</small></label>
+      <div class="leader-continuity-privacy"><b>Esta información no será visible para el colaborador</b><span>Solo podrá consultarla el líder responsable y el personal autorizado de RH/administración.</span></div>
     </section>
     <section class="leader-agreement-block"><div class="leader-block-head"><div><span>ACUERDOS</span><h4>Áreas de oportunidad y plan de mejora</h4></div><button class="btn btn-outline btn-sm" onclick="App.mostrarNuevaArea('${col.empleado}')">+ Agregar</button></div>
       <div id="nuevaArea-${col.empleado}" class="inline-editor leader-inline-editor leader-form-surface hidden"><div class="leader-form-intro"><strong>Registrar acuerdo de mejora</strong><span>Documenta el punto a desarrollar y la acción acordada con el colaborador.</span></div><div class="leader-inline-grid leader-inline-grid-2"><div class="leader-inline-field"><label>Área de oportunidad</label><textarea id="areaNueva-${col.empleado}" rows="3" placeholder="Describe con claridad el aspecto que se trabajará"></textarea></div><div class="leader-inline-field"><label>Plan de mejora</label><textarea id="planNuevo-${col.empleado}" rows="3" placeholder="Describe la acción acordada para mejorar"></textarea></div></div><div class="inline-editor-actions"><button class="btn btn-primary btn-sm" onclick="App.guardarNuevaArea('${col.empleado}')">Guardar acuerdo</button><button class="btn btn-outline btn-sm" onclick="App.ocultarNuevaArea('${col.empleado}')">Cancelar</button></div></div>
@@ -3070,6 +3114,8 @@
         const summary=fget('leaderSummary','sintesisLider','comments','comentariosLider','Comentarios del líder');
         const areas=fget('improvementPlan','planMejora','planDeMejora','Plan de mejora');
         const dev=fget('developmentPlan','planDesarrollo','planDeDesarrollo','Plan de desarrollo');
+        const continuity=detail.continuityRisk || (feedback&&feedback.continuityRisk) || null;
+        const continuityLevel=continuity&&(continuity.riskLevel||continuity.level)||'';
 
         return `<section class="calibration-shell calibration-detail-shell calibration-rich-remote">
           <a href="#/admin/calibracion" class="calibration-back">← Volver a calibración</a>
@@ -3090,6 +3136,8 @@
           <article class="admin-panel calibration-detail-table"><div class="admin-panel-head"><div><span class="admin-section-kicker">COMPETENCIAS</span><h2>Detalle de la evaluación</h2><p>Contrasta la percepción del colaborador con la valoración del líder y enfoca la revisión donde exista brecha.</p></div></div><div class="admin-table-wrap"><table class="table admin-table"><thead><tr><th>Competencia</th><th>Auto</th><th>Líder</th><th>Brecha</th><th>Comentario</th></tr></thead><tbody>${competencyRows}</tbody></table></div></article>
 
           <div class="admin-dashboard-grid calibration-context-two"><article class="admin-panel"><span class="admin-section-kicker">HERRAMIENTAS B.2</span><h2>Dominio de herramientas</h2><table class="table table-compact"><thead><tr><th>Herramienta</th><th>Auto</th><th>Líder</th></tr></thead><tbody>${toolRows}</tbody></table></article><article class="admin-panel"><span class="admin-section-kicker">LECTURA CUALITATIVA</span><h2>Contexto del líder</h2><div class="leader-context-grid"><div><h4>Fortalezas</h4><p>${esc(strengths)||'<span class="muted">Sin información registrada.</span>'}</p></div><div><h4>Oportunidades</h4><p>${esc(opp)||'<span class="muted">Sin información registrada.</span>'}</p></div><div><h4>Brechas</h4><p>${esc(gaps)||'<span class="muted">Sin información registrada.</span>'}</p></div><div><h4>Factores de atención</h4><p>${esc(risks)||'<span class="muted">Sin información registrada.</span>'}</p></div><div class="span-2"><h4>Síntesis del líder</h4><p>${esc(summary)||'<span class="muted">Sin información registrada.</span>'}</p></div></div></article></div>
+
+          <article class="admin-panel leader-continuity-admin"><div class="admin-panel-head"><div><span class="admin-section-kicker">CONFIDENCIAL · LÍDER Y RH</span><h2>Continuidad operativa y cobertura</h2><p class="panel-support-copy">Contexto para gestionar cobertura, transferencia de conocimiento, sucesión y retención. No modifica automáticamente la calificación.</p></div>${continuityLevel?`<span class="leader-confidential-badge">Riesgo ${esc(continuityLevel)}</span>`:''}</div>${continuity?`<div class="leader-context-grid"><div><h4>Impacto operativo</h4><p>${esc(continuity.operationalImpact||'—')}</p></div><div><h4>Disponibilidad de reemplazo</h4><p>${esc(continuity.replacementAvailability||'—')}</p></div><div class="span-2"><h4>Acciones recomendadas</h4><p>${Array.isArray(continuity.recommendedActions)&&continuity.recommendedActions.length?continuity.recommendedActions.map(esc).join(' · '):'Sin acciones registradas.'}</p></div><div class="span-2"><h4>Comentario confidencial</h4><p>${esc(continuity.confidentialComment||'Sin comentario registrado.')}</p></div></div>`:'<div class="admin-empty-state">La valoración de continuidad todavía no está disponible.</div>'}<div class="leader-continuity-privacy"><b>Información restringida</b><span>No se muestra en el portal, retroalimentación ni constancia del colaborador.</span></div></article>
 
           <article class="admin-panel calibration-objectives-rich"><div class="admin-panel-head"><div><span class="admin-section-kicker">OBJETIVOS</span><h2>Cumplimiento y validación del líder</h2></div></div>${objRows?`<div class="admin-table-wrap"><table class="table admin-table"><thead><tr><th>Objetivo</th><th>Meta</th><th>Resultado</th><th>% colaborador</th><th>% líder</th><th>Calificación</th></tr></thead><tbody>${objRows}</tbody></table></div>`:'<div class="admin-empty-state">Sin objetivos aplicables o sin datos disponibles.</div>'}</article>
 
@@ -3864,6 +3912,24 @@
     setComentarios(evaluacionId, valor) {
       const db = S.load(); const ev = db.evaluaciones.find((e) => e.id === evaluacionId); if (ev) { ev.comentarios = valor; S.persist(); }
     },
+    setContinuityField(evaluacionId, field, value) {
+      const allowed = ['continuityOperationalImpact','continuityReplacementAvailability','continuityConfidentialComment'];
+      if (!allowed.includes(field)) return;
+      const db = S.load(); const ev = db.evaluaciones.find((e) => e.id === evaluacionId);
+      if (ev) { ev[field] = value; S.persist(); if (field !== 'continuityConfidentialComment') render(); }
+    },
+    toggleContinuityAction(evaluacionId, action, checked) {
+      const allowed = ['Documentar procesos','Transferir conocimientos','Capacitación cruzada','Preparar sucesor','Plan de retención','Redistribuir responsabilidades','Ninguna acción inmediata','Otra'];
+      if (!allowed.includes(action)) return;
+      const db = S.load(); const ev = db.evaluaciones.find((e) => e.id === evaluacionId);
+      if (!ev) return;
+      let actions = Array.isArray(ev.continuityRecommendedActions) ? ev.continuityRecommendedActions.filter(v=>allowed.includes(v)) : [];
+      if (checked && !actions.includes(action)) actions.push(action);
+      if (!checked) actions = actions.filter(v=>v!==action);
+      if (action === 'Ninguna acción inmediata' && checked) actions = ['Ninguna acción inmediata'];
+      if (action !== 'Ninguna acción inmediata' && checked) actions = actions.filter(v=>v!=='Ninguna acción inmediata');
+      ev.continuityRecommendedActions = actions; S.persist(); render();
+    },
     mostrarNuevaArea(colaboradorId){ const el=document.getElementById('nuevaArea-'+colaboradorId); if(el) el.classList.remove('hidden'); },
     ocultarNuevaArea(colaboradorId){ const el=document.getElementById('nuevaArea-'+colaboradorId); if(el) el.classList.add('hidden'); },
     guardarNuevaArea(colaboradorId){ const a=document.getElementById('areaNueva-'+colaboradorId); const p=document.getElementById('planNuevo-'+colaboradorId); if(!a||!p||!a.value.trim()||!p.value.trim()){showNotice('Completa el área de oportunidad y el plan de mejora.','warning');return;} S.addAreaOportunidad(colaboradorId,state.periodo.id,a.value.trim(),p.value.trim(),state.user.nombre); render(); },
@@ -3905,6 +3971,11 @@
         }
       }
       const evActual = S.load().evaluaciones.find((e) => e.id === evaluacionId);
+      if (!(evActual && evActual.continuityOperationalImpact && evActual.continuityReplacementAvailability)) {
+        state.wizard.seccionIdx = SECCIONES_WIZARD.length - 1; render();
+        setTimeout(() => showNotice(currentLang === 'en' ? 'Complete the confidential operational continuity section before submitting.' : 'Completa la sección confidencial de continuidad operativa antes de enviar.','warning'), 0);
+        return;
+      }
       if (requiereJustificacionNA(evaluacionId) && !(evActual && String(evActual.comentarios || '').trim())) {
         state.wizard.seccionIdx = SECCIONES_WIZARD.length - 1; render();
         setTimeout(() => showNotice('Más de la mitad de una sección está marcada como N/A. Justifica el uso de N/A en Comentarios generales antes de enviar.','warning'), 0);
