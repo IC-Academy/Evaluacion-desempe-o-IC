@@ -14,18 +14,18 @@
 <header class="top"><div class="brand"><img src="assets/logo-ic-blanco-horizontal.png" alt="Inter-Con"><div><strong>Evaluación de Desempeño</strong><span>Evaluación 360°</span></div></div><div class="user"><div class="avatar">JM</div><div><b>Jorge Mejía</b><small>Inteligencia de Negocio</small></div></div></header>
 <main class="shell">
   <div class="eyebrow">Mi evaluación 360°</div>
-  <h1>Selecciona las áreas que quieres evaluar</h1>
-  <p class="lead">Elige dos áreas con las que hayas tenido interacción suficiente durante el periodo. Cuando confirmes tu selección, el sistema agregará una tercera área de manera aleatoria entre las áreas elegibles que no hayas seleccionado.</p>
+  <h1>Selecciona un área que quieras evaluar</h1>
+  <p class="lead">Elige una sola área con la que hayas tenido interacción suficiente durante el periodo. Cuando confirmes tu selección, el sistema agregará dos áreas adicionales de manera aleatoria entre las áreas elegibles que no hayas seleccionado.</p>
 
   <section class="flow">
-    <div class="card step"><div class="n">1</div><b>Eliges 2 áreas</b><p>Selecciona las funciones con las que tuviste una experiencia suficiente para emitir una opinión objetiva.</p></div>
-    <div class="card step"><div class="n">2</div><b>El sistema agrega 1 aleatoria</b><p>La tercera área se selecciona automáticamente entre las restantes para reducir sesgo de preferencia.</p></div>
+    <div class="card step"><div class="n">1</div><b>Eliges 1 área</b><p>Selecciona la función con la que tuviste suficiente experiencia para emitir una opinión objetiva.</p></div>
+    <div class="card step"><div class="n">2</div><b>El sistema agrega 2 aleatorias</b><p>Las otras dos áreas se seleccionan automáticamente entre las restantes para reducir sesgo de preferencia.</p></div>
     <div class="card step"><div class="n">3</div><b>Respondes 3 evaluaciones</b><p>Las tres quedan bloqueadas como tus evaluaciones del ciclo y ya no pueden cambiarse.</p></div>
   </section>
 
-  <div class="section-title"><h2>Áreas disponibles</h2><span>Debes seleccionar exactamente dos</span></div>
+  <div class="section-title"><h2>Áreas disponibles</h2><span>Debes seleccionar exactamente una</span></div>
   <section class="card selector">
-    <div class="selector-head"><div><div class="eyebrow">Selección del participante</div><div style="font-size:12px;color:var(--muted);margin-top:5px">Selecciona sólo áreas que conozcas por interacción de trabajo.</div></div><div class="counter" id="counter">0 de 2 seleccionadas</div></div>
+    <div class="selector-head"><div><div class="eyebrow">Selección del participante</div><div style="font-size:12px;color:var(--muted);margin-top:5px">Selecciona sólo un área que conozcas por interacción de trabajo.</div></div><div class="counter" id="counter">0 de 1 seleccionada</div></div>
     <div class="areas" id="areas">
       <article class="area" data-key="nominas" data-name="Nóminas" data-leader="Frances Jolanta Fernández Esparza" data-role="Gerente de Nómina, Auditoría e IMSS"><div class="eyebrow">Finanzas</div><h3>Nóminas</h3><div class="leader">Frances Jolanta Fernández Esparza</div><div class="role">Gerente de Nómina, Auditoría e IMSS</div><div class="meta">Servicio interno · Nómina, auditoría e IMSS</div></article>
       <article class="area" data-key="pricing" data-name="Pricing y Administración de Contratos" data-leader="Jorge Antonio Martínez Trilla" data-role="Coordinador de Precios y Administración de Contratos"><div class="eyebrow">Finanzas</div><h3>Pricing y Administración de Contratos</h3><div class="leader">Jorge Antonio Martínez Trilla</div><div class="role">Coordinador de Precios y Administración de Contratos</div><div class="meta">Servicio interno · Pricing y contratos</div></article>
@@ -37,23 +37,23 @@
       <article class="area" data-key="logistica" data-name="Compras y Logística" data-leader="José Ricardo Zamora Acosta" data-role="Gerente Nacional de Compras y Logística"><div class="eyebrow">Logística</div><h3>Compras y Logística</h3><div class="leader">José Ricardo Zamora Acosta</div><div class="role">Gerente Nacional de Compras y Logística</div><div class="meta">Servicio interno · Compras, almacén y logística</div></article>
       <article class="area" data-key="operaciones" data-name="Operaciones Nacionales" data-leader="Juan Carlos Pérez Eslava" data-role="Director de Operaciones Nacionales"><div class="eyebrow">Operaciones</div><h3>Operaciones Nacionales</h3><div class="leader">Juan Carlos Pérez Eslava</div><div class="role">Director de Operaciones Nacionales</div><div class="meta">Área operativa · Operaciones nacionales</div></article>
     </div>
-    <div class="actions"><button class="btn secondary" id="clearBtn">Limpiar</button><button class="btn primary" id="confirmBtn" disabled>Confirmar selección y asignar tercera área</button></div>
+    <div class="actions"><button class="btn secondary" id="clearBtn">Limpiar</button><button class="btn primary" id="confirmBtn" disabled>Confirmar selección y asignar 2 áreas aleatorias</button></div>
   </section>
 
   <section class="result" id="result">
-    <div class="section-title"><h2>Tus evaluaciones del ciclo</h2><span>2 seleccionadas por ti + 1 asignada aleatoriamente</span></div>
+    <div class="section-title"><h2>Tus evaluaciones del ciclo</h2><span>1 seleccionada por ti + 2 asignadas aleatoriamente</span></div>
     <div class="summary" id="summary"></div>
-    <div class="randombox"><div class="dice">🎲</div><div><b>La tercera área fue asignada automáticamente</b><p>El sistema eligió una de las áreas restantes. Esta asignación no puede modificarse ni sustituirse por otra.</p></div></div>
-    <div class="card next"><div><strong>Ya puedes iniciar tus evaluaciones</strong><span>Cada tarjeta abriría el mismo cuestionario 360° con el responsable y puesto de la función seleccionada.</span></div><button class="btn primary" id="startBtn">Comenzar primera evaluación</button></div>
+    <div class="randombox"><div class="dice">🎲</div><div><b>Dos áreas fueron asignadas automáticamente</b><p>El sistema eligió dos áreas distintas entre las opciones restantes. Estas asignaciones no pueden modificarse ni sustituirse.</p></div></div>
+    <div class="card next"><div><strong>Ya puedes iniciar tus evaluaciones</strong><span>Cada tarjeta abriría el mismo cuestionario 360° con el responsable y puesto de la función correspondiente.</span></div><button class="btn primary" id="startBtn">Comenzar primera evaluación</button></div>
   </section>
 </main>
 <div class="toast" id="toast">Demo: aquí se abriría el cuestionario de la primera evaluación.</div>
 <script>
 const cards=[...document.querySelectorAll('.area')];let selected=[];
-function refresh(){cards.forEach(c=>c.classList.toggle('selected',selected.includes(c.dataset.key)));document.getElementById('counter').textContent=`${selected.length} de 2 seleccionadas`;document.getElementById('confirmBtn').disabled=selected.length!==2;}
-cards.forEach(c=>c.onclick=()=>{const k=c.dataset.key;if(selected.includes(k))selected=selected.filter(x=>x!==k);else if(selected.length<2)selected.push(k);refresh();});
+function refresh(){cards.forEach(c=>c.classList.toggle('selected',selected.includes(c.dataset.key)));document.getElementById('counter').textContent=`${selected.length} de 1 seleccionada`;document.getElementById('confirmBtn').disabled=selected.length!==1;}
+cards.forEach(c=>c.onclick=()=>{const k=c.dataset.key;if(selected.includes(k))selected=[];else selected=[k];refresh();});
 document.getElementById('clearBtn').onclick=()=>{selected=[];refresh();document.getElementById('result').style.display='none'};
-document.getElementById('confirmBtn').onclick=()=>{if(selected.length!==2)return;const picked=cards.filter(c=>selected.includes(c.dataset.key));const pool=cards.filter(c=>!selected.includes(c.dataset.key));const random=pool[Math.floor(Math.random()*pool.length)];const items=[...picked,random];document.getElementById('summary').innerHTML=items.map((c,i)=>`<article class="card assignment"><span class="tag ${i<2?'userpick':'random'}">${i<2?'Elegida por ti':'Asignación aleatoria'}</span><h3>${c.dataset.name}</h3><div class="leader">${c.dataset.leader}</div><div class="role">${c.dataset.role}</div><div class="note">${i<2?'Seleccionaste esta área por tu interacción de trabajo durante el periodo.':'El sistema asignó esta tercera área entre las opciones restantes para complementar tu evaluación 360°.'}</div></article>`).join('');document.getElementById('result').style.display='block';cards.forEach(c=>c.style.pointerEvents='none');document.getElementById('confirmBtn').disabled=true;document.getElementById('clearBtn').disabled=true;document.getElementById('result').scrollIntoView({behavior:'smooth'});};
+document.getElementById('confirmBtn').onclick=()=>{if(selected.length!==1)return;const picked=cards.find(c=>selected.includes(c.dataset.key));const pool=cards.filter(c=>!selected.includes(c.dataset.key));for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}const randoms=pool.slice(0,2);const items=[picked,...randoms];document.getElementById('summary').innerHTML=items.map((c,i)=>`<article class="card assignment"><span class="tag ${i===0?'userpick':'random'}">${i===0?'Elegida por ti':'Asignación aleatoria'}</span><h3>${c.dataset.name}</h3><div class="leader">${c.dataset.leader}</div><div class="role">${c.dataset.role}</div><div class="note">${i===0?'Seleccionaste esta área por tu interacción de trabajo durante el periodo.':'El sistema asignó esta área automáticamente entre las opciones restantes para complementar tu evaluación 360°.'}</div></article>`).join('');document.getElementById('result').style.display='block';cards.forEach(c=>c.style.pointerEvents='none');document.getElementById('confirmBtn').disabled=true;document.getElementById('clearBtn').disabled=true;document.getElementById('result').scrollIntoView({behavior:'smooth'});};
 document.getElementById('startBtn').onclick=()=>{const t=document.getElementById('toast');t.style.display='block';setTimeout(()=>t.style.display='none',2600)};
 refresh();
 </script>
