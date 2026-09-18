@@ -26,6 +26,20 @@
   - 4 Destacado
   - 5 Ejemplar
 
+
+## Filtro corporativo temporal
+
+Para este entorno México/INTER-CON, sólo pueden participar usuarios cuyo correo corporativo termine en `@intercon.com.mx`.
+
+Reglas:
+- Incluir: `*@intercon.com.mx`.
+- Excluir: `*@icsecurity.com` y cualquier otro dominio.
+- La exclusión aplica tanto a evaluadores como a líderes/gerentes evaluados.
+- `@icsecurity.com` no debe importarse ni recibir asignaciones en este módulo porque IC Security opera con su propia base.
+- Validar el dominio en backend al construir el universo de participantes y nuevamente al resolver `/360/me`.
+- No basta con ocultarlos en frontend.
+- `360_Participantes.Correo snapshot` conserva el correo usado para validar el dominio de la campaña.
+
 ## Regla central de asignación
 
 La asignación no es "random puro". Debe ser **aleatoria balanceada**.
@@ -46,10 +60,11 @@ Objetivos simultáneos:
 Para una campaña:
 
 1. Obtener todos los evaluadores elegibles.
-2. Obtener todas las áreas con `Activa=true`, `Elegible aleatoria=true` y responsable evaluable.
-3. Mezclar aleatoriamente el orden de evaluadores para no favorecer siempre a los primeros.
-4. Inicializar `assignmentCount[targetAreaId]` con el número de asignaciones ya existentes del lote/campaña.
-5. Para cada evaluador:
+2. Filtrar evaluadores y targets a correo `@intercon.com.mx` únicamente. Excluir `@icsecurity.com`.
+3. Obtener todas las áreas con `Activa=true`, `Elegible aleatoria=true` y responsable evaluable.
+4. Mezclar aleatoriamente el orden de evaluadores para no favorecer siempre a los primeros.
+5. Inicializar `assignmentCount[targetAreaId]` con el número de asignaciones ya existentes del lote/campaña.
+6. Para cada evaluador:
    - excluir `ID Área propia 360`;
    - excluir áreas ya elegidas para ese evaluador;
    - excluir cualquier área cuyo responsable sea el mismo evaluador;
@@ -59,9 +74,9 @@ Para una campaña:
    - crear asignación;
    - incrementar inmediatamente `assignmentCount`;
    - repetir hasta completar 3.
-6. Validar el lote completo.
-7. Si algún evaluado recibe 0 asignaciones o la diferencia máxima-mínima es mayor a 1 cuando existe una solución factible, descartar el lote y regenerar con otro orden aleatorio.
-8. Persistir únicamente un lote validado.
+7. Validar el lote completo.
+8. Si algún evaluado recibe 0 asignaciones o la diferencia máxima-mínima es mayor a 1 cuando existe una solución factible, descartar el lote y regenerar con otro orden aleatorio.
+9. Persistir únicamente un lote validado.
 
 Resultado esperado:
 - si `evaluadores * 3` es divisible entre el número de evaluados, todos reciben exactamente la misma cantidad;
@@ -315,6 +330,7 @@ No anonimizar evaluadores en esta versión aprobada.
 12. Generación de lote debe ser idempotente.
 13. Activación requiere validación de cobertura.
 14. Registrar acciones críticas en `360_Bitacora`.
+15. Sólo `@intercon.com.mx` es elegible en este entorno; `@icsecurity.com` debe rechazarse.
 
 ## Datos seed DEV
 
