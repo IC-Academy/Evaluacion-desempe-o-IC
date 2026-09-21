@@ -138,7 +138,7 @@
       pendiente = null;
       // /auth/me es la fuente autoritativa de identidad/capacidades. Si está
       // disponible, enriquecemos la sesión inmediatamente después del OTP.
-      try { await refreshProfileFromApi(); } catch (e) { console.warn('EDDAuth: no fue posible hidratar /auth/me tras login.', e); }
+      try { await refreshProfileFromApi(true); } catch (e) { console.warn('EDDAuth: no fue posible hidratar /auth/me tras login; se conserva la sesión recién emitida.', e); }
       return resp;
     }
 
@@ -186,9 +186,9 @@
     });
   }
 
-  async function refreshProfileFromApi() {
+  async function refreshProfileFromApi(suppressSessionExpired) {
     if (cfg().mode !== 'api') return getSession();
-    const resp = await global.EDDApi.authMe();
+    const resp = await global.EDDApi.authMe(true, !!suppressSessionExpired);
     const data = resp && resp.data ? resp.data : resp;
     if (!data || !data.employee) return getSession();
     const session = getSession();
