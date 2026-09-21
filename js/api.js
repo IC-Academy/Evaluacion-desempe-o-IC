@@ -141,7 +141,12 @@
       setRequestActivity(-1);
 
       if (response.status === 401) {
-        try { global.dispatchEvent(new CustomEvent(EVENTO_SESION_EXPIRADA)); } catch (e) { /* entornos sin CustomEvent */ }
+        // Durante la hidratación inmediata posterior al OTP, /auth/me puede
+        // fallar transitoriamente sin invalidar la sesión recién emitida.
+        // Solo propagamos el cierre global cuando el caller NO lo suprime.
+        if (!options.suppressSessionExpired) {
+          try { global.dispatchEvent(new CustomEvent(EVENTO_SESION_EXPIRADA)); } catch (e) { /* entornos sin CustomEvent */ }
+        }
         throw new ApiError('unauthorized', 'Tu sesión expiró. Inicia sesión nuevamente.', 401);
       }
 
@@ -194,8 +199,14 @@
     authLogout() {
       return apiRequest('/auth/logout', { method: 'POST' });
     },
-    authMe(forceRefresh) {
-      return apiRequest('/auth/me', { method: 'GET', cacheMs: 60000, forceRefresh: !!forceRefresh, timeoutMs: 10000 });
+    authMe(forceRefresh, suppressSessionExpired) {
+      return apiRequest('/auth/me', {
+        method: 'GET',
+        cacheMs: 60000,
+        forceRefresh: !!forceRefresh,
+        timeoutMs: 10000,
+        suppressSessionExpired: !!suppressSessionExpired
+      });
     },
 
     // --- Capa de lectura real (Backend Integration v1) -----------------------
