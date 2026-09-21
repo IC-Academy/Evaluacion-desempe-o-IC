@@ -121,7 +121,14 @@
     if (!pendiente || pendiente.numeroEmpleado !== numeroEmpleado) {
       throw new global.EDDApi.ApiError('validation', 'Primero solicita un código para este número de empleado.');
     }
-    if (Date.now() > pendiente.expiresAt) {
+    // En modo API el backend es la única fuente autoritativa para la vigencia
+    // del OTP. El contador del frontend es meramente informativo y no debe
+    // bloquear un código que el servidor todavía considera válido.
+    //
+    // Esto evita falsos "código vencido" por diferencias de reloj, pestañas
+    // suspendidas o estados efímeros del navegador. El backend valida siempre:
+    // requestId + empleado + hash + usado + fecha de vencimiento.
+    if (cfg().mode !== 'api' && Date.now() > pendiente.expiresAt) {
       throw new global.EDDApi.ApiError('expired', 'El código venció. Solicita uno nuevo.');
     }
 
