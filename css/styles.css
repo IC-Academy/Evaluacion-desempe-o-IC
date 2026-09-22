@@ -1591,3 +1591,103 @@ body.edd-request-active::before {
   .profile-selector-foot{padding:18px 24px;align-items:flex-start;flex-direction:column}
   .profile-selector-brand{padding:20px 24px}
 }
+
+
+/* ==========================================================================
+   STAGING · Header compacto con módulo 360°
+   Mantiene una sola línea en desktop y evita que navegación/usuario compitan.
+   ========================================================================== */
+@media (min-width:1181px){
+  .premium-header-top{
+    max-width:1600px;
+    min-height:72px;
+    padding:0 20px;
+    grid-template-columns:220px minmax(0,1fr) minmax(360px,auto);
+    gap:12px;
+  }
+  .premium-brand{min-width:0}
+  .premium-brand img{width:190px;max-width:100%}
+  .premium-nav-tabs{
+    min-width:0;
+    justify-content:flex-start;
+    gap:2px;
+    overflow:visible;
+  }
+  .premium-nav-tabs a{
+    padding:0 10px;
+    font-size:.78rem;
+    font-weight:600;
+    letter-spacing:-.01em;
+  }
+  .premium-user-menu{
+    min-width:0;
+    gap:8px;
+    justify-content:flex-end;
+  }
+  .premium-user-avatar{
+    width:36px;
+    height:36px;
+    flex:0 0 36px;
+  }
+  .premium-user-copy{max-width:150px}
+  .premium-user-copy strong{font-size:.74rem}
+  .premium-user-copy small{
+    font-size:.61rem;
+    line-height:1.2;
+  }
+  .premium-profile-switch{
+    padding:8px 12px!important;
+    font-size:.69rem!important;
+    white-space:nowrap;
+  }
+  .language-switch-compact{flex:0 0 auto}
+  .premium-logout{
+    display:flex;
+    align-items:center;
+    gap:5px;
+    font-size:16px;
+    white-space:nowrap;
+  }
+  .premium-logout .logout-label{font-size:.69rem}
+}
+
+/* Desktop intermedio: compactar todavía más antes de pasar a layout móvil. */
+@media (min-width:1181px) and (max-width:1450px){
+  .premium-header-top{
+    grid-template-columns:185px minmax(0,1fr) minmax(300px,auto);
+    padding:0 14px;
+    gap:8px;
+  }
+  .premium-brand img{width:165px}
+  .premium-nav-tabs a{padding:0 7px;font-size:.72rem}
+  .premium-user-copy{max-width:118px}
+  .premium-profile-switch{padding:7px 9px!important}
+  .premium-logout .logout-label{display:none}
+}
+
+/* Tablet: navegación con scroll horizontal sin romper el header. */
+@media (max-width:1180px) and (min-width:761px){
+  .premium-header-top{
+    max-width:none;
+    min-height:auto;
+    padding:10px 16px;
+    display:grid;
+    grid-template-columns:190px 1fr;
+    grid-template-areas:
+      "brand user"
+      "nav nav";
+    gap:8px 12px;
+  }
+  .premium-brand{grid-area:brand}
+  .premium-brand img{width:170px}
+  .premium-user-menu{grid-area:user;min-width:0}
+  .premium-nav-tabs{
+    grid-area:nav;
+    width:100%;
+    justify-content:flex-start;
+    overflow-x:auto;
+    gap:4px;
+    scrollbar-width:thin;
+  }
+  .premium-nav-tabs a{padding:8px 10px;font-size:.76rem}
+}
