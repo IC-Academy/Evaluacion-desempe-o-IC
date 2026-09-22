@@ -31,7 +31,7 @@
     'Inicio':'Home','Autoevaluación':'Self-assessment','Retroalimentación':'Feedback',
     'Mi equipo':'My team','Pendientes por evaluar':'Pending evaluations','Dashboard':'Dashboard',
     'Calibración':'Calibration','Matriz 9-Box':'9-Box Matrix','Usuarios':'Users','Jerarquías':'Hierarchy',
-    'Auditoría':'Audit','Configuración':'Settings','Cerrar sesión':'Sign out',
+    'Auditoría':'Audit','Configuración':'Settings','Evaluación 360°':'360° Evaluation','Cerrar sesión':'Sign out',
     'Plataforma corporativa':'Corporate platform','Bienvenido(a)':'Welcome','Verificación de identidad':'Identity verification',
     'Utiliza tu número de empleado para acceder a tu evaluación.':'Use your employee number to access your evaluation.',
     'Revisa tu correo corporativo y captura el código temporal de 6 dígitos.':'Check your corporate email and enter the 6-digit temporary code.',
@@ -1105,12 +1105,12 @@
     const per = state.periodo;
     let tabs = [];
     if (u.perfil === 'colaborador') {
-      tabs = [['inicio', 'Inicio'], ['autoevaluacion', 'Autoevaluación'], ['retroalimentacion', 'Retroalimentación']];
+      tabs = [['inicio', 'Inicio'], ['autoevaluacion', 'Autoevaluación'], ['retroalimentacion', 'Retroalimentación'], ['360', 'Evaluación 360°']];
     } else if (u.perfil === 'lider') {
-      tabs = [['dashboard', 'Mi equipo'], ['pendientes', 'Pendientes por evaluar'], ['firmas', 'Por firmar']];
+      tabs = [['dashboard', 'Mi equipo'], ['pendientes', 'Pendientes por evaluar'], ['firmas', 'Por firmar'], ['360', 'Evaluación 360°']];
       if (perfilesDisponibles(u).includes('colaborador')) tabs.unshift(['mi-inicio', 'Mi evaluación']);
     } else {
-      tabs = [['dashboard', 'Dashboard'], ['calibracion', 'Calibración'], ['9box', 'Matriz 9-Box'], ['usuarios', 'Usuarios'], ['config', 'Configuración']];
+      tabs = [['dashboard', 'Dashboard'], ['calibracion', 'Calibración'], ['9box', 'Matriz 9-Box'], ['usuarios', 'Usuarios'], ['360', 'Evaluación 360°'], ['config', 'Configuración']];
     }
     const retroPendiente = u.perfil === 'colaborador' && state.periodo && (() => { const cal=S.getCalibracion(u.empleado, state.periodo.id); return !!(cal && cal.retroHabilitada && !cal.aceptacionColaborador); })();
     const firmasPendientesLider = u.perfil === 'lider' && state.periodo ? S.getColaboradoresDeLider(u.empleado).filter((c) => { const cal = S.getCalibracion(c.empleado, state.periodo.id); return !!(cal && cal.acuerdosLiberados && !cal.firmaLider); }).length : 0;
@@ -1123,6 +1123,7 @@
       const atencion = (esRetro && retroPendiente) || (esFirma && firmasPendientesLider > 0) || autoPropiaPendiente;
       const badgeCount = esRetro && retroPendiente ? 1 : esFirma ? firmasPendientesLider : autoPropiaPendiente ? 1 : 0;
       const titulo = esRetro ? 'Retroalimentación disponible' : esFirma ? 'Acuerdos pendientes por firmar' : 'Tu autoevaluación está pendiente';
+      if (t[0] === '360') return `<a href="360-demo-final.html" class="${page === '360' ? 'active' : ''}">${t[1]}</a>`;
       return `<a href="#/${area === 'colaborador' ? 'colaborador' : area}/${t[0]}" class="${page === t[0] ? 'active' : ''}${atencion ? ' nav-attention' : ''}">${t[1]}${atencion ? `<span class="nav-notification-dot" title="${titulo}">${badgeCount}</span>` : ''}</a>`;
     }).join('');
     const iniciales = esc((u.nombre || '').split(/\s+/).slice(0,2).map(x => x[0] || '').join('').toUpperCase());
