@@ -26,7 +26,7 @@
 @media(max-width:900px){.flow,.summary{grid-template-columns:1fr 1fr}.survey-layout{grid-template-columns:1fr}.side{position:static}.scaleGrid{grid-template-columns:1fr 1fr}.hero{grid-template-columns:1fr}.hero-side{grid-template-columns:repeat(3,1fr)}}@media(max-width:620px){.flow,.summary,.scaleGrid,.hero-side{grid-template-columns:1fr}.question{grid-template-columns:1fr}.top{padding:10px 16px}.shell{padding:0 12px}.section-title{align-items:flex-start;flex-direction:column}.top-actions{flex-wrap:wrap;justify-content:flex-end}}
 </style></head>
 <body>
-<header class="top"><div class="brand"><img src="assets/logo-ic-blanco-horizontal.png" alt="Inter-Con"><div><strong>Evaluación de Desempeño</strong><span>Evaluación 360°</span></div></div><div class="top-actions"><a class="toplink" href="./#/lider/dashboard">← Volver a EDD</a><div class="profile-chip"><span class="avatar" id="profileInitials">IC</span><span><strong id="profileName">Usuario INTER-CON</strong><small id="profileMeta">Evaluación 360°</small></span></div></div></header>
+<header class="top"><div class="brand"><img src="assets/logo-ic-blanco-horizontal.png" alt="Inter-Con"><div><strong>Evaluación de Desempeño</strong><span>Evaluación 360°</span></div></div><div class="top-actions"><a class="toplink" id="backToEdd" href="index.html">← Volver a EDD</a><div class="profile-chip"><span class="avatar" id="profileInitials">IC</span><span><strong id="profileName">Usuario INTER-CON</strong><small id="profileMeta">Evaluación 360°</small></span></div></div></header>
 <main class="shell">
 <section id="assignmentView">
   <div class="card hero"><div><div class="eyebrow">Mi evaluación 360°</div><h1>Tus evaluaciones 360° están listas</h1><p class="lead">Completa las tres evaluaciones asignadas para este ciclo. Las áreas se asignan automáticamente, excluyen tu propia área y se distribuyen de forma equilibrada entre los participantes.</p></div><div class="hero-side"><div class="kpi"><b>3</b><span>Asignaciones</span></div><div class="kpi"><b>0</b><span>Área propia</span></div><div class="kpi"><b>1</b><span>Solo envío</span></div></div></div>
@@ -91,6 +91,14 @@ function loadProfile(){
     const role=u.perfil||u.role||'Evaluación 360°';
     profileName.textContent=name;
     profileMeta.textContent=String(role).replace(/^./,m=>m.toUpperCase())+' · Evaluación 360°';
+    const normalizedRole=String(role).toLowerCase();
+    const targetRoute=normalizedRole==='administrador'||normalizedRole==='admin'
+      ? 'index.html#/admin/dashboard'
+      : normalizedRole==='lider'||normalizedRole==='líder'||normalizedRole==='manager'
+        ? 'index.html#/lider/dashboard'
+        : 'index.html#/colaborador/inicio';
+    const back=document.getElementById('backToEdd');
+    if(back) back.href=targetRoute;
     const initials=name.split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase();
     if(initials) profileInitials.textContent=initials;
   }catch(e){}
