@@ -1691,3 +1691,203 @@ body.edd-request-active::before {
   }
   .premium-nav-tabs a{padding:8px 10px;font-size:.76rem}
 }
+
+
+/* ==========================================================================
+   HEADER FINAL · EDD + 360
+   Desktop en dos niveles: identidad/usuario arriba, navegación abajo.
+   Evita compresión y mantiene apariencia de producto terminado.
+   ========================================================================== */
+.premium-header{
+  background:linear-gradient(105deg,#071e42 0%,#0a2f61 58%,#082650 100%)!important;
+  box-shadow:0 8px 24px rgba(3,24,53,.18)!important;
+  overflow:visible!important;
+}
+.premium-header-top{
+  max-width:100%!important;
+  min-height:104px!important;
+  padding:0!important;
+  display:grid!important;
+  grid-template-columns:minmax(210px,1fr) minmax(0,1500px) minmax(360px,1fr)!important;
+  grid-template-rows:60px 44px!important;
+  grid-template-areas:
+    "brand spacer user"
+    "nav nav nav"!important;
+  gap:0!important;
+  align-items:center!important;
+}
+.premium-brand{
+  grid-area:brand!important;
+  justify-self:end!important;
+  align-self:stretch!important;
+  width:230px!important;
+  min-width:230px!important;
+  padding:7px 16px!important;
+  margin:0!important;
+  border:0!important;
+  border-right:1px solid rgba(255,255,255,.08)!important;
+  border-radius:0!important;
+  background:#0a2f61!important;
+  box-shadow:none!important;
+  display:flex!important;
+  align-items:center!important;
+}
+.premium-brand img{
+  width:200px!important;
+  max-height:48px!important;
+  object-fit:contain!important;
+}
+.premium-user-menu{
+  grid-area:user!important;
+  justify-self:start!important;
+  min-width:0!important;
+  height:60px!important;
+  padding:0 22px!important;
+  gap:10px!important;
+  display:flex!important;
+  align-items:center!important;
+  border-left:1px solid rgba(255,255,255,.07)!important;
+}
+.premium-user-avatar{
+  width:36px!important;height:36px!important;flex:0 0 36px!important;
+}
+.premium-user-copy{
+  display:grid!important;
+  max-width:190px!important;
+  min-width:140px!important;
+}
+.premium-user-copy strong{
+  font-size:.76rem!important;
+  letter-spacing:.01em!important;
+}
+.premium-user-copy small{
+  font-size:.61rem!important;
+  line-height:1.25!important;
+}
+.premium-profile-switch{
+  height:34px!important;
+  padding:0 12px!important;
+  font-size:.69rem!important;
+}
+.premium-header .language-switch{
+  height:34px!important;
+  margin:0!important;
+}
+.premium-header .language-option{
+  min-width:30px!important;
+  padding:0 8px!important;
+}
+.premium-logout{
+  height:34px!important;
+  padding:0 8px!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:6px!important;
+  font-size:15px!important;
+}
+.premium-logout .logout-label{
+  display:inline!important;
+  font-size:.68rem!important;
+  font-weight:700!important;
+}
+.premium-nav-tabs{
+  grid-area:nav!important;
+  width:100%!important;
+  min-height:44px!important;
+  max-width:none!important;
+  margin:0!important;
+  padding:0 24px!important;
+  display:flex!important;
+  align-items:stretch!important;
+  justify-content:center!important;
+  gap:6px!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  background:rgba(3,19,42,.25)!important;
+  border-top:1px solid rgba(255,255,255,.055)!important;
+  scrollbar-width:none!important;
+}
+.premium-nav-tabs::-webkit-scrollbar{display:none!important}
+.premium-nav-tabs a{
+  flex:0 0 auto!important;
+  min-height:44px!important;
+  padding:0 16px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  color:#c7d7e9!important;
+  font-size:.77rem!important;
+  font-weight:600!important;
+  line-height:1!important;
+  border:0!important;
+  border-bottom:3px solid transparent!important;
+  border-radius:0!important;
+  background:transparent!important;
+  white-space:nowrap!important;
+}
+.premium-nav-tabs a:hover{
+  color:#fff!important;
+  background:rgba(255,255,255,.045)!important;
+}
+.premium-nav-tabs a.active{
+  color:#fff!important;
+  border-bottom-color:#2f8cff!important;
+  background:rgba(35,126,239,.08)!important;
+}
+.premium-nav-tabs a.nav-attention{
+  background:rgba(35,126,239,.08)!important;
+}
+.nav-notification-dot{
+  min-width:18px!important;height:18px!important;margin-left:6px!important;
+}
+
+/* Desktop más estrecho: conservar dos niveles y simplificar usuario. */
+@media (max-width:1280px) and (min-width:901px){
+  .premium-header-top{
+    grid-template-columns:210px minmax(0,1fr) auto!important;
+  }
+  .premium-brand{
+    justify-self:start!important;
+    width:210px!important;
+    min-width:210px!important;
+  }
+  .premium-brand img{width:180px!important}
+  .premium-user-menu{justify-self:end!important;padding:0 14px!important}
+  .premium-user-copy{display:none!important}
+  .premium-nav-tabs{justify-content:flex-start!important;padding:0 14px!important}
+  .premium-nav-tabs a{padding:0 12px!important;font-size:.74rem!important}
+  .premium-logout .logout-label{display:none!important}
+}
+
+/* Móvil/tablet: primera fila marca + controles, segunda fila navegación desplazable. */
+@media (max-width:900px){
+  .premium-header-top{
+    min-height:auto!important;
+    grid-template-columns:170px minmax(0,1fr)!important;
+    grid-template-rows:58px 44px!important;
+    grid-template-areas:
+      "brand user"
+      "nav nav"!important;
+  }
+  .premium-brand{
+    justify-self:start!important;
+    width:170px!important;
+    min-width:170px!important;
+    padding:6px 10px!important;
+  }
+  .premium-brand img{width:150px!important;max-height:42px!important}
+  .premium-user-menu{
+    justify-self:end!important;
+    height:58px!important;
+    padding:0 10px!important;
+    border-left:0!important;
+  }
+  .premium-user-avatar,.premium-user-copy{display:none!important}
+  .premium-profile-switch{display:none!important}
+  .premium-nav-tabs{
+    justify-content:flex-start!important;
+    padding:0 8px!important;
+  }
+  .premium-nav-tabs a{padding:0 11px!important;font-size:.72rem!important}
+  .premium-logout .logout-label{display:none!important}
+}
