@@ -1960,7 +1960,7 @@
             <label><span>Motivo principal <em>obligatorio</em></span><select onchange="App.setObjetivosNoAplicanMotivo('${ev.id}',this.value)"><option value="">Selecciona un motivo</option>${['No se definieron objetivos formales para mi puesto','Ingresé después del periodo de definición','Mi función operó sin metas documentadas','Otro'].map(x=>`<option value="${x}" ${ev.objetivosNoAplicanMotivo===x?'selected':''}>${x}</option>`).join('')}</select></label>
             <label><span>Contexto breve <em>obligatorio</em></span><textarea placeholder="Explica brevemente por qué no tuviste objetivos definidos durante el periodo." oninput="App.setObjetivosNoAplicanDetalle('${ev.id}',this.value)">${esc(ev.objetivosNoAplicanDetalle||'')}</textarea></label>
           </div>
-        </div>` : `<div id="objetivosWrap">${filas.map((o, i) => renderObjetivoRow(ev.id, o, Number(o.index ?? i), soloLecturaDescripcion, !comprendido)).join('')}</div>${filas.length < 5 ? `<button class="btn btn-outline btn-sm smart-add-objective" ${comprendido ? '' : 'disabled'} onclick="App.agregarObjetivo('${ev.id}')">+ Agregar objetivo</button>` : ''}`}
+        </div>` : `<div id="objetivosWrap">${filas.map((o, i) => renderObjetivoRow(ev.id, o, Number(o.index ?? i), soloLecturaDescripcion, !comprendido)).join('')}</div>${filas.length < 5 ? `<button type="button" class="btn btn-outline btn-sm smart-add-objective" ${comprendido ? '' : 'disabled'} onclick="App.agregarObjetivo('${ev.id}')">+ Agregar objetivo</button>` : ''}`}
       </section>
     </div>`;
   }
@@ -1969,7 +1969,7 @@
     const calif = o.calificacion || '';
     return `<div class="objetivo-row kpi-objective-row ${bloqueado ? 'is-locked' : ''}" data-idx="${index}">
       <div class="objetivo-num">#${index + 1}</div>
-      <button class="btn btn-outline btn-sm btn-remove-objective" ${bloqueado ? 'bloqueado' : ''} onclick="App.quitarObjetivo('${evaluacionId}',${index})">× Quitar</button>
+      <button type="button" class="btn btn-outline btn-sm btn-remove-objective" ${bloqueado ? 'bloqueado' : ''} onclick="App.quitarObjetivo('${evaluacionId}',${index})">× Quitar</button>
       <div class="objetivo-fields kpi-objective-fields">
         <div class="form-group kpi-objective-main"><label>Objetivo</label><textarea ${bloqueado||soloLecturaDescripcion?'bloqueado':''} placeholder="Describe el objetivo acordado para el periodo" onchange="App.editarObjetivoKPI('${evaluacionId}',${index},'descripcion',this.value)">${esc(o.descripcion || '')}</textarea></div>
         <div class="kpi-objective-grid">
@@ -2472,7 +2472,7 @@
           <button type="button" class="decision-card ${decision==='rechazado'?'active reject':''}" onclick="App.decisionObjetivosNoAplicanLider('${ev.id}','rechazado')"><b>Había objetivos</b><span>Debes documentarlos y evaluarlos para este cierre.</span></button>
         </div>
         ${decision==='confirmado' ? `<label class="leader-na-comment"><span>Comentario del líder <em>obligatorio</em></span><textarea placeholder="Confirma el contexto o explica por qué no se definieron objetivos para este puesto." oninput="App.setObjetivosNoAplicanComentarioLider('${ev.id}',this.value)">${esc(ev.objetivosNoAplicanComentarioLider||'')}</textarea></label>` : ''}
-        ${decision==='rechazado' ? `<div class="leader-objectives-recovery"><div class="leader-form-intro"><strong>Documenta los objetivos que sí existían</strong><span>Captura objetivo, meta y resultado. El cumplimiento y la equivalencia se calcularán automáticamente. Esta discrepancia quedará visible para DO.</span></div><div id="objetivosWrap">${leaderRows.map((o,i)=>renderObjetivoRow(ev.id,o,Number(o.index??i),false,false)).join('')}</div>${leaderRows.length<5?`<button class="btn btn-outline btn-sm smart-add-objective" onclick="App.agregarObjetivo('${ev.id}')">+ Agregar objetivo</button>`:''}<label class="leader-na-comment"><span>Justificación de la discrepancia <em>obligatoria</em></span><textarea placeholder="Explica por qué consideras que sí existían objetivos aunque el colaborador reportó lo contrario." oninput="App.setObjetivosNoAplicanComentarioLider('${ev.id}',this.value)">${esc(ev.objetivosNoAplicanComentarioLider||'')}</textarea></label></div>` : ''}
+        ${decision==='rechazado' ? `<div class="leader-objectives-recovery"><div class="leader-form-intro"><strong>Documenta los objetivos que sí existían</strong><span>Captura objetivo, meta y resultado. El cumplimiento y la equivalencia se calcularán automáticamente. Esta discrepancia quedará visible para DO.</span></div><div id="objetivosWrap">${leaderRows.map((o,i)=>renderObjetivoRow(ev.id,o,Number(o.index??i),false,false)).join('')}</div>${leaderRows.length<5?`<button type="button" class="btn btn-outline btn-sm smart-add-objective" onclick="App.agregarObjetivo('${ev.id}')">+ Agregar objetivo</button>`:''}<label class="leader-na-comment"><span>Justificación de la discrepancia <em>obligatoria</em></span><textarea placeholder="Explica por qué consideras que sí existían objetivos aunque el colaborador reportó lo contrario." oninput="App.setObjetivosNoAplicanComentarioLider('${ev.id}',this.value)">${esc(ev.objetivosNoAplicanComentarioLider||'')}</textarea></label></div>` : ''}
       </section>`;
     }
     if (!objetivosAuto.length) return '<p class="muted">El colaborador no registró objetivos en este periodo.</p>';
