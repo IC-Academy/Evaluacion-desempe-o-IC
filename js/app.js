@@ -810,7 +810,14 @@
       const impact = String(selects[0] ? selects[0].value : ev.continuityOperationalImpact || '').trim();
       const replacement = String(selects[1] ? selects[1].value : ev.continuityReplacementAvailability || '').trim();
       const actions = Array.from(block.querySelectorAll('.leader-continuity-actions input[type="checkbox"]:checked'))
-        .map(el => String(el.value || (el.parentElement && el.parentElement.textContent) || '').trim())
+        .map(el => {
+          const explicit = String(el.getAttribute('value') || '').trim();
+          if (explicit && explicit.toLowerCase() !== 'on') return explicit;
+          const labelText = el.parentElement && el.parentElement.querySelector('span')
+            ? el.parentElement.querySelector('span').textContent
+            : (el.parentElement && el.parentElement.textContent);
+          return String(labelText || '').trim();
+        })
         .filter(Boolean);
       const comment = block.querySelector('.leader-continuity-comment textarea');
 
