@@ -800,7 +800,78 @@
       noObjectivesDetail: noObjectives ? (ev.objetivosNoAplicanDetalle || '') : ''
     };
   }
+  function syncLeaderFinalSectionFromDom(localEvalId) {
+    const ev = S.load().evaluaciones.find(e => e.id === localEvalId);
+    if (!ev) return;
+
+    const block = document.querySelector('.leader-continuity-block');
+    if (block) {
+      const selects = Array.from(block.querySelectorAll('.leader-continuity-field select'));
+      const impact = String(selects[0] ? selects[0].value : ev.continuityOperationalImpact || '').trim();
+      const replacement = String(selects[1] ? selects[1].value : ev.continuityReplacementAvailability || '').trim();
+      const actions = Array.from(block.querySelectorAll('.leader-continuity-actions input[type="checkbox"]:checked'))
+        .map(el => String(el.value || (el.parentElement && el.parentElement.textContent) || '').trim())
+        .filter(Boolean);
+      const comment = block.querySelector('.leader-continuity-comment textarea');
+
+      ev.continuityOperationalImpact = impact;
+      ev.continuityReplacementAvailability = replacement;
+      if (actions.length) ev.continuityRecommendedActions = actions;
+      if (comment) ev.continuityConfidentialComment = String(comment.value || '').trim();
+      S.persist();
+    }
+
+    // If the leader typed an improvement/development item but did not press its
+    // separate "Guardar" button, commit it before saving/submitting the draft.
+    const colaboradorId = String(ev.colaboradorId || state.wizard.colaboradorId || '');
+    const periodoId = ev.periodoId || (state.periodo && state.periodo.id) || '';
+    const areaEl = colaboradorId ? document.getElementById('areaNueva-' + colaboradorId) : null;
+    const planEl = colaboradorId ? document.getElementById('planNuevo-' + colaboradorId) : null;
+    if (areaEl && !areaEl.classList.contains('hidden')) {
+      const area = document.getElementById('areaNueva-' + colaboradorId);
+      const plan = document.getElementById('planNuevo-' + colaboradorId);
+      if (area && plan && area.value.trim() && plan.value.trim()) {
+        S.addAreaOportunidad(colaboradorId, periodoId, area.value.trim(), plan.value.trim(), state.user.nombre);
+        area.value = ''; plan.value = '';
+      }
+    }
+    if (planEl && !planEl.classList.contains('hidden')) {
+      const comp = document.getElementById('competenciaNueva-' + colaboradorId);
+      const action = document.getElementById('accionNueva-' + colaboradorId);
+      const responsible = document.getElementById('responsableNuevo-' + colaboradorId);
+      const date = document.getElementById('fechaNueva-' + colaboradorId);
+      if (comp && action && comp.value.trim() && action.value.trim()) {
+        S.addPlanDesarrollo(colaboradorId, periodoId, {
+          competencia: comp.value.trim(),
+          accion: action.value.trim(),
+          responsable: responsible && responsible.value.trim() ? responsible.value.trim() : String(state.user.empleado || ''),
+          fechaCompromiso: date && date.value ? date.value : ''
+        }, state.user.nombre);
+        comp.value = ''; action.value = '';
+      }
+    }
+  }
+
+  function canonicalContinuityRisk(ev) {
+    const impacts = ['Bajo','Moderado','Alto','Crítico'];
+    const replacements = ['Cobertura inmediata','Cobertura con capacitación breve','Cobertura parcial','Sin reemplazo identificado'];
+    const actionCatalog = ['Documentar procesos','Transferir conocimientos','Capacitación cruzada','Preparar sucesor','Plan de retención','Redistribuir responsabilidades','Ninguna acción inmediata','Otra'];
+    const impact = String(ev.continuityOperationalImpact || '').trim();
+    const replacement = String(ev.continuityReplacementAvailability || '').trim();
+    const actions = (Array.isArray(ev.continuityRecommendedActions) ? ev.continuityRecommendedActions : [])
+      .map(v => String(v || '').trim()).filter(v => actionCatalog.includes(v));
+    return {
+      operationalImpact: impacts.includes(impact) ? impact : '',
+      replacementAvailability: replacements.includes(replacement) ? replacement : '',
+      recommendedActions: [...new Set(actions)],
+      confidentialComment: String(ev.continuityConfidentialComment || '').trim(),
+      riskLevel: continuityRiskLevel(impact, replacement),
+      status: 'Confirmado'
+    };
+  }
+
   function leaderDraftPayload(localEvalId, backendId) {
+    syncLeaderFinalSectionFromDom(localEvalId);
     const ev = S.load().evaluaciones.find(e => e.id === localEvalId) || {};
     const answers = S.getRespuestas(localEvalId).filter(r => String(r.competenciaId).toUpperCase() !== 'B2').map(r => ({competencyId:r.competenciaId, value:r.valor, comment:r.comentario || ''}));
     const h = S.getHerramientasEvaluacion(localEvalId) || {};
@@ -832,14 +903,7 @@
       gaps: ev.debilidadesBrechas || '',
       risks: ev.riesgosAtencion || '',
       leaderSummary: ev.comentarios || '',
-      continuityRisk: {
-        operationalImpact: ev.continuityOperationalImpact || '',
-        replacementAvailability: ev.continuityReplacementAvailability || '',
-        recommendedActions: Array.isArray(ev.continuityRecommendedActions) ? ev.continuityRecommendedActions : [],
-        confidentialComment: ev.continuityConfidentialComment || '',
-        riskLevel: continuityRiskLevel(ev.continuityOperationalImpact, ev.continuityReplacementAvailability),
-        status: 'Confirmado'
-      },
+      continuityRisk: canonicalContinuityRisk(ev),
       improvementPlan,
       developmentPlan
     };
@@ -3970,10 +4034,18 @@
           return;
         }
       }
+      syncLeaderFinalSectionFromDom(evaluacionId);
       const evActual = S.load().evaluaciones.find((e) => e.id === evaluacionId);
-      if (!(evActual && evActual.continuityOperationalImpact && evActual.continuityReplacementAvailability)) {
+      const continuity = evActual ? canonicalContinuityRisk(evActual) : null;
+      const requiresComment = continuity && (continuity.operationalImpact === 'Alto' || continuity.operationalImpact === 'Crítico' || continuity.replacementAvailability === 'Sin reemplazo identificado');
+      if (!(continuity && continuity.operationalImpact && continuity.replacementAvailability && continuity.recommendedActions.length)) {
         state.wizard.seccionIdx = SECCIONES_WIZARD.length - 1; render();
-        setTimeout(() => showNotice(currentLang === 'en' ? 'Complete the confidential operational continuity section before submitting.' : 'Completa la sección confidencial de continuidad operativa antes de enviar.','warning'), 0);
+        setTimeout(() => showNotice(currentLang === 'en' ? 'Complete impact, replacement availability and at least one continuity action before submitting.' : 'Completa impacto, disponibilidad de reemplazo y al menos una acción de continuidad antes de enviar.','warning'), 0);
+        return;
+      }
+      if (requiresComment && !continuity.confidentialComment) {
+        state.wizard.seccionIdx = SECCIONES_WIZARD.length - 1; render();
+        setTimeout(() => showNotice(currentLang === 'en' ? 'Add the confidential HR comment required for this continuity risk.' : 'Agrega el comentario confidencial para RH requerido por este nivel de riesgo.','warning'), 0);
         return;
       }
       if (requiereJustificacionNA(evaluacionId) && !(evActual && String(evActual.comentarios || '').trim())) {
