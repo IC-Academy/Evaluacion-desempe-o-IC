@@ -810,14 +810,7 @@
       const impact = String(selects[0] ? selects[0].value : ev.continuityOperationalImpact || '').trim();
       const replacement = String(selects[1] ? selects[1].value : ev.continuityReplacementAvailability || '').trim();
       const actions = Array.from(block.querySelectorAll('.leader-continuity-actions input[type="checkbox"]:checked'))
-        .map(el => {
-          const explicit = String(el.getAttribute('value') || '').trim();
-          if (explicit && explicit.toLowerCase() !== 'on') return explicit;
-          const labelText = el.parentElement && el.parentElement.querySelector('span')
-            ? el.parentElement.querySelector('span').textContent
-            : (el.parentElement && el.parentElement.textContent);
-          return String(labelText || '').trim();
-        })
+        .map(el => String(el.dataset.action || el.value || '').trim())
         .filter(Boolean);
       const comment = block.querySelector('.leader-continuity-comment textarea');
 
@@ -2603,7 +2596,7 @@
         <label class="leader-continuity-field"><span>Disponibilidad de reemplazo <em>obligatorio</em></span><select onchange="App.setContinuityField('${ev.id}','continuityReplacementAvailability',this.value)"><option value="">Selecciona una opción</option>${['Cobertura inmediata','Cobertura con capacitación breve','Cobertura parcial','Sin reemplazo identificado'].map(v=>`<option value="${v}" ${ev.continuityReplacementAvailability===v?'selected':''}>${v}</option>`).join('')}</select><small>Valora si otra persona puede asumir las funciones con el conocimiento disponible hoy.</small></label>
       </div>
       <div class="leader-continuity-result ${continuityLevel ? 'risk-'+continuityLevel.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'') : 'pending'}"><span>Nivel de riesgo calculado</span><strong>${esc(continuityLevel||'Pendiente de completar')}</strong></div>
-      <fieldset class="leader-continuity-actions"><legend>Acciones recomendadas</legend><p>Selecciona una o más acciones para gestionar la continuidad.</p><div>${continuityActionOptions.map(v=>`<label><input type="checkbox" ${continuityActions.includes(v)?'checked':''} onchange="App.toggleContinuityAction('${ev.id}','${v}',this.checked)"/> <span>${v}</span></label>`).join('')}</div></fieldset>
+      <fieldset class="leader-continuity-actions"><legend>Acciones recomendadas</legend><p>Selecciona una o más acciones para gestionar la continuidad.</p><div>${continuityActionOptions.map(v=>`<label><input type="checkbox" value="${esc(v)}" data-action="${esc(v)}" ${continuityActions.includes(v)?'checked':''} onchange="App.toggleContinuityAction('${ev.id}','${v}',this.checked)"/> <span>${v}</span></label>`).join('')}</div></fieldset>
       <label class="leader-continuity-comment"><span>Comentario confidencial para RH</span><textarea maxlength="1500" placeholder="Describe funciones críticas, conocimiento especializado, posibles coberturas o acciones que RH deba considerar." oninput="App.setContinuityField('${ev.id}','continuityConfidentialComment',this.value)">${esc(ev.continuityConfidentialComment||'')}</textarea><small>No incluyas diagnósticos médicos, datos sensibles ni apreciaciones personales. Registra únicamente hechos y contexto operativo.</small></label>
       <div class="leader-continuity-privacy"><b>Esta información no será visible para el colaborador</b><span>Solo podrá consultarla el líder responsable y el personal autorizado de RH/administración.</span></div>
     </section>
