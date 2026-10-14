@@ -607,26 +607,49 @@
     if (up === 'TOOL-EXCEL') return S.saveHerramientaEvaluacion(localEvalId, 'excel', val);
     if (up === 'TOOL-POWERBI') return S.saveHerramientaEvaluacion(localEvalId, 'analisis', val);
     if (up === 'TOOL-IA') return S.saveHerramientaEvaluacion(localEvalId, 'ia', val);
-    const sec = ans.section || ans.seccion || (up.startsWith('A') ? 'actitud' : 'habilidades');
+    // Airtable sends title-case section names; calculations only read lowercase.
+    const rawSec = String(ans.section || ans.seccion || '').toLowerCase().trim();
+    const sec = rawSec.startsWith('act') ? 'actitud' :
+      (rawSec.startsWith('habil') || rawSec.startsWith('conoc')) ? 'habilidades' :
+      (up.startsWith('A') ? 'actitud' : 'habilidades');
     S.saveRespuesta(localEvalId, sec, String(cid), val, ans.comment || ans.comentario || '');
+  }
+  function hydrateToolAverage(localEvalId) {
+    const h = S.getHerramientasEvaluacion(localEvalId) || {};
+    const scores = [h.excel, h.analisis, h.ia]
+      .filter(v => v !== '' && v != null && String(v).toUpperCase() !== 'N/A')
+      .map(Number).filter(v => Number.isFinite(v) && v >= 1 && v <= 5);
+    if (scores.length) S.saveRespuesta(localEvalId, 'habilidades', 'B2',
+      scores.reduce((a, b) => a + b, 0) / scores.length, '');
   }
   function hydrateObjectives(localEvalId, objectives, leaderMode) {
     if (!Array.isArray(objectives)) return;
+    // Evaluation Detail returns one row for employee and another for leader.
+    // Merge by objectiveId, not row index, and never count each twice.
+    const merged = new Map();
     objectives.forEach((o, i) => {
-      const idx = Number.isFinite(Number(o.index)) ? Number(o.index) : i;
+      if (!o || typeof o !== 'object' || o.noObjectives) return;
+      const id = String(o.objectiveId || o.id || ('row-' + i));
+      merged.set(id, Object.assign({}, merged.get(id) || {}, Object.fromEntries(
+        Object.entries(o).filter(([,v]) => v !== null && v !== undefined && v !== '')
+      )));
+    });
+    Array.from(merged.values()).forEach((o, i) => {
+      const idx = i;
       const desc = o.description || o.descripcion || o.name || '';
+      if (!String(desc).trim()) return;
       const goal = o.goal ?? o.meta ?? '';
       const result = o.actualResult ?? o.resultado ?? '';
       const pctSelf = o.employeeCompletionPercent ?? o.completionPercent ?? o.cumplimiento ?? '';
       const scoreSelf = o.employeeScore ?? o.calificacionColaborador ?? o.score ?? o.calificacion ?? '';
       const pctLeader = o.leaderValidatedPercent ?? o.porcentajeValidadoLider ?? '';
       const scoreLeader = o.leaderScore ?? o.calificacionLider ?? '';
-      S.saveObjetivo(localEvalId, idx, desc, result, leaderMode ? (scoreLeader || '') : (scoreSelf || ''), {
-        meta: goal,
-        cumplimiento: leaderMode ? (pctLeader === null ? '' : pctLeader) : (pctSelf === null ? '' : pctSelf),
+      S.saveObjetivo(localEvalId, idx, desc, result, leaderMode ? (scoreLeader ?? '') : (scoreSelf ?? ''), {
+        meta: goal, backendObjectiveId:o.objectiveId || '',
+        cumplimiento: leaderMode ? pctLeader : pctSelf,
         cumplimientoAutomatico: pctSelf,
         calificacionAutomatica: scoreSelf,
-        ajusteManualLider: leaderMode && pctLeader !== '' && Number(pctLeader) !== Number(pctSelf),
+        ajusteManualLider: leaderMode && pctLeader !== '' && pctLeader !== null && Number(pctLeader) !== Number(pctSelf),
         justificacionLider: o.leaderAdjustmentReason || o.justificacionAjusteLider || ''
       });
     });
@@ -654,8 +677,8 @@
     ].filter(Boolean);
     for (const src of candidates) {
       const globalScore = pickMetric(src, ['resultadoGlobalBackend','resultadoGlobal','globalResult','globalScore','score','Resultado global (backend)','Resultado Global Backend']);
-      const attitude = pickMetric(src, ['actitudBackend','attitudeBackend','attitude','actitud','Actitud (backend)','Actitud Backend']);
-      const performance = pickMetric(src, ['desempenoBackend','performanceBackend','performance','desempeno','Desempeño (backend)','Desempeno (backend)','Desempeño Backend']);
+      const attitude = pickMetric(src, ['attitudeScore','actitudBackend','attitudeBackend','attitude','actitud','Actitud (backend)','Actitud Backend']);
+      const performance = pickMetric(src, ['performanceScore','desempenoBackend','performanceBackend','performance','desempeno','Desempeño (backend)','Desempeno (backend)','Desempeño Backend']);
       if (globalScore !== null || attitude !== null || performance !== null) return { globalScore, attitude, performance, source:'backend' };
     }
     return null;
@@ -663,11 +686,16 @@
   function persistBackendResult(ev, metrics) {
     if (!ev || !ev.id || !metrics) return null;
     const existing = S.getResultado(ev.id);
-    const localFallback = existing || (() => {
-      try { return C.calcularResultado(S.getRespuestasPorSeccion(ev.id), S.getObjetivos(ev.id)); } catch (_) { return null; }
-    })();
-    const promedios = Object.assign({}, (localFallback && localFallback.promedios) || {});
-    const puntajes = Object.assign({}, (localFallback && localFallback.puntajes) || {});
+    // The API's 1-5 aggregate and 0-100 axis values do not contain the
+    // individual 40/30/30 section breakdown. Rebuild section breakdown from
+    // hydrated answers/objectives; never replace it with an aggregate-only object.
+    let calculated = null;
+    try {
+      calculated = C.calcularResultado(S.getRespuestasPorSeccion(ev.id), S.getObjetivos(ev.id));
+    } catch (e) { console.warn('EDD: no se pudo calcular desglose local', e); }
+    const localFallback = calculated || existing;
+    const promedios = Object.assign({}, (existing && existing.promedios) || {}, (localFallback && localFallback.promedios) || {});
+    const puntajes = Object.assign({}, (existing && existing.puntajes) || {}, (localFallback && localFallback.puntajes) || {});
     if (metrics.attitude !== null) promedios.actitud = metrics.attitude / 20;
     if (metrics.performance !== null) promedios.desempeno = metrics.performance / 20;
     if (metrics.globalScore !== null) puntajes.total = metrics.globalScore;
@@ -777,10 +805,46 @@
     upsertColaboradorRemoto(me, liderId);
     const backendId = state.remote.mine.evaluation.evaluationId || state.remote.mine.evaluation.id;
     const local = getOrCreateLocalEvaluation(me.empleado, liderId, 'autoevaluacion', backendId, state.remote.mine.evaluation.state || state.remote.mine.evaluation.selfState);
-    (d.answers || []).filter(a => !/l[ií]der|leader/i.test(String(a.evaluator || a.evaluador || ''))).forEach(a => mapRemoteAnswerToLocal(local.id, a));
+    const remoteAnswers = Array.isArray(d.answers) ? d.answers : [];
+    const isLeaderAnswer = a => /l[ií]der|leader/i.test(String(a.evaluator || a.evaluador || a.evaluatorRole || ''));
+    remoteAnswers.filter(a => !isLeaderAnswer(a)).forEach(a => mapRemoteAnswerToLocal(local.id, a));
+    hydrateToolAverage(local.id);
     hydrateObjectives(local.id, d.objectives || [], false);
-    syncBackendResultsFromDetail(d, local, null);
-    hydrateRemoteFeedback(d, me.empleado, state.periodo.id, S.getEvaluacion(me.empleado, state.periodo.id, 'lider'));
+
+    // Released feedback needs a local leader evaluation and its result. Before
+    // this, only self answers were hydrated, so section cards, 9-Box and leader
+    // commentary were rendered as empty despite a successful 200 response.
+    const leaderBackendId = (d.leaderEvaluation && (d.leaderEvaluation.evaluationId || d.leaderEvaluation.id)) || (String(backendId).endsWith('-LIDER') ? backendId : String(backendId) + '-LIDER');
+    const localLeader = getOrCreateLocalEvaluation(me.empleado, liderId, 'lider', leaderBackendId, 'leader_submitted');
+    remoteAnswers.filter(isLeaderAnswer).forEach(a => mapRemoteAnswerToLocal(localLeader.id, a));
+    hydrateToolAverage(localLeader.id);
+    hydrateObjectives(localLeader.id, (d.objectives || []).filter(o =>
+      o && (o.leaderValidatedPercent != null || o.leaderScore != null || o.calificacionLider != null)
+    ), true);
+    const backendResults = syncBackendResultsFromDetail(d, local, localLeader);
+    // Detail v2 is authoritative. Do not infer official axes from a rounded
+    // global score, and never resurrect a stale leader result for unreleased data.
+    if (!backendResults.selfMetrics && d.selfResult === undefined)
+      persistBackendResult(local, {globalScore:null, attitude:null, performance:null});
+    if (!backendResults.leaderMetrics && d.leaderResult === undefined) {
+      // Legacy API fallback only; v2 never enters this branch.
+      const cal = d.calibration || {};
+      const attitude = pickMetric(cal, ['attitudeScore']);
+      const total = pickMetric(cal, ['leaderResult']);
+      const derived = attitude !== null && total !== null
+        ? (total * 20 - attitude * 0.4) / 0.6 : null;
+      persistBackendResult(localLeader, {globalScore:null, attitude,
+        performance: derived !== null && derived >= 0 && derived <= 100 ? derived : null});
+    }
+    if (d.leaderResult === null) {
+      // Pre-release employee view: eliminate any cached result from older sessions.
+      const db = S.load();
+      db.resultados = (db.resultados || []).filter(x => x.evaluacionId !== localLeader.id);
+      db.respuestas = (db.respuestas || []).filter(x => x.evaluacionId !== localLeader.id);
+      S.persist();
+    }
+
+    hydrateRemoteFeedback(d, me.empleado, state.periodo.id, localLeader);
   }
   function selfDraftPayload(localEvalId, backendId) {
     const ev = S.load().evaluaciones.find(e => e.id === localEvalId) || {};

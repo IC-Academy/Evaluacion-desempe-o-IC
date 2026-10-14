@@ -327,8 +327,14 @@
   // TARJETA DE SIGNIFICADO / ACCIÓN DE UN CUADRANTE (compartida)
   // ===========================================================================
   function renderCuadranteInfo(cuad) {
+    // A released evaluation can legitimately lack local leader-axis averages
+    // while the backend results are being hydrated. Never crash the entire
+    // feedback screen just because the Nine Box position is unavailable.
+    if (!cuad || !cuad.info) {
+      return '<div class="cuadrante-box"><div class="cuadrante-body"><strong>Clasificación pendiente de consulta</strong><p class="muted">El resultado 9-Box aún no está disponible. Puedes continuar revisando la retroalimentación y tus acuerdos.</p></div></div>';
+    }
     const icons = Icons();
-    const icono = (icons && icons.SVG[cuad.cuadrante]) || '';
+    const icono = (icons && icons.SVG && icons.SVG[cuad.cuadrante]) || '';
     return `<div class="cuadrante-box" style="border-color:${cuad.info.color}">
       <div class="cuadrante-icon">${icono}</div>
       <div class="cuadrante-body">

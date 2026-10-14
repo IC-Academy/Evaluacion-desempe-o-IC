@@ -183,7 +183,7 @@
    */
   function calcularResultado(respuestasPorSeccion, objetivos) {
     const valoresA = (respuestasPorSeccion.actitud || []).map((r) => r.valor);
-    const valoresB = (respuestasPorSeccion.habilidades || []).map((r) => r.valor);
+    const valoresB = (respuestasPorSeccion.habilidades || []).filter(r => String(r.competenciaId || '').toUpperCase() !== 'B2').map((r) => r.valor);
     const valoresC = (respuestasPorSeccion.conocimientos || []).map((r) => r.valor);
 
     // Solo objetivos registrados (con descripción) y con calificación válida entran al promedio.

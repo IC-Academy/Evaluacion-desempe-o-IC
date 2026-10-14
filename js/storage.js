@@ -379,7 +379,7 @@
   function saveRespuesta(evaluacionId, seccion, competenciaId, valor, comentario) {
     const db = load();
     let r = db.respuestas.find((x) => x.evaluacionId === evaluacionId && x.competenciaId === competenciaId);
-    if (r) { r.valor = valor; r.comentario = comentario || ''; }
+    if (r) { r.seccion = seccion; r.valor = valor; r.comentario = comentario || ''; }
     else { db.respuestas.push({ evaluacionId, seccion, competenciaId, valor, comentario: comentario || '' }); }
     const ev = db.evaluaciones.find((e) => e.id === evaluacionId);
     if (ev) { ev.updatedAt = nowParts().iso; if (ev.estado === global.EDDData.ESTADOS.NO_INICIADA) ev.estado = global.EDDData.ESTADOS.EN_PROGRESO; }
