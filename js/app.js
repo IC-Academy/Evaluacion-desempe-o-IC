@@ -3143,6 +3143,23 @@
     return `<div class="admin-alert-detail">${rows.map(d=>{const l=S.getLider(d.c.liderId);return `<div><strong>${esc(d.c.nombre)}</strong><span>${esc(d.c.area)} · Líder: ${esc(l?l.nombre:'—')}</span><div class="admin-alert-actions">${tipo==='vencidas'?`<button class="btn btn-primary btn-sm" onclick="App.enviarNotificacionVencida('${esc(d.c.empleado)}')">Enviar notificación</button>`:''}${tipo==='calibracion'?`<a class="btn btn-outline btn-sm" href="#/admin/calibracion/${d.c.empleado}">Revisar</a>`:''}</div></div>`}).join('')}</div>`;
   }
 
+  // Selección de calibración por lotes: solamente interfaz en staging.
+  // Ningún botón ejecuta escrituras hasta disponer de endpoint bulk auditado.
+  const calibrationBatchSelection = new Set();
+  let calibrationBatchOnlyQuick = false;
+  function calibrationGap(row) {
+    const a = row && row.selfResult, b = row && row.leaderResult;
+    if (a === null || a === undefined || b === null || b === undefined || a === '' || b === '') return null;
+    const self = Number(a), leader = Number(b);
+    return Number.isFinite(self) && Number.isFinite(leader) && self >= 1 && self <= 5 && leader >= 1 && leader <= 5
+      ? Math.abs(self - leader) : null;
+  }
+  function quickCalibrationEligible(row) {
+    const gap = calibrationGap(row);
+    return row && row.status === 'pending_calibration' && gap !== null && gap <= 0.20
+      && row.calibrationStatus !== 'calibration_completed';
+  }
+  function calibrationSelectable(row) { const d = calibrationGap(row); return row && row.status === 'pending_calibration' && d !== null && Math.round(d*100)/100 <= 0.50 && row.calibrationStatus !== 'calibration_completed'; }
   function viewCalibracionLista(periodoId) {
     if (apiReadMode()) {
       const queue = state.remote.calibration || {};
@@ -3150,13 +3167,53 @@
       const calibrated = Array.isArray(queue.calibrated) ? queue.calibrated : [];
       const closed = Array.isArray(queue.closed) ? queue.closed : [];
       const rows = [...pending, ...calibrated, ...closed];
-      const statusLabel = (x) => x.status === 'pending_calibration' ? 'Pendiente de calibración' : (x.status === 'closed' ? 'Cerrada' : 'Calibrada');
+      const activeKeys = new Set(rows.filter(calibrationSelectable).map(x => String(x.employeeId)));
+      for (const key of calibrationBatchSelection) if (!activeKeys.has(key)) calibrationBatchSelection.delete(key);
+      const green = pending.filter(quickCalibrationEligible).length;
+      const yellow = pending.filter(x => { const v = calibrationGap(x); return v !== null && v > 0.20 && v <= 0.50; }).length;
+      const red = pending.filter(x => { const v = calibrationGap(x); return v !== null && v > 0.50; }).length;
+      const unknown = pending.filter(x => calibrationGap(x) === null).length;
+      const shown = calibrationBatchOnlyQuick ? rows.filter(calibrationSelectable) : rows;
+      const statusLabel = x => x.status === 'pending_calibration' ? 'Pendiente' : x.status === 'closed' ? 'Cerrada' : 'Calibrada';
+      const score = v => v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? '—' : Number(v).toFixed(2);
+      const priority = x => {
+        const d = calibrationGap(x);
+        if (x.status !== 'pending_calibration') return '<span class="muted">Procesada</span>';
+        if (d === null) return badge('Sin datos', 'gray');
+        if (d <= 0.20) return badge('Baja · rápida', 'green');
+        if (d <= 0.50) return badge('Media · revisar', 'yellow');
+        return badge('Alta · revisión individual', 'red');
+      };
       return `<section class="calibration-shell">
-        <div class="calibration-list-hero"><div><span class="admin-kicker">CALIBRACIÓN DO</span><h1>Revisión y calibración</h1><p>Aquí aparecen los colaboradores cuya evaluación de líder está lista para revisión y calibración.</p></div><div class="calibration-list-stats"><div><strong>${pending.length}</strong><span>Por revisar</span></div><div><strong>${calibrated.length}</strong><span>Calibradas</span></div></div></div>
-        <div class="calibration-card-list">
-        ${rows.map((x) => `<article class="calibration-person-card"><div class="calibration-avatar">${esc(x.name||'').split(' ').slice(0,2).map(v=>v[0]).join('')}</div><div class="calibration-person-main"><div class="calibration-person-title"><strong>${esc(x.name||x.employeeId)}</strong>${badge(statusLabel(x))}</div><span>${esc(x.position||'')} · ${esc(x.area||'')}</span><small>Líder: ${esc(x.leaderName||'—')}</small></div><div class="calibration-score"><span>Resultado</span><strong>${f1(x.calibratedResult ?? x.leaderResult)}</strong><small>${x.calibratedResult!=null?'Calibrado':'Líder'}</small></div><a class="btn btn-primary btn-sm" href="#/admin/calibracion/${encodeURIComponent(String(x.employeeId||''))}">${x.status==='pending_calibration'?'Calibrar':'Revisar'}</a></article>`).join('') || '<div class="admin-empty-state">No hay evaluaciones disponibles para calibración.</div>'}
+        <div class="calibration-list-hero"><div><span class="admin-kicker">CALIBRACIÓN DO</span><h1>Calibraciones · revisión comparativa</h1><p>Compara las dos calificaciones oficiales en escala 1–5. Las diferencias pequeñas se pueden preparar para revisión conjunta; ninguna se aprueba automáticamente.</p></div>
+          <div class="calibration-list-stats"><div><strong>${pending.length}</strong><span>Pendientes</span></div><div><strong>${calibrated.length}</strong><span>Calibradas</span></div></div></div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="calibration-list-stats" style="display:flex;flex-wrap:wrap;gap:24px;margin-bottom:16px">
+            <div><strong>${green}</strong><span>🟢 Diferencia ≤ 0.20</span></div>
+            <div><strong>${yellow}</strong><span>🟡 Diferencia 0.21–0.50</span></div>
+            <div><strong>${red}</strong><span>🔴 Diferencia > 0.50</span></div>
+            <div><strong>${unknown}</strong><span>Sin comparación</span></div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <button class="btn btn-outline btn-sm" onclick="App.filtrarCalibracionesRapidas()">${calibrationBatchOnlyQuick?'Mostrar todas':'Solo diferencias ≤ 0.50'}</button>
+            <button class="btn btn-outline btn-sm" onclick="App.seleccionarCalibracionesRapidas()">Seleccionar elegibles (${green+yellow})</button>
+            <button class="btn btn-outline btn-sm" onclick="App.limpiarSeleccionCalibracion()">Limpiar selección</button>
+            <button class="btn btn-primary btn-sm" ${calibrationBatchSelection.size?'':'disabled'} onclick="App.previsualizarCalibracionMultiple()">Revisar lote (${calibrationBatchSelection.size})</button>
+          </div>
+          <p class="muted" style="margin:12px 0 0">Puedes seleccionar diferencias bajas y medias (hasta 0.50). Los casos de prioridad media exigen una confirmación adicional tras la revisión de DO. Ninguna calibración libera resultados automáticamente.</p>
         </div>
-        <p class="backend-read-note">La cola se actualiza conforme las evaluaciones avanzan en el proceso.</p>
+        <div class="card" style="overflow-x:auto">
+          <table class="table"><thead><tr><th>Seleccionar</th><th>Colaborador</th><th>Líder</th><th>Autoevaluación</th><th>Evaluación líder</th><th>Diferencia absoluta</th><th>Prioridad</th><th>Estado</th><th>Acción</th></tr></thead><tbody>
+          ${shown.map(x=>{const gap=calibrationGap(x), eligible=calibrationSelectable(x), key=String(x.employeeId||'');return `<tr>
+            <td><input type="checkbox" aria-label="Seleccionar ${esc(x.name||key)}" ${eligible?'':'disabled'} ${calibrationBatchSelection.has(key)?'checked':''} onchange="App.seleccionarCalibracion('${esc(key)}',this.checked)"></td>
+            <td><strong>${esc(x.name||key)}</strong><br><small>${esc(key)} · ${esc(x.area||'')}</small></td>
+            <td>${esc(x.leaderName||'—')}</td><td>${score(x.selfResult)}</td><td>${score(x.leaderResult)}</td>
+            <td><strong>${gap===null?'—':gap.toFixed(2)}</strong></td><td>${priority(x)}</td><td>${esc(statusLabel(x))}</td>
+            <td><a class="btn btn-outline btn-sm" href="#/admin/calibracion/${encodeURIComponent(key)}">Revisar</a></td>
+          </tr>`}).join('')||'<tr><td colspan="9">No hay evaluaciones disponibles.</td></tr>'}
+          </tbody></table>
+        </div>
+        <p class="backend-read-note">Las notas, riesgos y observaciones requieren revisión humana, incluso cuando las calificaciones coinciden.</p>
       </section>`;
     }
     const datos = datosGlobales(periodoId).filter((d) => [D.ESTADOS.PENDIENTE_CALIBRACION, D.ESTADOS.CALIBRADA, D.ESTADOS.RETRO_PENDIENTE, D.ESTADOS.CERRADA].includes(d.estado));
@@ -4419,6 +4476,63 @@
       resetLoginState('solicitar');
       location.hash = '#/login';
       render();
+    },
+    filtrarCalibracionesRapidas() { calibrationBatchOnlyQuick = !calibrationBatchOnlyQuick; render(); },
+    seleccionarCalibracion(id, checked) {
+      const rows = (state.remote.calibration && state.remote.calibration.pending) || [];
+      const row = rows.find(x => String(x.employeeId) === String(id));
+      if (!calibrationSelectable(row)) return;
+      if (checked) calibrationBatchSelection.add(String(id)); else calibrationBatchSelection.delete(String(id));
+      render();
+    },
+    seleccionarCalibracionesRapidas() {
+      ((state.remote.calibration && state.remote.calibration.pending) || []).filter(calibrationSelectable)
+        .forEach(x => calibrationBatchSelection.add(String(x.employeeId)));
+      render();
+    },
+    limpiarSeleccionCalibracion() { calibrationBatchSelection.clear(); render(); },
+    async previsualizarCalibracionMultiple() {
+      if (state.remote.calibrationBatchRunning) return;
+      const rows = ((state.remote.calibration && state.remote.calibration.pending) || [])
+        .filter(x => calibrationBatchSelection.has(String(x.employeeId)) && calibrationSelectable(x));
+      if (!rows.length) { showNotice('No hay evaluaciones elegibles seleccionadas.','warning'); return; }
+      const mediumRows = rows.filter(x => !quickCalibrationEligible(x));
+      // Extra explicit review for yellow cases before final batch confirmation.
+      if (mediumRows.length) {
+        const items = mediumRows.map(x => String(x.name||x.employeeId)+' · diferencia '+calibrationGap(x).toFixed(2)).join('\n');
+        if (!global.confirm('CONFIRMACIÓN ADICIONAL — PRIORIDAD MEDIA\n\n'+items+
+          '\n\nEstas evaluaciones presentan diferencias mayores a 0.20 y hasta 0.50.'+
+          '\nSe conservará el resultado del líder sin ajustes.'+
+          '\n¿Revisaste individualmente estos casos y autorizas incluirlos en el lote?')) return;
+      }
+      if (rows.length > 25) { showNotice('Máximo 25 evaluaciones por lote.','warning'); return; }
+      if (rows.some(x => !x.evaluationId || !/^EV-\d{4}-\d{2}-\d+$/.test(String(x.evaluationId)))) {
+        showNotice('Falta un identificador oficial de evaluación en la selección.','warning'); return;
+      }
+      const detail = rows.map(x=>String(x.name||x.employeeId)+' ('+String(x.employeeId)+')'+
+        ': auto '+Number(x.selfResult).toFixed(2)+' / líder '+Number(x.leaderResult).toFixed(2)+
+        ' / diferencia '+calibrationGap(x).toFixed(2)).join('\n');
+      if (!global.confirm('CALIBRACIÓN MÚLTIPLE — '+rows.length+' evaluaciones\n\n'+detail+
+        '\n\nSe conservará la calificación del líder sin ajuste (RH = 0).'+
+        '\nLa calibración NO liberará retroalimentación ni firmas.'+
+        '\n¿Confirmas aplicar estos cambios en Airtable?')) return;
+      state.remote.calibrationBatchRunning = true;
+      render();
+      try {
+        const response = apiData(await global.EDDApi.bulkCompleteCalibration(rows.map(x=>String(x.evaluationId)), mediumRows.length > 0));
+        const results = Array.isArray(response.results) ? response.results : [];
+        const completed = Number(response.completed||0), skipped = Number(response.skipped||0), failed = Number(response.failed||0);
+        const details = results.map(x=>String(x.evaluationId||'')+' — '+String(x.status||'')+
+          (x.reason?' ('+String(x.reason)+')':'')+
+          (Array.isArray(x.warnings)&&x.warnings.length?' ⚠ '+x.warnings.join(', '):'')).join('\n');
+        calibrationBatchSelection.clear();
+        state.remote.calibration = apiData(await global.EDDApi.adminCalibration(true));
+        global.alert('Resultado de calibración múltiple\nCompletadas: '+completed+
+          '\nOmitidas: '+skipped+'\nFallidas: '+failed+
+          '\n\n'+details);
+      } catch (error) {
+        showNotice(error && error.message ? error.message : 'Falló la calibración múltiple.','warning');
+      } finally { state.remote.calibrationBatchRunning = false; render(); }
     },
     setFiltroUsuarios(campo, valor) { state.usuariosFiltros[campo] = valor || undefined; render(); },
     limpiarFiltrosUsuarios() { state.usuariosFiltros = {}; render(); },
