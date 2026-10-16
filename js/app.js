@@ -1046,13 +1046,25 @@
     const mineEval = state.remote.mine && state.remote.mine.evaluation;
     const id = mineEval && (mineEval.evaluationId || mineEval.id);
     if (!id || (state.remote.detail && !force)) return;
+    // An unsuccessful load must be retried explicitly, not on every render.
+    if (state.remote.detailError && !force) return;
     state.remote.detailLoading = true;
+    state.remote.detailError = null;
     try {
-      state.remote.detail = apiData(await global.EDDApi.evaluationDetail(id, !!force));
-      try { hydrateOwnRemoteDetail(); } catch (e) { console.warn('EDD read: no fue posible hidratar detalle propio', e); }
+      const detail = apiData(await global.EDDApi.evaluationDetail(id, !!force));
+      if (!detail || typeof detail !== 'object' || Array.isArray(detail)) {
+        throw new Error('El servidor no devolvió un expediente de evaluación válido.');
+      }
+      state.remote.detail = detail;
+      try { hydrateOwnRemoteDetail(); } catch (e) {
+        console.error('EDD read: error al procesar expediente propio', e);
+        state.remote.detail = null;
+        throw new Error('No fue posible procesar los datos de tu evaluación. Reintenta o contacta a soporte.');
+      }
     } catch (e) {
-      console.warn('EDD read: detalle propio no disponible', e);
-      showNotice(e && e.message ? e.message : 'No fue posible cargar el detalle de la evaluación.', 'warning');
+      state.remote.detail = null;
+      state.remote.detailError = e && e.message ? e.message : 'No fue posible cargar el detalle de la evaluación.';
+      console.error('EDD read: detalle propio no disponible', { evaluationId: id, error: e });
     } finally {
       state.remote.detailLoading = false;
       render();
@@ -1197,8 +1209,12 @@
     const necesitaDetallePropio = (area === 'colaborador' && (page === 'autoevaluacion' || page === 'retroalimentacion')) || (area === 'lider' && (page === 'mi-autoevaluacion' || page === 'mi-retroalimentacion'));
     const mineEvalParaDetalle = state.remote.mine && state.remote.mine.evaluation;
     if (apiReadMode() && necesitaDetallePropio && mineEvalParaDetalle && !state.remote.detail) {
-      if (!state.remote.detailLoading) ensureOwnRemoteDetail(false);
-      root.innerHTML = viewBackendLoading().replace('Cargando tu información','Cargando tu evaluación').replace('Preparando tu experiencia y la información del periodo…','Recuperando respuestas y objetivos guardados…');
+      if (state.remote.detailError) {
+        root.innerHTML = `<main class="container backend-state-page"><div class="card backend-state-card"><div class="backend-state-icon">!</div><h2>No pudimos abrir tu evaluación</h2><p class="muted">${esc(state.remote.detailError)}</p><button class="btn btn-primary" onclick="App.reintentarDetallePropio()">Reintentar cargar evaluación</button><p class="backend-read-note">Tus respuestas y resultados guardados no se modificaron.</p></div></main>`;
+      } else {
+        if (!state.remote.detailLoading) ensureOwnRemoteDetail(false);
+        root.innerHTML = viewBackendLoading().replace('Cargando tu información','Cargando tu evaluación').replace('Preparando tu experiencia y la información del periodo…','Recuperando respuestas y objetivos guardados…');
+      }
       translateDOM(root);
       return;
     }
@@ -4123,6 +4139,12 @@
     ocultarNuevoPlan(colaboradorId){ const el=document.getElementById('nuevoPlan-'+colaboradorId); if(el) el.classList.add('hidden'); },
     guardarNuevoPlan(colaboradorId,liderId){ const c=document.getElementById('competenciaNueva-'+colaboradorId),a=document.getElementById('accionNueva-'+colaboradorId),r=document.getElementById('responsableNuevo-'+colaboradorId),f=document.getElementById('fechaNueva-'+colaboradorId); if(!c||!a||!c.value.trim()||!a.value.trim()){showNotice('Completa la competencia y la acción de desarrollo.','warning');return;} S.addPlanDesarrollo(colaboradorId,state.periodo.id,{competencia:c.value.trim(),accion:a.value.trim(),responsable:r&&r.value.trim()?r.value.trim():liderId,fechaCompromiso:f&&f.value?f.value:'2026-09-01'},state.user.nombre); render(); },
     quitarPlanDesarrollo(id) { S.removePlanDesarrollo(id, state.user.nombre); render(); },
+    reintentarDetallePropio() {
+      if (state.remote.detailLoading) return;
+      state.remote.detailError = null;
+      ensureOwnRemoteDetail(true);
+      render();
+    },
     async enviarEvaluacionLider(colaboradorId) {
       if (state.remote.leaderSubmitting) return;
       if (!$('#confirmEnvioLider').checked) { showNotice(t('Confirma que la evaluación está completa antes de enviar.'),'warning'); return; }
