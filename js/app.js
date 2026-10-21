@@ -649,7 +649,7 @@
         cumplimiento: leaderMode ? pctLeader : pctSelf,
         cumplimientoAutomatico: pctSelf,
         calificacionAutomatica: scoreSelf,
-        ajusteManualLider: leaderMode && pctLeader !== '' && pctLeader !== null && Number(pctLeader) !== Number(pctSelf),
+        ajusteManualLider: leaderMode && global.eddIsAdjusted(global.eddSelfPct(goal, result, pctSelf), pctLeader),
         justificacionLider: o.leaderAdjustmentReason || o.justificacionAjusteLider || ''
       });
     });
@@ -2616,7 +2616,7 @@
       }
       const pctAuto = Number(o.cumplimiento);
       const pctLider = actual?.cumplimiento === '' || actual?.cumplimiento == null ? pctAuto : Number(actual.cumplimiento);
-      const manual = Number.isFinite(pctAuto) && Number.isFinite(pctLider) ? Math.abs(pctLider - pctAuto) > 0.01 : !!actual?.ajusteManualLider;
+      const manual = Number.isFinite(pctAuto) && Number.isFinite(pctLider) ? global.eddIsAdjusted(pctAuto, pctLider) : !!actual?.ajusteManualLider;
       const scoreLider = Number.isFinite(pctLider) ? C.calificacionPorCumplimiento(pctLider) : autoScore;
       const just = actual?.justificacionLider || '';
       return `<div class="objetivo-row leader-objective-review ${manual ? 'manual-active' : ''}" data-idx="${sourceIndex}"><div class="objetivo-num">#${i+1}</div><div class="objetivo-fields">
@@ -3507,7 +3507,15 @@
     return faltantes.length;
   }
 
+  // Detalle legible del último intento de validación (sección + campo + motivo).
+  let ultimoDetalleValidacion = [];
+  function detalleValidacion(mensajeBase) {
+    if (!ultimoDetalleValidacion.length) return mensajeBase;
+    return mensajeBase + ' ' + ultimoDetalleValidacion.slice(0, 6).join(' ') + (ultimoDetalleValidacion.length > 6 ? ' …' : '');
+  }
   function validarSeccionVisual(evaluacionId, seccion) {
+    ultimoDetalleValidacion = [];
+    const nombreSeccion = { actitud: 'Actitud', habilidades: 'Habilidades', objetivos: 'Objetivos' }[seccion] || seccion;
     const wizard = document.querySelector('.wizard-card') || document;
     limpiarErroresVisuales(wizard);
     const faltantes = [];
@@ -3518,6 +3526,7 @@
       (D.COMPETENCIAS[seccion] || []).forEach((c) => {
         if (!respondidas.has(String(c.id))) {
           faltantes.push(Array.from(wizard.querySelectorAll('.competency-card')).find((el) => el.dataset.competenciaId === String(c.id)));
+          ultimoDetalleValidacion.push('Sección ' + nombreSeccion + ': falta calificar ' + c.id + '.');
         }
       });
       if (seccion === 'habilidades') {
@@ -3543,7 +3552,15 @@
       filas.forEach((fila) => {
         const idx = Number(fila.dataset.idx);
         const o = objetivos.find((x) => Number(x.index) === idx);
-        if (!o || o.calificacion === '' || o.calificacion === null || o.calificacion === undefined || (o.ajusteManualLider && !String(o.justificacionLider || '').trim())) faltantes.push(fila);
+        const sinCalif = !o || o.calificacion === '' || o.calificacion === null || o.calificacion === undefined;
+        const sinJust = !!(o && o.ajusteManualLider && !String(o.justificacionLider || '').trim());
+        if (sinCalif || sinJust) {
+          faltantes.push(fila);
+          const n = idx + 1;
+          ultimoDetalleValidacion.push('Sección Objetivos, objetivo ' + n + ': ' + (sinJust
+            ? 'falta la justificación del ajuste (' + (o.cumplimientoAutomatico !== '' && o.cumplimientoAutomatico != null ? global.eddRound1(o.cumplimientoAutomatico) + ' % → ' : '') + global.eddRound1(o.cumplimiento) + ' %).'
+            : 'falta validar el porcentaje de cumplimiento.'));
+        }
       });
     } else {
       if (evaluacionSinObjetivos(evaluacionId)) { const evNA=S.load().evaluaciones.find(e=>e.id===evaluacionId); if(!String(evNA?.objetivosNoAplicanMotivo||'').trim()||!String(evNA?.objetivosNoAplicanDetalle||'').trim()){ const block=wizard.querySelector('.objective-na-diagnostic')||wizard.querySelector('.objective-na-choice'); if(block) faltantes.push(block); } return marcarErroresYEnfocar(faltantes); }
@@ -3795,7 +3812,7 @@
         syncCheckedRatingsFromDom();
         const faltantes = validarSeccionVisual(ev.id, seccion);
         if (faltantes) {
-          showNotice(currentLang === 'en' ? `You cannot continue. Review the fields marked in red.` : `No puedes continuar. Revisa los campos marcados en rojo.`,'warning');
+          showNotice(currentLang === 'en' ? `You cannot continue. Review the fields marked in red.` : detalleValidacion(`No puedes continuar. Revisa los campos marcados en rojo.`),'warning');
           return;
         }
       }
@@ -3882,7 +3899,7 @@
       const pct = valor === '' ? '' : Number(valor);
       const pctAuto = fuente.cumplimiento === '' || fuente.cumplimiento == null ? '' : Number(fuente.cumplimiento);
       const score = pct === '' || !Number.isFinite(pct) ? '' : C.calificacionPorCumplimiento(pct);
-      const ajustado = pct !== '' && Number.isFinite(Number(pctAuto)) ? Math.abs(Number(pct) - Number(pctAuto)) > 0.01 : false;
+      const ajustado = pct !== '' && Number.isFinite(Number(pctAuto)) ? global.eddIsAdjusted(Number(pctAuto), Number(pct)) : false;
       S.saveObjetivo(evaluacionId, Number(index), fuente.descripcion || '', fuente.resultado || '', score, {meta:fuente.meta||'', cumplimiento:pct, cumplimientoAutomatico:fuente.cumplimiento??'', noCuantificable:false, calificacionAutomatica:fuente.calificacion||'', ajusteManualLider:ajustado, justificacionLider:ajustado?(actual?.justificacionLider||''):''});
       render();
     },
@@ -4024,7 +4041,7 @@
           state.wizard.seccionIdx = i; render();
           setTimeout(() => {
             const n = validarSeccionVisual(evaluacionId, sec);
-            showNotice(currentLang === 'en' ? `You cannot submit. Review the fields marked in red.` : `No puedes enviar. Revisa los campos marcados en rojo.`,'warning');
+            showNotice(currentLang === 'en' ? `You cannot submit. Review the fields marked in red.` : detalleValidacion(`No puedes enviar. Revisa los campos marcados en rojo.`),'warning');
           }, 0);
           return;
         }
@@ -4150,7 +4167,7 @@
           state.wizard.seccionIdx = i; render();
           setTimeout(() => {
             const n = validarSeccionVisual(evaluacionId, sec);
-            showNotice(currentLang === 'en' ? `You cannot submit. Review the fields marked in red.` : `No puedes enviar. Revisa los campos marcados en rojo.`,'warning');
+            showNotice(currentLang === 'en' ? `You cannot submit. Review the fields marked in red.` : detalleValidacion(`No puedes enviar. Revisa los campos marcados en rojo.`),'warning');
           }, 0);
           return;
         }
