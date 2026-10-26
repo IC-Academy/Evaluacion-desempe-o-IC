@@ -3566,14 +3566,43 @@
       if (evaluacionSinObjetivos(evaluacionId)) { const evNA=S.load().evaluaciones.find(e=>e.id===evaluacionId); if(!String(evNA?.objetivosNoAplicanMotivo||'').trim()||!String(evNA?.objetivosNoAplicanDetalle||'').trim()){ const block=wizard.querySelector('.objective-na-diagnostic')||wizard.querySelector('.objective-na-choice'); if(block) faltantes.push(block); } return marcarErroresYEnfocar(faltantes); }
       const objetivos = S.getObjetivos(evaluacionId) || [];
       const filas = wizard.querySelectorAll('.objetivo-row');
-      filas.forEach((fila, i) => {
-        const o = objetivos.find((x) => Number(x.index) === i);
-        const tieneAlgo = o && ((o.descripcion || '').trim() || (o.meta || '').trim() || (o.resultado || '').trim() || o.calificacion || o.cumplimiento !== '' || o.noCuantificable);
-        const completo = o && (o.descripcion || '').trim() && (o.meta || '').trim() && (o.resultado || '').trim() && o.calificacion;
-        if (tieneAlgo && !completo) faltantes.push(fila);
+      // Cada fila conserva su índice real aunque se eliminen objetivos intermedios.
+      // El porcentaje y su equivalencia pueden venir calculados sin "calificacion" persistida.
+      const presente = (v) => v !== '' && v !== null && v !== undefined && Number.isFinite(Number(v));
+      const estadoObjetivo = (o) => {
+        if (!o) return { tieneAlgo:false, completo:false, faltan:['objetivo'] };
+        const descripcion = !!String(o.descripcion ?? '').trim();
+        const meta = presente(o.meta) && Number(o.meta) > 0;
+        const resultado = presente(o.resultado);
+        const pctCalculado = meta && resultado ? cumplimientoAutomatico(o.meta, o.resultado) : '';
+        const pct = pctCalculado !== '' && pctCalculado != null ? Number(pctCalculado) : (presente(o.cumplimiento) ? Number(o.cumplimiento) : null);
+        const calificacion = presente(o.calificacion) ? Number(o.calificacion) : (pct !== null && Number.isFinite(pct) ? C.calificacionPorCumplimiento(pct) : null);
+        const valido = calificacion !== null && Number.isFinite(Number(calificacion)) && Number(calificacion) >= 1 && Number(calificacion) <= 5;
+        const faltan = [];
+        if (!descripcion) faltan.push('descripción');
+        if (!meta) faltan.push('meta mayor que 0');
+        if (!resultado) faltan.push('resultado');
+        if (!valido) faltan.push('calificación automática');
+        return {
+          tieneAlgo: descripcion || o.meta !== '' && o.meta != null || o.resultado !== '' && o.resultado != null,
+          completo: descripcion && meta && resultado && valido,
+          faltan
+        };
+      };
+      filas.forEach((fila) => {
+        const idx = Number(fila.dataset.idx);
+        const o = objetivos.find((x) => Number(x.index) === idx);
+        const estado = estadoObjetivo(o);
+        if (estado.tieneAlgo && !estado.completo) {
+          faltantes.push(fila);
+          ultimoDetalleValidacion.push('Objetivo ' + (idx + 1) + ': falta ' + estado.faltan.join(', ') + '.');
+        }
       });
-      if (!objetivos.some((o) => (o.descripcion || '').trim() && (o.meta || '').trim() && (o.resultado || '').trim() && o.calificacion)) {
-        if (!faltantes.length && filas[0]) faltantes.push(filas[0]);
+      if (!objetivos.some(o => estadoObjetivo(o).completo)) {
+        if (!faltantes.length && filas[0]) {
+          faltantes.push(filas[0]);
+          ultimoDetalleValidacion.push('Registra al menos un objetivo completo con meta y resultado.');
+        }
       }
     }
 
@@ -3933,11 +3962,11 @@
         o.calificacion = score === null ? '' : score;
       }
       if (campo === 'noCuantificable' && valor) o.cumplimiento = '';
-      S.saveObjetivo(evaluacionId, Number(index), o.descripcion || '', o.resultado || '', o.calificacion || '', {
-        meta: o.meta || '', cumplimiento: o.cumplimiento ?? '', noCuantificable: !!o.noCuantificable
+      S.saveObjetivo(evaluacionId, Number(index), o.descripcion || '', o.resultado ?? '', o.calificacion ?? '', {
+        meta: o.meta ?? '', cumplimiento: o.cumplimiento ?? '', noCuantificable: !!o.noCuantificable
       });
       const fila = document.querySelector(`.objetivo-row[data-idx="${Number(index)}"]`);
-      if (fila && (o.descripcion || '').trim() && String(o.meta || '').trim() && String(o.resultado || '').trim() && o.calificacion) fila.classList.remove('validation-error');
+      if (fila && (o.descripcion || '').trim() && Number(o.meta) > 0 && o.resultado !== '' && o.resultado != null && o.calificacion) fila.classList.remove('validation-error');
       if (campo === 'meta' || campo === 'resultado' || campo === 'noCuantificable') render();
     },
     editarObjetivoSmart(evaluacionId, index, campo, valor) {
