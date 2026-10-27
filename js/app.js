@@ -934,7 +934,18 @@
     };
   }
 
+  function syncLeaderObjectiveReasonsFromDom(localEvalId) {
+    // Evita perder el texto capturado si hay un render o submit antes del blur.
+    document.querySelectorAll('.leader-objective-review[data-idx] textarea[data-leader-adjustment-reason]').forEach(el => {
+      const idx = Number(el.closest('.leader-objective-review').dataset.idx);
+      const objective = S.getObjetivos(localEvalId).find(o => Number(o.index) === idx);
+      if (objective) objective.justificacionLider = el.value.trim();
+    });
+    S.persist();
+  }
+
   function leaderDraftPayload(localEvalId, backendId) {
+    syncLeaderObjectiveReasonsFromDom(localEvalId);
     syncLeaderFinalSectionFromDom(localEvalId);
     const ev = S.load().evaluaciones.find(e => e.id === localEvalId) || {};
     const answers = S.getRespuestas(localEvalId).filter(r => String(r.competenciaId).toUpperCase() !== 'B2').map(r => ({competencyId:r.competenciaId, value:r.valor, comment:r.comentario || ''}));
@@ -2628,7 +2639,7 @@
             <label class="leader-percent-field"><span>% de cumplimiento validado por líder</span><div class="percent-input-wrap"><input type="number" min="0" step="0.1" value="${Number.isFinite(pctLider)?esc(pctLider):''}" onchange="App.validarCumplimientoObjetivoLider('${ev.id}',${sourceIndex},this.value)"/><b>%</b></div><small>Captura el porcentaje que determinaste después de validar la evidencia o fuente.</small></label>
             <div class="leader-derived-rating"><span>Calificación resultante</span><strong>${esc(scoreLider||'—')}/5 ${scoreLider?'★'.repeat(Number(scoreLider)||0):''}</strong><small>Se calcula automáticamente con la equivalencia Rev. 4.</small></div>
           </div>
-          ${manual ? `<label class="leader-justification-field"><span>Justificación de la diferencia <em>obligatoria</em></span><textarea placeholder="Explica por qué el porcentaje validado difiere del reportado por el colaborador e indica la evidencia o fuente revisada..." oninput="App.justificarObjetivoLider('${ev.id}',${sourceIndex},this.value)">${esc(just)}</textarea></label>` : `<div class="leader-auto-score-kept"><span>✓</span><div><strong>Sin ajuste</strong><small>El porcentaje validado coincide con el colaborador.</small></div></div>`}
+          ${manual ? `<label class="leader-justification-field"><span>Justificación de la diferencia <em>obligatoria</em></span><textarea placeholder="Explica por qué el porcentaje validado difiere del reportado por el colaborador e indica la evidencia o fuente revisada..." data-leader-adjustment-reason="1" oninput="App.justificarObjetivoLider('${ev.id}',${sourceIndex},this.value)">${esc(just)}</textarea></label>` : `<div class="leader-auto-score-kept"><span>✓</span><div><strong>Sin ajuste</strong><small>El porcentaje validado coincide con el colaborador.</small></div></div>`}
         </div>
         <div class="validation-message" aria-live="polite">Si el porcentaje validado es diferente al reportado por el colaborador, registra la justificación y fuente utilizada.</div>
       </div></div>`;
@@ -4032,6 +4043,7 @@
     async enviarAutoevaluacion() {
       if (!$('#confirmEnvioAuto').checked) { showNotice(t('Confirma que la información es correcta antes de enviar.'),'warning'); return; }
       const evaluacionId = state.wizard.evaluacionId;
+      syncLeaderObjectiveReasonsFromDom(evaluacionId);
       for (let i = 0; i < SECCIONES_WIZARD.length - 1; i++) {
         const sec = SECCIONES_WIZARD[i];
         const incompleta = sec === 'objetivos'
