@@ -634,7 +634,16 @@
         Object.entries(o).filter(([,v]) => v !== null && v !== undefined && v !== '')
       )));
     });
-    Array.from(merged.values()).forEach((o, i) => {
+    // Stable objective positions: Airtable may return leader and self rows out of order.
+    // Never map the leader's percentage to another self objective by array position.
+    const sortedObjectives = Array.from(merged.values()).sort((a,b) => {
+      const number = o => {
+        const match = String(o.objectiveId || o.id || '').match(/-OBJ-(\d+)$/i);
+        return match ? Number(match[1]) : Number.MAX_SAFE_INTEGER;
+      };
+      return number(a) - number(b);
+    });
+    sortedObjectives.forEach((o, i) => {
       const idx = i;
       const desc = o.description || o.descripcion || o.name || '';
       if (!String(desc).trim()) return;
@@ -952,7 +961,9 @@
     const h = S.getHerramientasEvaluacion(localEvalId) || {};
     const decision = ev.objetivosNoAplicanDecision || (ev.objetivosNoAplicanConfirmados ? 'confirmado' : '');
     const objectives = decision === 'confirmado' ? [] : S.getObjetivos(localEvalId).filter(o => (o.descripcion || '').trim()).map((o,i) => ({
-      objectiveId:o.backendObjectiveId || `${backendId}-OBJ-${Number(o.index ?? i)+1}`,
+      // Leader records must use the SAME stable ID as the self objective.
+      // Avoid stale, misordered backendObjectiveId on a reopened evaluation.
+      objectiveId:`${String(backendId).replace(/-LIDER$/i,'')}-OBJ-${Number(o.index ?? i)+1}`,
       leaderValidatedPercent:o.cumplimiento === '' ? '' : Number(o.cumplimiento), leaderAdjustmentReason:o.justificacionLider || '', evidenceLeader:o.evidenceLeader || ''
     }));
     const colaboradorId = String(ev.colaboradorId || state.wizard.colaboradorId || '');
@@ -4156,6 +4167,7 @@
       if (state.remote.leaderSubmitting) return;
       if (!$('#confirmEnvioLider').checked) { showNotice(t('Confirma que la evaluación está completa antes de enviar.'),'warning'); return; }
       const evaluacionId = state.wizard.evaluacionId;
+      syncLeaderObjectiveReasonsFromDom(evaluacionId);
       for (let i = 0; i < SECCIONES_WIZARD.length - 1; i++) {
         const sec = SECCIONES_WIZARD[i];
         let incompleta;
