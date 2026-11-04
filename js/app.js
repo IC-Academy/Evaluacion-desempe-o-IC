@@ -4267,7 +4267,13 @@
         const msg=(err && (err.tipo === 'timeout' || err.tipo === 'network'))
           ? (err.message || 'No fue posible conectar con el servidor.')
           : ((d&&((d.error&&d.error.message)||d.message))||err.message||'No fue posible enviar la evaluación del líder.');
-        showNotice(msg + (code?` (${code})`:''),'warning');
+        if (String(code||'').toLowerCase()==='objectives_not_reviewed') {
+          state.wizard.seccionIdx = SECCIONES_WIZARD.indexOf('objetivos');
+          render();
+          showNotice('Revisa Objetivos: el colaborador indicó que no tuvo objetivos. Debes confirmar esta situación y justificarla, o indicar que sí había objetivos y documentarlos. Guarda los cambios antes de enviar.','warning');
+        } else {
+          showNotice(msg + (code?` (${code})`:''),'warning');
+        }
       } finally {
         state.remote.leaderSubmitting = false;
         if (submitBtn && document.body.contains(submitBtn)) {
