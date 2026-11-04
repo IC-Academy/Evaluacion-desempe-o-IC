@@ -4175,7 +4175,9 @@
           const autoEval = S.getEvaluacion(colaboradorId, state.periodo.id, 'autoevaluacion');
           const evLider = S.load().evaluaciones.find((e) => e.id === evaluacionId);
           if (autoEval && autoEval.objetivosNoAplican) {
-            incompleta = !(evLider && evLider.objetivosNoAplicanConfirmados);
+            const decision = String((evLider && evLider.objetivosNoAplicanDecision) || '');
+            incompleta = !((decision === 'confirmado' && String(evLider.objetivosNoAplicanComentarioLider || '').trim())
+              || (decision === 'rechazado' && S.getObjetivos(evaluacionId).some(o => String(o.descripcion||'').trim())));
           } else {
             const objetivosAuto = autoEval ? S.getObjetivos(autoEval.id).filter((o) => (o.descripcion || '').trim()) : [];
             const objetivosLider = S.getObjetivos(evaluacionId);
