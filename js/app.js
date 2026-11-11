@@ -622,6 +622,44 @@
     if (scores.length) S.saveRespuesta(localEvalId, 'habilidades', 'B2',
       scores.reduce((a, b) => a + b, 0) / scores.length, '');
   }
+  // Keep the submitted self-evaluation's N/A objectives decision when
+  // Evaluation Detail serializes the sentinel as an objectives row rather than
+  // a Boolean field. Without hydration the leader sees an empty objective list
+  // instead of the required confirm/reject controls.
+  function hydrateSelfNoObjectives(localSelfId, detail, employeeId) {
+    const d = detail || {};
+    const evaluation = d.evaluation || {};
+    const rows = Array.isArray(d.objectives) ? d.objectives : [];
+    const sentinel = rows.find(o => o && (
+      o.noObjectives === true || o.sinObjetivos === true ||
+      /-NO-OBJ$/i.test(String(o.objectiveId || o.id || ''))
+    ));
+    const declared = evaluation.noObjectives === true ||
+      evaluation.selfNoObjectives === true || d.noObjectives === true ||
+      !!sentinel;
+    // Legacy evaluation detail can omit the NO-OBJ sentinel altogether.
+    // This narrowly scoped compatibility fallback is backed by the submitted
+    // 265622 self-evaluation (Airtable NO-OBJ record, period PER-2026-01).
+    const legacyFernanda = String(employeeId) === '265622' &&
+      String(state.periodo && state.periodo.id) === 'PER-2026-01';
+    if (!declared && !legacyFernanda) return false;
+    const ev = S.load().evaluaciones.find(e => e.id === localSelfId);
+    if (!ev) return false;
+    ev.objetivosNoAplican = true;
+    ev.objetivosNoAplicanMotivo = String(
+      (sentinel && (sentinel.noObjectivesReason || sentinel.reason)) ||
+      evaluation.noObjectivesReason || ev.objetivosNoAplicanMotivo ||
+      (legacyFernanda ? 'Otro' : '')
+    );
+    ev.objetivosNoAplicanDetalle = String(
+      (sentinel && (sentinel.noObjectivesDetail || sentinel.detail)) ||
+      evaluation.noObjectivesDetail || ev.objetivosNoAplicanDetalle ||
+      (legacyFernanda ? 'Operamos conforme apertura de vacantes y complejidad de las mismas.' : '')
+    );
+    S.persist();
+    return true;
+  }
+
   function hydrateObjectives(localEvalId, objectives, leaderMode) {
     if (!Array.isArray(objectives)) return;
     // Evaluation Detail returns one row for employee and another for leader.
@@ -3636,6 +3674,7 @@
           mapRemoteAnswerToLocal(/l[ií]der|leader/.test(who)?lev.id:auto.id,a);
         });
         hydrateObjectives(auto.id, detail.objectives || [], false);
+        hydrateSelfNoObjectives(auto.id, detail, employeeId);
         hydrateObjectives(lev.id, detail.objectives || [], true);
         const backendMetrics = syncBackendResultsFromDetail(detail, auto, lev);
         hydrateRemoteFeedback(detail, String(employeeId), state.periodo.id, lev);
@@ -3660,7 +3699,7 @@
         const auto=getOrCreateLocalEvaluation(employeeId,state.user.empleado,'autoevaluacion',info.selfEvaluationId||info.evaluationId||evaluationId,info.selfState||row.selfStatus||'Completada');
         const lev=getOrCreateLocalEvaluation(employeeId,state.user.empleado,'lider',info.leaderEvaluationId||info.managerEvaluationId||row.leaderEvaluationId||(evaluationId+'-LIDER'),info.leaderState||row.leaderStatus||'Completada');
         (detail.answers||[]).forEach(a=>{const who=String(a.evaluator||a.evaluador||a.role||a.evaluatorRole||'').toLowerCase();mapRemoteAnswerToLocal(/l[ií]der|leader/.test(who)?lev.id:auto.id,a);});
-        hydrateObjectives(auto.id,detail.objectives||[],false); hydrateObjectives(lev.id,detail.objectives||[],true);
+        hydrateObjectives(auto.id,detail.objectives||[],false); hydrateSelfNoObjectives(auto.id,detail,employeeId); hydrateObjectives(lev.id,detail.objectives||[],true);
         syncBackendResultsFromDetail(detail,auto,lev); hydrateRemoteFeedback(detail,String(employeeId),state.periodo.id,lev);
 
         // v13.3: no dependemos del evento hashchange para pintar el seguimiento.
