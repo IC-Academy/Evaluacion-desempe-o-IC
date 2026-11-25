@@ -3350,7 +3350,36 @@
         const performanceProfile={dimensiones:performanceDims,autoevaluacion:performanceAuto,evaluacionLider:performanceLeader};
         const performanceWheel = detailReady ? global.EDDCharts.renderPerformanceWheel(performanceProfile) : '';
         const sectionGapSummary = detailReady ? renderSectionGapSummary({promedios:autoProm},{promedios:leaderProm}) : '';
-        const nine = global.EDDCharts.renderNineBoxIndividual({actitudProm:Number(item.leaderAttitude)/20, desempenoProm:Number(item.leaderPerformance)/20, nombreColaborador:item.name});
+        // Some calibration records predate the backend attitude/performance axes.
+        // Number(null) === 0 used to assign such employees to Black Spot (1)
+        // even when their leader scores were medium/high. Prefer the official
+        // backend axes when present; otherwise derive both from leader answers.
+        // Never infer an axis while the employee detail is still loading.
+        const axisFromBackend = value => value === null || value === undefined ||
+          value === '' || !Number.isFinite(Number(value)) ? null : Number(value)/20;
+        const leaderAttitudeAxis = axisFromBackend(item.leaderAttitude);
+        const leaderPerformanceAxis = axisFromBackend(item.leaderPerformance);
+        const validLeaderAverage = keys => {
+          if (!detailReady) return null;
+          const values=keys.map(k=>valOf(findAns(k,true))).filter(v=>typeof v==='number'&&v>=1&&v<=5);
+          return values.length===keys.length ? values.reduce((a,b)=>a+b,0)/values.length : null;
+        };
+        const fallbackAttitude=validLeaderAverage(['A1','A2','A3','A4','A5']);
+        const fallbackSkills=validLeaderAverage(['B1','B3','B4','B5']); // B2 excluded by Rev.4
+        const leaderObjectiveScores=detailReady ? objectives.filter(o=>o&&!o.noObjectives&&
+          !/-NO-OBJ$/i.test(String(o.objectiveId||o.id||'')))
+          .map(o=>o.leaderScore??o.calificacionLider)
+          .filter(v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v)))
+          .map(Number) : [];
+        const objectiveAverage=leaderObjectiveScores.length ?
+          leaderObjectiveScores.reduce((a,b)=>a+b,0)/leaderObjectiveScores.length : null;
+        const fallbackPerformance=fallbackSkills===null?null:
+          objectiveAverage===null?fallbackSkills:(fallbackSkills+objectiveAverage)/2;
+        const nine = global.EDDCharts.renderNineBoxIndividual({
+          actitudProm: leaderAttitudeAxis ?? fallbackAttitude,
+          desempenoProm: leaderPerformanceAxis ?? fallbackPerformance,
+          nombreColaborador:item.name
+        });
         const fget=(...keys)=>{for(const k of keys){if(feedback&&feedback[k]!=null&&feedback[k]!=='')return feedback[k];}return ''};
         const strengths=fget('strengths','fortalezas','Fortalezas');
         const opp=fget('developmentOpportunities','oportunidadesDesarrollo','areasOfOpportunity','Áreas de oportunidad');
